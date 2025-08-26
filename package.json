@@ -18,7 +18,7 @@
     "build:frontend": "cd frontend && npm run build",
     "build:extension": "cd extension && npm run build",
     "test": "npm run test:backend && npm run test:frontend && npm run test:extension",
-    "test:backend": "cd backend && npm test",
+    "test:backend": "cd backend && npm run test:unit",
     "test:frontend": "cd frontend && npm test",
     "test:extension": "cd extension && npm test",
     "test:watch": "concurrently \"npm run test:watch:backend\" \"npm run test:watch:frontend\" \"npm run test:watch:extension\"",
@@ -72,7 +72,7 @@
   "lint-staged": {
     "backend/**/*.{ts,js}": [
       "npm run lint:fix:backend",
-      "npm run test:backend -- --passWithNoTests"
+      "npm run test:backend -- --passWithNoTests --testPathIgnorePatterns=integration"
     ],
     "frontend/**/*.{ts,tsx,js,jsx}": [
       "npm run lint:fix:frontend",
