@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run lint-staged to check staged files
+npx lint-staged
+
+# Run tests for changed files
+echo "Running tests for changed files..."
+npm run test -- --passWithNoTests

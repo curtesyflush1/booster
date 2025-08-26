@@ -1,0 +1,28 @@
+{
+  "enabled": true,
+  "name": "Documentation Sync",
+  "description": "Monitors all source files in the repository and triggers documentation updates when changes are detected",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "backend/src/**/*.ts",
+      "frontend/src/**/*.ts",
+      "frontend/src/**/*.tsx",
+      "extension/src/**/*.ts",
+      "shared/**/*.ts",
+      "*.ts",
+      "*.js",
+      "*.tsx",
+      "*.jsx",
+      "package.json",
+      "tsconfig.json",
+      "docker-compose*.yml",
+      "Dockerfile"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Source code has been modified in the repository. Please review the changes and update the documentation accordingly. Check if the README.md needs updates for new features, API changes, or setup instructions. If there is a /docs folder, also update relevant documentation files there to reflect the code changes. Focus on keeping documentation accurate and up-to-date with the current codebase."
+  }
+}

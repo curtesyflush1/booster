@@ -1,0 +1,66 @@
+{
+  "name": "booster-beacon",
+  "version": "1.0.0",
+  "description": "BoosterBeacon - Collector-grade alerting service for Pokémon TCG",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend",
+    "extension"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "npm run build:backend && npm run build:frontend && npm run build:extension",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "build:extension": "cd extension && npm run build",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "test:watch": "concurrently \"npm run test:watch:backend\" \"npm run test:watch:frontend\"",
+    "test:watch:backend": "cd backend && npm run test:watch",
+    "test:watch:frontend": "cd frontend && npm run test:watch",
+    "test:coverage": "npm run test:coverage:backend && npm run test:coverage:frontend",
+    "test:coverage:backend": "cd backend && npm run test:coverage",
+    "test:coverage:frontend": "cd frontend && npm run test:coverage",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd backend && npm run lint",
+    "lint:frontend": "cd frontend && npm run lint",
+    "lint:fix": "npm run lint:fix:backend && npm run lint:fix:frontend",
+    "lint:fix:backend": "cd backend && npm run lint:fix",
+    "lint:fix:frontend": "cd frontend && npm run lint:fix",
+    "docker:dev": "docker-compose -f docker-compose.dev.yml up -d",
+    "docker:dev:build": "docker-compose -f docker-compose.dev.yml up -d --build",
+    "docker:dev:down": "docker-compose -f docker-compose.dev.yml down",
+    "docker:dev:logs": "docker-compose -f docker-compose.dev.yml logs -f",
+    "setup": "npm install && npm run docker:dev && npm run migrate:up && npm run seed:dev",
+    "migrate:up": "cd backend && npm run migrate:up",
+    "migrate:down": "cd backend && npm run migrate:down",
+    "seed:dev": "cd backend && npm run seed:dev",
+    "prepare": "husky install"
+  },
+  "keywords": ["pokemon", "tcg", "alerts", "collector", "monitoring"],
+  "author": "BoosterBeacon Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.1.0"
+  },
+  "lint-staged": {
+    "backend/**/*.{ts,js}": [
+      "npm run lint:fix:backend",
+      "npm run test:backend -- --passWithNoTests"
+    ],
+    "frontend/**/*.{ts,tsx,js,jsx}": [
+      "npm run lint:fix:frontend",
+      "npm run test:frontend -- --passWithNoTests"
+    ]
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

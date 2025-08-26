@@ -1,0 +1,18 @@
+{
+  "name": "booster-beacon-frontend",
+  "version": "1.0.0",
+  "description": "BoosterBeacon frontend React PWA",
+  "type": "module",
+  "scripts": {
+    "dev": "echo 'Frontend dev server not yet implemented'",
+    "build": "echo 'Frontend build not yet implemented'",
+    "test": "echo 'Frontend tests not yet implemented'",
+    "test:watch": "echo 'Frontend test watch not yet implemented'",
+    "test:coverage": "echo 'Frontend test coverage not yet implemented'",
+    "lint": "echo 'Linting frontend code...'",
+    "lint:fix": "echo 'Fixing frontend code...'"
+  },
+  "keywords": ["pokemon", "tcg", "alerts", "collector", "react", "pwa"],
+  "author": "BoosterBeacon",
+  "license": "MIT"
+}

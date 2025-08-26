@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: booster-postgres-dev
+    environment:
+      POSTGRES_DB: boosterbeacon_dev
+      POSTGRES_USER: booster_user
+      POSTGRES_PASSWORD: booster_dev_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./backend/docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U booster_user -d boosterbeacon_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - booster-network
+
+  # PostgreSQL Test Database
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: booster-postgres-test
+    environment:
+      POSTGRES_DB: boosterbeacon_test
+      POSTGRES_USER: booster_user
+      POSTGRES_PASSWORD: booster_test_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U booster_user -d boosterbeacon_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - booster-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: booster-redis-dev
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_dev_data:/data
+    command: redis-server --appendonly yes --requirepass booster_redis_password
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - booster-network
+
+  # Backend API (for development)
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: booster-api-dev
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://booster_user:booster_dev_password@postgres:5432/boosterbeacon_dev
+      TEST_DATABASE_URL: postgresql://booster_user:booster_test_password@postgres-test:5432/boosterbeacon_test
+      REDIS_URL: redis://:booster_redis_password@redis:6379
+      JWT_SECRET: dev_jwt_secret_key_change_in_production
+      LOG_LEVEL: debug
+      FRONTEND_URL: http://localhost:5173
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./backend/logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgres-test:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - booster-network
+    command: npm run dev
+
+volumes:
+  postgres_dev_data:
+    driver: local
+  postgres_test_data:
+    driver: local
+  redis_dev_data:
+    driver: local
+
+networks:
+  booster-network:
+    driver: bridge
