@@ -10,6 +10,7 @@ import { generalRateLimit } from './middleware/rateLimiter';
 // Import routes
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
+import productRoutes from './routes/products';
 
 // Load environment variables
 dotenv.config();
@@ -58,6 +59,9 @@ app.use('/api/auth', authRoutes);
 
 // User management routes
 app.use('/api/users', userRoutes);
+
+// Product catalog routes
+app.use('/api/products', productRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

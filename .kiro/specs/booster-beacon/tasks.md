@@ -36,7 +36,7 @@
   - Test email validation and password reset flows end-to-end
   - _Requirements: 19.1, 19.2, 19.3, 19.4, 19.5, 19.6, 19.7, 32.1, 32.3, 32.4_
 
-- [ ] 4. Create user preferences and settings management
+- [x] 4. Create user preferences and settings management
   - Implement user preferences storage for notification channels and alert filters
   - Build endpoints for managing shipping addresses and location settings
   - Create secure storage system for retailer login credentials with encryption
@@ -49,7 +49,7 @@
   - Verify existing authentication tests still pass with new preference features
   - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.1.1, 10.1.2, 10.1.3, 10.1.4, 10.1.5, 10.1.6, 32.1, 32.2, 32.6_
 
-- [ ] 5. Build product catalog and search functionality
+- [x] 5. Build product catalog and search functionality
   - Create product database schema with Pokémon TCG-specific fields (sets, categories, UPC codes)
   - Implement product search API with filtering by retailer, price, category, and availability
   - Build product detail endpoints with pricing history and availability status

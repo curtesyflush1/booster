@@ -17,11 +17,11 @@ export class TokenService {
 
     const accessToken = jwt.sign(payload, this.config.jwtSecret, {
       expiresIn: this.config.accessTokenExpiry
-    });
+    } as jwt.SignOptions);
 
     const refreshToken = jwt.sign(payload, this.config.jwtRefreshSecret, {
       expiresIn: this.config.refreshTokenExpiry
-    });
+    } as jwt.SignOptions);
 
     const expiresIn = this.parseExpiryToSeconds(this.config.accessTokenExpiry);
 

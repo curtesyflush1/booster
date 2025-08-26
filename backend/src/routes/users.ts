@@ -64,4 +64,60 @@ router.delete('/addresses/:addressId', generalRateLimit, userController.removeSh
  */
 router.get('/stats', userController.getUserStats);
 
+/**
+ * @route   POST /api/users/retailer-credentials
+ * @desc    Add retailer login credentials
+ * @access  Private
+ */
+router.post('/retailer-credentials', generalRateLimit, userController.addRetailerCredentials);
+
+/**
+ * @route   GET /api/users/retailer-credentials
+ * @desc    Get list of retailer credentials (without passwords)
+ * @access  Private
+ */
+router.get('/retailer-credentials', userController.getRetailerCredentials);
+
+/**
+ * @route   PUT /api/users/retailer-credentials/:retailer
+ * @desc    Update retailer credentials
+ * @access  Private
+ */
+router.put('/retailer-credentials/:retailer', generalRateLimit, userController.updateRetailerCredentials);
+
+/**
+ * @route   DELETE /api/users/retailer-credentials/:retailer
+ * @desc    Delete retailer credentials
+ * @access  Private
+ */
+router.delete('/retailer-credentials/:retailer', generalRateLimit, userController.deleteRetailerCredentials);
+
+/**
+ * @route   POST /api/users/retailer-credentials/:retailer/verify
+ * @desc    Verify retailer credentials
+ * @access  Private
+ */
+router.post('/retailer-credentials/:retailer/verify', generalRateLimit, userController.verifyRetailerCredentials);
+
+/**
+ * @route   POST /api/users/payment-methods
+ * @desc    Add payment method
+ * @access  Private
+ */
+router.post('/payment-methods', generalRateLimit, userController.addPaymentMethod);
+
+/**
+ * @route   DELETE /api/users/payment-methods/:paymentMethodId
+ * @desc    Remove payment method
+ * @access  Private
+ */
+router.delete('/payment-methods/:paymentMethodId', generalRateLimit, userController.removePaymentMethod);
+
+/**
+ * @route   GET /api/users/quiet-hours/check
+ * @desc    Check current quiet hours status
+ * @access  Private
+ */
+router.get('/quiet-hours/check', userController.checkQuietHours);
+
 export default router;

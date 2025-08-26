@@ -3,6 +3,8 @@ import Joi from 'joi';
 import { User } from '../models/User';
 import { logger } from '../utils/logger';
 import { IUser } from '../types/database';
+import { CredentialService, RetailerCredentialInput } from '../services/credentialService';
+import { QuietHoursService } from '../services/quietHoursService';
 
 // Validation schemas
 const updateProfileSchema = Joi.object({
@@ -130,12 +132,81 @@ const addShippingAddressSchema = Joi.object({
   is_default: Joi.boolean().default(false)
 });
 
+const addRetailerCredentialSchema = Joi.object({
+  retailer: Joi.string().min(1).max(50).required().messages({
+    'string.min': 'Retailer name cannot be empty',
+    'string.max': 'Retailer name must not exceed 50 characters',
+    'any.required': 'Retailer name is required'
+  }),
+  username: Joi.string().min(1).max(100).required().messages({
+    'string.min': 'Username cannot be empty',
+    'string.max': 'Username must not exceed 100 characters',
+    'any.required': 'Username is required'
+  }),
+  password: Joi.string().min(1).max(200).required().messages({
+    'string.min': 'Password cannot be empty',
+    'string.max': 'Password must not exceed 200 characters',
+    'any.required': 'Password is required'
+  }),
+  twoFactorEnabled: Joi.boolean().default(false)
+});
+
+const updateRetailerCredentialSchema = Joi.object({
+  username: Joi.string().min(1).max(100).optional().messages({
+    'string.min': 'Username cannot be empty',
+    'string.max': 'Username must not exceed 100 characters'
+  }),
+  password: Joi.string().min(1).max(200).optional().messages({
+    'string.min': 'Password cannot be empty',
+    'string.max': 'Password must not exceed 200 characters'
+  }),
+  twoFactorEnabled: Joi.boolean().optional()
+});
+
+const addPaymentMethodSchema = Joi.object({
+  type: Joi.string().valid('credit_card', 'debit_card', 'paypal').required().messages({
+    'any.only': 'Payment method type must be credit_card, debit_card, or paypal',
+    'any.required': 'Payment method type is required'
+  }),
+  last_four: Joi.string().pattern(/^\d{4}$/).required().messages({
+    'string.pattern.base': 'Last four digits must be exactly 4 digits',
+    'any.required': 'Last four digits are required'
+  }),
+  brand: Joi.string().min(1).max(50).required().messages({
+    'string.min': 'Brand cannot be empty',
+    'string.max': 'Brand must not exceed 50 characters',
+    'any.required': 'Brand is required'
+  }),
+  expires_month: Joi.number().integer().min(1).max(12).required().messages({
+    'number.base': 'Expiry month must be a number',
+    'number.integer': 'Expiry month must be an integer',
+    'number.min': 'Expiry month must be between 1 and 12',
+    'number.max': 'Expiry month must be between 1 and 12',
+    'any.required': 'Expiry month is required'
+  }),
+  expires_year: Joi.number().integer().min(new Date().getFullYear()).required().messages({
+    'number.base': 'Expiry year must be a number',
+    'number.integer': 'Expiry year must be an integer',
+    'number.min': 'Expiry year cannot be in the past',
+    'any.required': 'Expiry year is required'
+  }),
+  billing_address_id: Joi.string().uuid().required().messages({
+    'string.uuid': 'Billing address ID must be a valid UUID',
+    'any.required': 'Billing address ID is required'
+  }),
+  is_default: Joi.boolean().default(false)
+});
+
 /**
- * Get current user profile
+ * Get current user profile with enhanced security and error handling
  */
 export const getProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    if (!req.user) {
+    if (!req.user?.id) {
+      logger.warn('Profile access attempt without valid user', { 
+        ip: req.ip, 
+        userAgent: req.get('User-Agent') 
+      });
       res.status(401).json({
         error: {
           code: 'AUTHENTICATION_REQUIRED',
@@ -149,6 +220,10 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
     // Get fresh user data from database
     const user = await User.findById<IUser>(req.user.id);
     if (!user) {
+      logger.warn('User profile requested for non-existent user', { 
+        userId: req.user.id,
+        ip: req.ip 
+      });
       res.status(404).json({
         error: {
           code: 'USER_NOT_FOUND',
@@ -159,13 +234,26 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
       return;
     }
 
-    // Remove password hash from response
-    const { password_hash, reset_token, reset_token_expires, verification_token, ...userProfile } = user;
+    // Remove sensitive fields from response using a more secure approach
+    const sensitiveFields = [
+      'password_hash', 'reset_token', 'reset_token_expires', 
+      'verification_token', 'failed_login_attempts'
+    ] as const;
+    
+    const userProfile = Object.fromEntries(
+      Object.entries(user).filter(([key]) => !sensitiveFields.includes(key as any))
+    );
+
+    logger.info('User profile accessed', { userId: req.user.id });
 
     res.status(200).json({
       user: userProfile
     });
   } catch (error) {
+    logger.error('Error retrieving user profile', {
+      userId: req.user?.id,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
     next(error);
   }
 };
@@ -530,6 +618,424 @@ export const getUserStats = async (req: Request, res: Response, next: NextFuncti
 
     res.status(200).json({
       stats
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Add retailer credentials
+ */
+export const addRetailerCredentials = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: {
+          code: 'AUTHENTICATION_REQUIRED',
+          message: 'Authentication is required',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    // Validate request body
+    const { error, value } = addRetailerCredentialSchema.validate(req.body);
+    if (error) {
+      res.status(400).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: error.details?.[0]?.message || 'Validation error',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    // Store encrypted credentials
+    const success = await CredentialService.storeRetailerCredentials(req.user.id, value);
+    if (!success) {
+      res.status(500).json({
+        error: {
+          code: 'CREDENTIAL_STORAGE_FAILED',
+          message: 'Failed to store retailer credentials',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    logger.info('Retailer credentials added', { userId: req.user.id, retailer: value.retailer });
+
+    res.status(201).json({
+      message: 'Retailer credentials added successfully',
+      retailer: value.retailer
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get retailer credentials list (without passwords)
+ */
+export const getRetailerCredentials = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: {
+          code: 'AUTHENTICATION_REQUIRED',
+          message: 'Authentication is required',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    const credentials = await CredentialService.listRetailerCredentials(req.user.id);
+
+    res.status(200).json({
+      credentials
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Update retailer credentials
+ */
+export const updateRetailerCredentials = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: {
+          code: 'AUTHENTICATION_REQUIRED',
+          message: 'Authentication is required',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    const { retailer } = req.params;
+    if (!retailer) {
+      res.status(400).json({
+        error: {
+          code: 'MISSING_RETAILER',
+          message: 'Retailer parameter is required',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    // Validate request body
+    const { error, value } = updateRetailerCredentialSchema.validate(req.body);
+    if (error) {
+      res.status(400).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: error.details?.[0]?.message || 'Validation error',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    // Update credentials
+    const success = await CredentialService.updateRetailerCredentials(req.user.id, retailer, value);
+    if (!success) {
+      res.status(404).json({
+        error: {
+          code: 'CREDENTIALS_NOT_FOUND',
+          message: 'Retailer credentials not found',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    logger.info('Retailer credentials updated', { userId: req.user.id, retailer });
+
+    res.status(200).json({
+      message: 'Retailer credentials updated successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Delete retailer credentials
+ */
+export const deleteRetailerCredentials = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: {
+          code: 'AUTHENTICATION_REQUIRED',
+          message: 'Authentication is required',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    const { retailer } = req.params;
+    if (!retailer) {
+      res.status(400).json({
+        error: {
+          code: 'MISSING_RETAILER',
+          message: 'Retailer parameter is required',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    // Delete credentials
+    const success = await CredentialService.deleteRetailerCredentials(req.user.id, retailer);
+    if (!success) {
+      res.status(404).json({
+        error: {
+          code: 'CREDENTIALS_NOT_FOUND',
+          message: 'Retailer credentials not found',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    logger.info('Retailer credentials deleted', { userId: req.user.id, retailer });
+
+    res.status(200).json({
+      message: 'Retailer credentials deleted successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Verify retailer credentials
+ */
+export const verifyRetailerCredentials = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: {
+          code: 'AUTHENTICATION_REQUIRED',
+          message: 'Authentication is required',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    const { retailer } = req.params;
+    if (!retailer) {
+      res.status(400).json({
+        error: {
+          code: 'MISSING_RETAILER',
+          message: 'Retailer parameter is required',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    // Verify credentials
+    const result = await CredentialService.verifyRetailerCredentials(req.user.id, retailer);
+
+    res.status(200).json({
+      message: result.message,
+      isValid: result.isValid
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Add payment method
+ */
+export const addPaymentMethod = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: {
+          code: 'AUTHENTICATION_REQUIRED',
+          message: 'Authentication is required',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    // Validate request body
+    const { error, value } = addPaymentMethodSchema.validate(req.body);
+    if (error) {
+      res.status(400).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: error.details?.[0]?.message || 'Validation error',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    // Generate unique ID for the payment method
+    const paymentMethodWithId = {
+      ...value,
+      id: require('crypto').randomUUID()
+    };
+
+    // Get current user to update payment methods
+    const user = await User.findById<IUser>(req.user.id);
+    if (!user) {
+      res.status(404).json({
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'User not found',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    // Add payment method
+    const updatedPaymentMethods = [...user.payment_methods, paymentMethodWithId];
+    const success = await User.updateById<IUser>(req.user.id, {
+      payment_methods: updatedPaymentMethods
+    });
+
+    if (!success) {
+      res.status(500).json({
+        error: {
+          code: 'PAYMENT_METHOD_ADD_FAILED',
+          message: 'Failed to add payment method',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    logger.info('Payment method added', { userId: req.user.id, paymentMethodId: paymentMethodWithId.id });
+
+    res.status(201).json({
+      message: 'Payment method added successfully',
+      paymentMethod: paymentMethodWithId
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Remove payment method
+ */
+export const removePaymentMethod = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: {
+          code: 'AUTHENTICATION_REQUIRED',
+          message: 'Authentication is required',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    const { paymentMethodId } = req.params;
+    if (!paymentMethodId) {
+      res.status(400).json({
+        error: {
+          code: 'MISSING_PAYMENT_METHOD_ID',
+          message: 'Payment method ID is required',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    // Get current user
+    const user = await User.findById<IUser>(req.user.id);
+    if (!user) {
+      res.status(404).json({
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'User not found',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    // Remove payment method
+    const updatedPaymentMethods = user.payment_methods.filter(pm => pm.id !== paymentMethodId);
+    
+    if (updatedPaymentMethods.length === user.payment_methods.length) {
+      res.status(404).json({
+        error: {
+          code: 'PAYMENT_METHOD_NOT_FOUND',
+          message: 'Payment method not found',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    const success = await User.updateById<IUser>(req.user.id, {
+      payment_methods: updatedPaymentMethods
+    });
+
+    if (!success) {
+      res.status(500).json({
+        error: {
+          code: 'PAYMENT_METHOD_REMOVE_FAILED',
+          message: 'Failed to remove payment method',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    logger.info('Payment method removed', { userId: req.user.id, paymentMethodId });
+
+    res.status(200).json({
+      message: 'Payment method removed successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Check quiet hours status
+ */
+export const checkQuietHours = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: {
+          code: 'AUTHENTICATION_REQUIRED',
+          message: 'Authentication is required',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    const quietCheck = await QuietHoursService.isQuietTime(req.user.id);
+
+    res.status(200).json({
+      isQuietTime: quietCheck.isQuietTime,
+      nextActiveTime: quietCheck.nextActiveTime,
+      reason: quietCheck.reason
     });
   } catch (error) {
     next(error);

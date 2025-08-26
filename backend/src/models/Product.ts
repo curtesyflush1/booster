@@ -164,6 +164,9 @@ export class Product extends BaseModel<IProduct> {
 
   // Find product by UPC
   static async findByUPC(upc: string): Promise<IProduct | null> {
+    if (!upc || typeof upc !== 'string') {
+      return null;
+    }
     return this.findOneBy<IProduct>({ upc: upc.trim() });
   }
 
@@ -338,6 +341,164 @@ export class Product extends BaseModel<IProduct> {
     }
 
     return query;
+  }
+
+  // Advanced search with filters including retailer and price
+  static async searchWithFilters(
+    searchTerm: string,
+    options: {
+      category_id?: string;
+      set_name?: string;
+      series?: string;
+      retailer_id?: string;
+      min_price?: number;
+      max_price?: number;
+      availability?: string;
+      is_active?: boolean;
+      page?: number;
+      limit?: number;
+      sort_by?: string;
+      sort_order?: string;
+    } = {}
+  ): Promise<IPaginatedResult<IProduct & { availability?: any }>> {
+    try {
+      const {
+        category_id,
+        set_name,
+        series,
+        retailer_id,
+        min_price,
+        max_price,
+        availability,
+        is_active = true,
+        page = 1,
+        limit = 20,
+        sort_by = 'popularity_score',
+        sort_order = 'desc'
+      } = options;
+
+      let query = this.db(this.getTableName())
+        .select(`${this.getTableName()}.*`)
+        .where(`${this.getTableName()}.is_active`, is_active);
+
+      // Join with availability if retailer or price filters are specified
+      if (retailer_id || min_price !== undefined || max_price !== undefined || availability) {
+        query = query
+          .leftJoin('product_availability', `${this.getTableName()}.id`, 'product_availability.product_id')
+          .select(`${this.getTableName()}.*`, 
+            'product_availability.price',
+            'product_availability.in_stock',
+            'product_availability.availability_status'
+          );
+
+        if (retailer_id) {
+          query = query.where('product_availability.retailer_id', retailer_id);
+        }
+        if (min_price !== undefined) {
+          query = query.where('product_availability.price', '>=', min_price);
+        }
+        if (max_price !== undefined) {
+          query = query.where('product_availability.price', '<=', max_price);
+        }
+        if (availability) {
+          query = query.where('product_availability.availability_status', availability);
+        }
+      }
+
+      // Add search term filtering
+      if (searchTerm) {
+        query = query.where(function () {
+          this.where(`${Product.getTableName()}.name`, 'ILIKE', `%${searchTerm}%`)
+            .orWhere(`${Product.getTableName()}.description`, 'ILIKE', `%${searchTerm}%`)
+            .orWhere(`${Product.getTableName()}.set_name`, 'ILIKE', `%${searchTerm}%`)
+            .orWhere(`${Product.getTableName()}.series`, 'ILIKE', `%${searchTerm}%`)
+            .orWhere(`${Product.getTableName()}.sku`, 'ILIKE', `%${searchTerm}%`);
+        });
+      }
+
+      // Add other filters
+      if (category_id) {
+        query = query.where(`${this.getTableName()}.category_id`, category_id);
+      }
+      if (set_name) {
+        query = query.where(`${this.getTableName()}.set_name`, 'ILIKE', `%${set_name}%`);
+      }
+      if (series) {
+        query = query.where(`${this.getTableName()}.series`, 'ILIKE', `%${series}%`);
+      }
+
+      // Add sorting
+      const validSortFields = ['name', 'release_date', 'popularity_score', 'created_at'];
+      const sortField = validSortFields.includes(sort_by) ? sort_by : 'popularity_score';
+      const sortDirection = sort_order === 'asc' ? 'asc' : 'desc';
+      
+      query = query.orderBy(`${this.getTableName()}.${sortField}`, sortDirection);
+
+      return this.getPaginatedResults<IProduct>(query, page, limit);
+    } catch (error) {
+      logger.error(`Error searching products with filters:`, error);
+      throw handleDatabaseError(error);
+    }
+  }
+
+  // Get product with availability information
+  static async getProductWithAvailability(productId: string): Promise<(IProduct & { availability: any[] }) | null> {
+    try {
+      const product = await this.findById<IProduct>(productId);
+      if (!product) return null;
+
+      // Get availability data from all retailers
+      const availability = await this.db('product_availability')
+        .select(
+          'product_availability.*',
+          'retailers.name as retailer_name',
+          'retailers.slug as retailer_slug'
+        )
+        .leftJoin('retailers', 'product_availability.retailer_id', 'retailers.id')
+        .where('product_availability.product_id', productId)
+        .where('retailers.is_active', true)
+        .orderBy('product_availability.last_checked', 'desc');
+
+      return {
+        ...product,
+        availability
+      };
+    } catch (error) {
+      logger.error(`Error getting product with availability:`, error);
+      throw handleDatabaseError(error);
+    }
+  }
+
+  // Get price history for a product
+  static async getPriceHistory(
+    productId: string, 
+    days: number = 30, 
+    retailerId?: string
+  ): Promise<any[]> {
+    try {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+
+      let query = this.db('price_history')
+        .select(
+          'price_history.*',
+          'retailers.name as retailer_name',
+          'retailers.slug as retailer_slug'
+        )
+        .leftJoin('retailers', 'price_history.retailer_id', 'retailers.id')
+        .where('price_history.product_id', productId)
+        .where('price_history.recorded_at', '>=', startDate)
+        .orderBy('price_history.recorded_at', 'asc');
+
+      if (retailerId) {
+        query = query.where('price_history.retailer_id', retailerId);
+      }
+
+      return query;
+    } catch (error) {
+      logger.error(`Error getting price history:`, error);
+      throw handleDatabaseError(error);
+    }
   }
 
   // Get product statistics

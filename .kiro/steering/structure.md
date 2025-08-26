@@ -107,6 +107,7 @@ booster/
 - **Commit Messages**: Conventional commits format for automated changelog
 - **Pull Requests**: Required reviews before merging to main branch
 - **CI/CD Pipeline**: Automated testing, building, and deployment
+- **Code Length**: Keep individual files under 500 lines when possible for better maintainability
 
 ## Security Considerations
 - **Input Validation**: Centralized validation middleware and schemas
