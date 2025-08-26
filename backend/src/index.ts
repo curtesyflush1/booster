@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -27,7 +27,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(requestLogger);
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
@@ -37,7 +37,7 @@ app.get('/health', (req, res) => {
 });
 
 // API routes will be added here
-app.get('/api/v1/status', (req, res) => {
+app.get('/api/v1/status', (_req: Request, res: Response) => {
   res.json({
     message: 'BoosterBeacon API is running',
     version: '1.0.0',
@@ -49,7 +49,7 @@ app.get('/api/v1/status', (req, res) => {
 app.use(errorHandler);
 
 // 404 handler
-app.use('*', (req, res) => {
+app.use('*', (_req: Request, res: Response) => {
   res.status(404).json({
     error: {
       code: 'NOT_FOUND',

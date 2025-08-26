@@ -73,6 +73,8 @@ npm run db:backup
 ```bash
 # Build for production
 npm run build
+npm run build:backend
+npm run build:frontend
 npm run build:extension
 
 # Deploy to staging
@@ -80,9 +82,17 @@ npm run deploy:staging
 
 # Deploy to production
 npm run deploy:prod
+./scripts/deploy.sh
 
 # Rollback deployment
 npm run rollback
+./scripts/deploy.sh rollback
+
+# PM2 production management
+pm2 start ecosystem.config.js
+pm2 restart booster-beacon-api
+pm2 logs booster-beacon-api
+pm2 monit
 ```
 
 ### Testing Commands
@@ -92,6 +102,9 @@ npm run test:unit
 
 # Integration tests
 npm run test:integration
+
+# Extension tests
+npm run test:extension
 
 # E2E tests
 npm run test:e2e

@@ -7,7 +7,7 @@ module.exports = {
     '**/integration/**/*.spec.ts'
   ],
   transform: {
-    '^.+\\.ts$': 'ts-jest',
+    '^.+\\.ts$': 'ts-jest'
   },
   setupFilesAfterEnv: ['<rootDir>/tests/integration/setup.ts'],
   testTimeout: 30000,

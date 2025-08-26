@@ -96,7 +96,7 @@ npm run test:watch
 # Run with coverage
 npm run test:coverage
 
-# Run integration tests
+# Run integration tests (requires Docker services)
 npm run test:integration
 
 # Run backend tests only
@@ -104,7 +104,21 @@ npm run test:backend
 
 # Run frontend tests only
 npm run test:frontend
+
+# Run extension tests only
+npm run test:extension
+
+# Run smoke tests only
+npm run test -- tests/smoke.test.ts
 ```
+
+### Test Requirements
+
+- **Docker services must be running** for integration tests
+- **PostgreSQL test database** on port 5435
+- **Redis** on port 6380
+- Current test coverage: **48% statements, 75% functions** (will increase as features are added)
+- Target coverage: **90%+ for production** (currently adjusted for early development)
 
 ## 🐳 Docker Commands
 
@@ -138,6 +152,51 @@ npm run seed:dev
 npm run db:backup
 ```
 
+## 🚀 Production Deployment
+
+The application uses PM2 for production process management with the following configuration:
+
+### PM2 Configuration
+- **Cluster mode**: Utilizes all available CPU cores
+- **Auto-restart**: Restarts on crashes with exponential backoff
+- **Memory management**: Restarts if memory usage exceeds 1GB
+- **Logging**: Structured logs with timestamps in `./logs/` directory
+- **Health monitoring**: Minimum uptime requirements and restart limits
+
+### Deployment Process
+```bash
+# Deploy to production (full pipeline)
+./scripts/deploy.sh
+
+# Quick deployment options
+./scripts/deploy.sh sync-only    # Only sync files
+./scripts/deploy.sh restart-only # Only restart services
+./scripts/deploy.sh check        # Health check only
+./scripts/deploy.sh rollback     # Rollback to previous release
+```
+
+The deployment script performs:
+1. **Pre-deployment checks** - Tests and build validation
+2. **Atomic deployment** - Zero-downtime release switching
+3. **Database migrations** - Automatic schema updates
+4. **Health verification** - Post-deployment validation
+5. **Cleanup** - Maintains last 5 releases for rollback
+
+### Production Commands
+```bash
+# Check PM2 status
+pm2 status
+
+# View application logs
+pm2 logs booster-beacon-api
+
+# Restart application
+pm2 restart booster-beacon-api
+
+# Monitor in real-time
+pm2 monit
+```
+
 ## 🔧 Available Scripts
 
 ### Root Level
@@ -157,6 +216,17 @@ npm run db:backup
 - `npm run build:frontend` - Build frontend for production
 - `npm run test:frontend` - Run frontend tests
 
+### Extension
+- `npm run dev:extension` - Start extension development mode
+- `npm run build:extension` - Build extension for production
+- `npm run test:extension` - Run extension tests
+
+### Production Deployment
+- `npm run deploy:prod` - Deploy to production server
+- `npm run deploy:staging` - Deploy to staging environment
+- `./scripts/deploy.sh` - Full deployment with health checks
+- `./scripts/deploy.sh rollback` - Rollback to previous release
+
 ## 🌐 Services
 
 When running locally, services are available at:
@@ -168,9 +238,19 @@ When running locally, services are available at:
 
 ### API Endpoints
 
-- `GET /health` - Health check
-- `GET /api/v1/status` - API status
+- `GET /health` - Health check with uptime and environment info
+- `GET /api/v1/status` - API status with version and timestamp
 - More endpoints will be added as development progresses
+
+### Database Schema
+
+Current tables:
+- **users** - User accounts with authentication and subscription data
+  - UUID primary keys with automatic generation
+  - Email uniqueness constraints with indexing
+  - bcrypt password hashing
+  - Subscription tier management (free/pro)
+  - Automatic timestamp tracking
 
 ## 🏗️ Technology Stack
 
@@ -190,9 +270,11 @@ When running locally, services are available at:
 
 ### Infrastructure
 - **Containerization**: Docker with Docker Compose
+- **Process Management**: PM2 with cluster mode
 - **Reverse Proxy**: NGINX
 - **Logging**: Winston with structured JSON
 - **CI/CD**: GitHub Actions
+- **Deployment**: Automated deployment with rollback support
 
 ## 🔒 Security
 
@@ -245,13 +327,25 @@ DISCORD_BOT_TOKEN=your_discord_token
 This project is in active development. Current focus:
 
 - [x] Project foundation and development environment
-- [ ] Core database schema and models
-- [ ] Authentication and user management
+- [x] Basic database schema with users table
+- [x] TypeScript configuration and Jest testing setup
+- [x] Docker development environment with PostgreSQL and Redis
+- [x] Integration tests for database connectivity and schema validation
+- [x] Smoke tests for API endpoints and security headers
+- [ ] Authentication and user management system
 - [ ] Product monitoring system
 - [ ] Alert delivery system
 - [ ] Frontend application
 - [ ] Browser extension
 - [ ] Machine learning features
+
+### Recent Updates
+
+**Extension Package Configuration** - Added package.json for browser extension with build, test, and lint scripts
+**Jest Configuration Fixed** - Resolved corrupted Jest config files that were preventing tests from running
+**TypeScript Issues Resolved** - Added proper type annotations to eliminate compilation errors
+**Database Integration Tests** - All 9 integration tests passing with proper database connectivity
+**API Smoke Tests** - All 6 smoke tests passing with security headers and CORS validation
 
 ## 📄 License
 

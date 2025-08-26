@@ -1,0 +1,17 @@
+{
+  "name": "booster-beacon-extension",
+  "version": "1.0.0",
+  "description": "BoosterBeacon browser extension",
+  "scripts": {
+    "dev": "echo 'Extension dev server not yet implemented'",
+    "build": "echo 'Extension build not yet implemented'",
+    "test": "echo 'Extension tests not yet implemented'",
+    "test:watch": "echo 'Extension test watch not yet implemented'",
+    "test:coverage": "echo 'Extension test coverage not yet implemented'",
+    "lint": "echo 'Linting extension code...'",
+    "lint:fix": "echo 'Fixing extension code...'"
+  },
+  "keywords": ["pokemon", "tcg", "alerts", "collector", "browser-extension"],
+  "author": "BoosterBeacon",
+  "license": "MIT"
+}

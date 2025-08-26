@@ -12,25 +12,31 @@
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
+    "dev:extension": "cd extension && npm run dev",
     "build": "npm run build:backend && npm run build:frontend && npm run build:extension",
     "build:backend": "cd backend && npm run build",
     "build:frontend": "cd frontend && npm run build",
     "build:extension": "cd extension && npm run build",
-    "test": "npm run test:backend && npm run test:frontend",
+    "test": "npm run test:backend && npm run test:frontend && npm run test:extension",
     "test:backend": "cd backend && npm test",
     "test:frontend": "cd frontend && npm test",
-    "test:watch": "concurrently \"npm run test:watch:backend\" \"npm run test:watch:frontend\"",
+    "test:extension": "cd extension && npm test",
+    "test:watch": "concurrently \"npm run test:watch:backend\" \"npm run test:watch:frontend\" \"npm run test:watch:extension\"",
     "test:watch:backend": "cd backend && npm run test:watch",
     "test:watch:frontend": "cd frontend && npm run test:watch",
-    "test:coverage": "npm run test:coverage:backend && npm run test:coverage:frontend",
+    "test:watch:extension": "cd extension && npm run test:watch",
+    "test:coverage": "npm run test:coverage:backend && npm run test:coverage:frontend && npm run test:coverage:extension",
     "test:coverage:backend": "cd backend && npm run test:coverage",
     "test:coverage:frontend": "cd frontend && npm run test:coverage",
-    "lint": "npm run lint:backend && npm run lint:frontend",
+    "test:coverage:extension": "cd extension && npm run test:coverage",
+    "lint": "npm run lint:backend && npm run lint:frontend && npm run lint:extension",
     "lint:backend": "cd backend && npm run lint",
     "lint:frontend": "cd frontend && npm run lint",
-    "lint:fix": "npm run lint:fix:backend && npm run lint:fix:frontend",
+    "lint:extension": "cd extension && npm run lint",
+    "lint:fix": "npm run lint:fix:backend && npm run lint:fix:frontend && npm run lint:fix:extension",
     "lint:fix:backend": "cd backend && npm run lint:fix",
     "lint:fix:frontend": "cd frontend && npm run lint:fix",
+    "lint:fix:extension": "cd extension && npm run lint:fix",
     "docker:dev": "docker-compose -f docker-compose.dev.yml up -d",
     "docker:dev:build": "docker-compose -f docker-compose.dev.yml up -d --build",
     "docker:dev:down": "docker-compose -f docker-compose.dev.yml down",
@@ -39,9 +45,23 @@
     "migrate:up": "cd backend && npm run migrate:up",
     "migrate:down": "cd backend && npm run migrate:down",
     "seed:dev": "cd backend && npm run seed:dev",
-    "prepare": "husky install"
+    "deploy:prod": "./scripts/deploy.sh",
+    "deploy:staging": "./scripts/deploy.sh staging",
+    "rollback": "./scripts/deploy.sh rollback",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:restart": "pm2 restart booster-beacon-api",
+    "pm2:stop": "pm2 stop booster-beacon-api",
+    "pm2:logs": "pm2 logs booster-beacon-api",
+    "pm2:monit": "pm2 monit",
+    "prepare": "node -e \"if (process.env.NODE_ENV !== 'production') require('husky').install()\""
   },
-  "keywords": ["pokemon", "tcg", "alerts", "collector", "monitoring"],
+  "keywords": [
+    "pokemon",
+    "tcg",
+    "alerts",
+    "collector",
+    "monitoring"
+  ],
   "author": "BoosterBeacon Team",
   "license": "MIT",
   "devDependencies": {
@@ -57,6 +77,10 @@
     "frontend/**/*.{ts,tsx,js,jsx}": [
       "npm run lint:fix:frontend",
       "npm run test:frontend -- --passWithNoTests"
+    ],
+    "extension/**/*.{ts,js}": [
+      "npm run lint:fix:extension",
+      "npm run test:extension -- --passWithNoTests"
     ]
   },
   "engines": {
