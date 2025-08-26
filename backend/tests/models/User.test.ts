@@ -1,5 +1,6 @@
 import { User } from '../../src/models/User';
 import { db } from '../../src/config/database';
+import { SubscriptionTier } from '../../src/types/subscription';
 
 // Mock the database connection for unit tests
 jest.mock('../../src/config/database', () => ({
@@ -78,7 +79,7 @@ describe('User Model', () => {
       const errors = user.validate({
         email: 'test@example.com',
         password_hash: 'validpassword123',
-        subscription_tier: 'free',
+        subscription_tier: SubscriptionTier.FREE,
         first_name: 'John',
         last_name: 'Doe'
       });

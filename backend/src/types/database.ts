@@ -1,10 +1,11 @@
 // Core database interface definitions for BoosterBeacon
+import { SubscriptionTier } from './subscription';
 
 export interface IUser {
   id: string;
   email: string;
   password_hash: string;
-  subscription_tier: 'free' | 'pro';
+  subscription_tier: SubscriptionTier;
   first_name?: string;
   last_name?: string;
   email_verified: boolean;
