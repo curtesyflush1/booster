@@ -77,9 +77,6 @@ describe('Product Controller', () => {
         });
 
         it('should validate search parameters', async () => {
-            // Mock should return undefined to trigger validation error
-            MockedProduct.searchWithFilters.mockResolvedValue(undefined as any);
-
             const response = await request(app)
                 .get('/api/products/search')
                 .query({
@@ -87,10 +84,10 @@ describe('Product Controller', () => {
                     page: -1, // Invalid
                     limit: 1000 // Too high
                 })
-                .expect(500); // Currently returns 500, should be 400 with proper validation
+                .expect(400);
 
-            // For now, just check that it fails - validation middleware needs to be implemented
-            expect(response.status).toBe(500);
+            expect(response.body.error.code).toBe('VALIDATION_ERROR');
+            expect(MockedProduct.searchWithFilters).not.toHaveBeenCalled();
         });
 
         it('should filter by category', async () => {

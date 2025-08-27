@@ -11,6 +11,7 @@ import { generalRateLimit } from './middleware/rateLimiter';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import productRoutes from './routes/products';
+import watchRoutes from './routes/watches';
 
 // Load environment variables
 dotenv.config();
@@ -62,6 +63,9 @@ app.use('/api/users', userRoutes);
 
 // Product catalog routes
 app.use('/api/products', productRoutes);
+
+// Watch management routes
+app.use('/api/watches', watchRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

@@ -1,33 +1,46 @@
-import dotenv from 'dotenv';
+/**
+ * Test setup file to handle global test configuration and cleanup
+ */
 
-// Load test environment variables
-dotenv.config({ path: '.env.test' });
+// Mock the intervals to prevent open handles in tests
+const originalSetInterval = global.setInterval;
+const originalClearInterval = global.clearInterval;
+const activeIntervals = new Set<NodeJS.Timeout>();
 
-// Set test environment
-process.env.NODE_ENV = 'test';
-process.env.LOG_LEVEL = 'error'; // Reduce log noise during tests
+// Override setInterval to track intervals
+global.setInterval = ((callback: (...args: any[]) => void, ms?: number, ...args: any[]) => {
+  const interval = originalSetInterval(callback, ms, ...args);
+  activeIntervals.add(interval);
+  return interval;
+}) as typeof setInterval;
 
-// Mock external services for unit tests
-jest.mock('redis', () => ({
-  createClient: jest.fn(() => ({
-    connect: jest.fn(),
-    disconnect: jest.fn(),
-    get: jest.fn(),
-    set: jest.fn(),
-    del: jest.fn(),
-    exists: jest.fn(),
-    expire: jest.fn()
-  }))
-}));
+// Override clearInterval to remove from tracking
+global.clearInterval = ((intervalId: NodeJS.Timeout) => {
+  activeIntervals.delete(intervalId);
+  return originalClearInterval(intervalId);
+}) as typeof clearInterval;
 
-// Global test setup
-beforeAll(async () => {
-  // Global setup logic here
+// Clean up all intervals after each test
+afterEach(() => {
+  activeIntervals.forEach(interval => {
+    originalClearInterval(interval);
+  });
+  activeIntervals.clear();
 });
 
-afterAll(async () => {
-  // Global cleanup logic here
+// Global test timeout
+jest.setTimeout(30000);
+
+// Suppress console warnings in tests unless explicitly needed
+const originalConsoleWarn = console.warn;
+const originalConsoleError = console.error;
+
+beforeAll(() => {
+  console.warn = jest.fn();
+  console.error = jest.fn();
 });
 
-// Increase timeout for all tests
-jest.setTimeout(10000);
+afterAll(() => {
+  console.warn = originalConsoleWarn;
+  console.error = originalConsoleError;
+});

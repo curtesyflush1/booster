@@ -22,6 +22,13 @@ const EVENT_WEIGHTS = {
   SEARCH: 0.5
 } as const;
 
+// Validation constants
+const VALIDATION_LIMITS = {
+  MAX_SEARCH_TERM_LENGTH: 200,
+  MAX_RESULT_COUNT: 10000,
+  MIN_RESULT_COUNT: 0
+} as const;
+
 interface AnalyticsConfig {
   batchSize?: number;
   processInterval?: number;
@@ -100,26 +107,50 @@ class AnalyticsService {
   }
 
   /**
-   * Validate product ID format (UUID)
+   * Validate product ID format (UUID v4)
    */
   private isValidProductId(productId: string): boolean {
     if (!productId || typeof productId !== 'string') {
       return false;
     }
-    // UUID v4 regex pattern
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(productId);
+    // More comprehensive UUID v4 regex pattern
+    const uuidV4Regex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidV4Regex.test(productId);
   }
 
   /**
-   * Track a product search event
+   * Track a product search event with enhanced validation
    */
   trackProductSearch(searchTerm: string, resultCount: number): void {
-    if (!searchTerm?.trim() || resultCount < 0) {
-      logger.warn('Invalid search parameters', { searchTerm, resultCount });
+    // Enhanced validation
+    if (!searchTerm?.trim()) {
+      logger.warn('Invalid search term: empty or whitespace only', { searchTerm });
       return;
     }
-    logger.info('Product search tracked', { searchTerm, resultCount });
+    
+    if (searchTerm.length > VALIDATION_LIMITS.MAX_SEARCH_TERM_LENGTH) {
+      logger.warn('Search term too long', { 
+        searchTerm: searchTerm.substring(0, 50) + '...', 
+        length: searchTerm.length,
+        maxLength: VALIDATION_LIMITS.MAX_SEARCH_TERM_LENGTH
+      });
+      return;
+    }
+    
+    if (resultCount < VALIDATION_LIMITS.MIN_RESULT_COUNT || resultCount > VALIDATION_LIMITS.MAX_RESULT_COUNT) {
+      logger.warn('Invalid result count', { 
+        resultCount, 
+        minCount: VALIDATION_LIMITS.MIN_RESULT_COUNT,
+        maxCount: VALIDATION_LIMITS.MAX_RESULT_COUNT
+      });
+      return;
+    }
+    
+    logger.info('Product search tracked', { 
+      searchTerm: searchTerm.trim(), 
+      resultCount,
+      searchLength: searchTerm.length
+    });
     // Could track search analytics here in the future
   }
 

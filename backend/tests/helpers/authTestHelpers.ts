@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { IUser } from '../../src/types/database';
 import { SubscriptionTier } from '../../src/types/subscription';
+import jwt from 'jsonwebtoken';
 
 export class AuthTestHelpers {
   static createMockUser(overrides: Partial<Omit<IUser, 'password_hash'>> = {}): Omit<IUser, 'password_hash'> {
@@ -82,3 +83,16 @@ export class AuthTestHelpers {
     });
   }
 }
+
+// Generate test JWT token
+export const generateTestToken = (userId: string): string => {
+  const payload = {
+    userId,
+    email: 'test@example.com',
+    subscriptionTier: 'free'
+  };
+
+  return jwt.sign(payload, process.env.JWT_SECRET || 'test-secret', {
+    expiresIn: '1h'
+  });
+};

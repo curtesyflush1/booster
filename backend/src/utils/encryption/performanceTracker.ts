@@ -9,16 +9,33 @@ interface PerformanceTrackerConfig {
     enableDetailedMetrics?: boolean; // Track min/max/percentiles
 }
 
-// Validation for configuration
+// Validation for configuration with more comprehensive checks
 const validateConfig = (config: PerformanceTrackerConfig): void => {
-    if (config.maxOperations !== undefined && config.maxOperations <= 0) {
-        throw new Error('maxOperations must be positive');
+    if (config.maxOperations !== undefined) {
+        if (!Number.isInteger(config.maxOperations) || config.maxOperations <= 0) {
+            throw new Error('maxOperations must be a positive integer');
+        }
+        if (config.maxOperations > 100000) {
+            throw new Error('maxOperations cannot exceed 100,000 to prevent memory issues');
+        }
     }
-    if (config.slowOperationThreshold !== undefined && config.slowOperationThreshold < 0) {
-        throw new Error('slowOperationThreshold must be non-negative');
+    
+    if (config.slowOperationThreshold !== undefined) {
+        if (typeof config.slowOperationThreshold !== 'number' || config.slowOperationThreshold < 0) {
+            throw new Error('slowOperationThreshold must be a non-negative number');
+        }
+        if (config.slowOperationThreshold > 60000) {
+            throw new Error('slowOperationThreshold cannot exceed 60 seconds');
+        }
     }
-    if (config.retentionPeriod !== undefined && config.retentionPeriod <= 0) {
-        throw new Error('retentionPeriod must be positive');
+    
+    if (config.retentionPeriod !== undefined) {
+        if (!Number.isInteger(config.retentionPeriod) || config.retentionPeriod <= 0) {
+            throw new Error('retentionPeriod must be a positive integer (milliseconds)');
+        }
+        if (config.retentionPeriod > 7 * 24 * 60 * 60 * 1000) { // 7 days
+            throw new Error('retentionPeriod cannot exceed 7 days to prevent memory issues');
+        }
     }
 };
 
@@ -50,6 +67,15 @@ export class PerformanceTracker {
     }
 
     async trackOperation<T>(operationName: string, operation: () => Promise<T>): Promise<T> {
+        // Validate operation name
+        if (!operationName || typeof operationName !== 'string') {
+            throw new Error('Operation name must be a non-empty string');
+        }
+        
+        if (operationName.length > 100) {
+            throw new Error('Operation name cannot exceed 100 characters');
+        }
+        
         // Prevent memory leaks by limiting tracked operations
         if (!this.metrics[operationName] && Object.keys(this.metrics).length >= this.config.maxOperations) {
             if (this.config.enableWarnings) {

@@ -18,6 +18,36 @@ export interface ApiResponse<T = any> {
   };
 }
 
+// Convenience functions for consistent API responses
+export const successResponse = <T>(
+  res: Response, 
+  data: T, 
+  message?: string, 
+  statusCode: number = 200
+): void => {
+  const response: any = { success: true, data };
+  if (message) response.message = message;
+  res.status(statusCode).json(response);
+};
+
+export const errorResponse = (
+  res: Response, 
+  statusCode: number, 
+  message: string, 
+  code?: string,
+  details?: any
+): void => {
+  res.status(statusCode).json({
+    success: false,
+    error: {
+      code: code || `HTTP_${statusCode}`,
+      message,
+      timestamp: new Date().toISOString(),
+      ...(details && { details })
+    }
+  });
+};
+
 export class ResponseHelper {
   static success<T>(res: Response, data: T, statusCode: number = 200): void {
     res.status(statusCode).json({ data });

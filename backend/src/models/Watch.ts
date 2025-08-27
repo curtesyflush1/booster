@@ -357,4 +357,20 @@ export class Watch extends BaseModel<IWatch> {
 
     return count;
   }
+
+  // Remove orphaned watches (watches without valid users)
+  static async cleanupOrphanedWatches(): Promise<number> {
+    try {
+      const count = await this.db(this.getTableName())
+        .whereNotIn('user_id', function() {
+          this.select('id').from('users');
+        })
+        .del();
+
+      return count;
+    } catch (error) {
+      logger.error('Error cleaning up orphaned watches:', error);
+      throw handleDatabaseError(error);
+    }
+  }
 }

@@ -1,12 +1,36 @@
-// Set NODE_ENV to test for all Jest tests
+/**
+ * Jest setup file for test environment configuration
+ */
+
+// Set test environment variables
 process.env.NODE_ENV = 'test';
+process.env.DATABASE_URL = 'sqlite::memory:';
+process.env.JWT_SECRET = 'test-jwt-secret';
+process.env.REDIS_URL = 'redis://localhost:6379';
 
-// Disable rate limiting in most tests (can be overridden per test)
-process.env.DISABLE_RATE_LIMITING = 'true';
+// Mock the database configuration to use SQLite in memory
+jest.mock('../src/config/database', () => ({
+  default: {
+    client: 'sqlite3',
+    connection: ':memory:',
+    useNullAsDefault: true,
+    pool: {
+      min: 0,
+      max: 1
+    },
+    migrations: {
+      directory: './migrations'
+    },
+    seeds: {
+      directory: './seeds'
+    }
+  }
+}));
 
-// Set test database URL if needed
-process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgresql://test:test@localhost:5432/booster_test';
+// Global test timeout
+jest.setTimeout(30000);
 
-// Set JWT secrets for testing
-process.env.JWT_SECRET = 'test-jwt-secret-key-for-testing-only';
-process.env.JWT_REFRESH_SECRET = 'test-jwt-refresh-secret-key-for-testing-only';
+// Suppress console output in tests
+console.error = jest.fn();
+console.warn = jest.fn();
+console.log = jest.fn();
