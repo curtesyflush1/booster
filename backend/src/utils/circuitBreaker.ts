@@ -58,7 +58,10 @@ export class CircuitBreaker {
     this.failureCount++;
     this.lastFailureTime = Date.now();
 
-    if (this.failureCount >= this.config.failureThreshold) {
+    if (this.state === CircuitState.HALF_OPEN) {
+      // Any failure in HALF_OPEN state should immediately open the circuit
+      this.state = CircuitState.OPEN;
+    } else if (this.failureCount >= this.config.failureThreshold) {
       this.state = CircuitState.OPEN;
     }
   }

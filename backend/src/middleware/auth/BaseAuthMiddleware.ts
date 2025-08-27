@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService } from '../../services/authService';
 import { logger } from '../../utils/logger';
-import { AuthResponseFactory } from '../../utils/authResponseFactory';
+
 
 export abstract class BaseAuthMiddleware {
   protected extractToken(req: Request): string | null {

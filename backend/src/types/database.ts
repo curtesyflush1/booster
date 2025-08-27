@@ -20,6 +20,7 @@ export interface IUser {
   retailer_credentials: Record<string, IRetailerCredential>;
   notification_settings: INotificationSettings;
   quiet_hours: IQuietHours;
+  push_subscriptions?: IPushSubscription[];
   timezone: string;
   zip_code?: string;
   preferences: Record<string, any>;
@@ -76,6 +77,17 @@ export interface IQuietHours {
   end_time: string; // HH:MM format
   timezone: string;
   days: number[]; // 0-6, Sunday = 0
+}
+
+export interface IPushSubscription {
+  id?: string;
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+  createdAt?: Date;
+  lastUsed?: Date;
 }
 
 export interface IRetailer {

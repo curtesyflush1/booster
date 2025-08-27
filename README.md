@@ -209,7 +209,8 @@ pm2 monit
 ### Backend
 - `npm run dev:backend` - Start backend in development mode
 - `npm run build:backend` - Build backend for production
-- `npm run test:backend` - Run backend tests
+- `npm run test:backend` - Run backend unit tests
+- `npm run test:integration` - Run backend integration tests
 
 ### Frontend
 - `npm run dev:frontend` - Start frontend development server
@@ -238,9 +239,33 @@ When running locally, services are available at:
 
 ### API Endpoints
 
+#### Core System
 - `GET /health` - Health check with uptime and environment info
 - `GET /api/v1/status` - API status with version and timestamp
-- More endpoints will be added as development progresses
+
+#### Watch Management
+- `GET /api/v1/watches` - Get user's watches with filtering and pagination
+- `POST /api/v1/watches` - Create a new product watch
+- `GET /api/v1/watches/:id` - Get specific watch details
+- `PUT /api/v1/watches/:id` - Update watch settings
+- `DELETE /api/v1/watches/:id` - Delete a watch
+- `PATCH /api/v1/watches/:id/toggle` - Toggle watch active status
+- `GET /api/v1/watches/stats` - Get user's watch statistics
+- `GET /api/v1/watches/export` - Export watches to CSV
+- `POST /api/v1/watches/import` - Bulk import watches from CSV
+
+#### Watch Packs
+- `GET /api/v1/watches/packs` - Get available watch packs
+- `GET /api/v1/watches/packs/popular` - Get popular watch packs
+- `GET /api/v1/watches/packs/:id` - Get watch pack details
+- `POST /api/v1/watches/packs/:id/subscribe` - Subscribe to watch pack
+- `DELETE /api/v1/watches/packs/:id/subscribe` - Unsubscribe from watch pack
+- `GET /api/v1/watches/packs/subscriptions` - Get user's subscriptions
+
+#### Health & Monitoring
+- `GET /api/v1/watches/:id/health` - Get watch health status
+- `GET /api/v1/watches/health/all` - Get all user watches health
+- `GET /api/v1/watches/metrics/performance` - Get watch performance metrics
 
 ### Database Schema
 
@@ -252,6 +277,31 @@ Current tables:
   - Subscription tier management (free/pro)
   - Automatic timestamp tracking
 
+- **watches** - Individual product monitoring subscriptions
+  - User-specific product watches with retailer filtering
+  - Price thresholds and location-based monitoring
+  - Alert preferences and delivery customization
+  - Health tracking and performance metrics
+
+- **watch_packs** - Curated collections of related products
+  - Pre-configured product bundles (e.g., "Latest Pokémon Sets")
+  - Auto-updating collections based on criteria
+  - Subscriber management and popularity tracking
+
+- **user_watch_packs** - User subscriptions to watch packs
+  - Subscription management with customization options
+  - Individual watch creation for pack products
+  - Subscription analytics and engagement tracking
+
+- **products** - Pokémon TCG product catalog
+  - Product metadata, pricing, and availability
+  - UPC codes and retailer-specific information
+  - Category classification and search indexing
+
+- **product_categories** - Product classification system
+  - Hierarchical category structure
+  - Search and filtering optimization
+
 ## 🏗️ Technology Stack
 
 ### Backend
@@ -259,6 +309,7 @@ Current tables:
 - **Framework**: Express.js with Helmet.js security
 - **Database**: PostgreSQL 15+ with Redis cache
 - **Authentication**: JWT tokens with bcrypt
+- **Retailer Integration**: Multi-retailer API and scraping with circuit breakers
 - **Testing**: Jest with Supertest
 
 ### Frontend
@@ -302,8 +353,21 @@ JWT_SECRET=your_secret_key_here
 
 # External Services
 AWS_ACCESS_KEY_ID=your_aws_key
+AWS_SECRET_ACCESS_KEY=your_aws_secret
+AWS_REGION=us-east-1
+SES_CONFIGURATION_SET=boosterbeacon-emails
+
+# Twilio SMS
 TWILIO_ACCOUNT_SID=your_twilio_sid
+TWILIO_AUTH_TOKEN=your_twilio_token
+TWILIO_PHONE_NUMBER=+1234567890
+
+# Discord Integration
 DISCORD_BOT_TOKEN=your_discord_token
+
+# Email Configuration
+FROM_EMAIL=alerts@boosterbeacon.com
+FROM_NAME=BoosterBeacon
 ```
 
 ## 🤝 Contributing
@@ -324,28 +388,63 @@ DISCORD_BOT_TOKEN=your_discord_token
 
 ## 📋 Project Status
 
-This project is in active development. Current focus:
+This project is in active development. **Major systems completed:**
 
 - [x] Project foundation and development environment
-- [x] Basic database schema with users table
-- [x] TypeScript configuration and Jest testing setup
-- [x] Docker development environment with PostgreSQL and Redis
-- [x] Integration tests for database connectivity and schema validation
-- [x] Smoke tests for API endpoints and security headers
-- [ ] Authentication and user management system
-- [ ] Product monitoring system
-- [ ] Alert delivery system
+- [x] Core database schema and models
+- [x] Authentication and user management system
+- [x] User preferences and settings management
+- [x] Product catalog and search functionality
+- [x] **Watch management system** ✅ **COMPLETED**
+- [x] **Retailer integration and monitoring system** ✅ **COMPLETED**
+- [x] **Alert processing and delivery system** ✅ **COMPLETED**
+- [ ] Web push notification system **← CURRENT FOCUS**
+- [ ] Email notification system with Amazon SES
 - [ ] Frontend application
 - [ ] Browser extension
 - [ ] Machine learning features
 
 ### Recent Updates
 
-**Extension Package Configuration** - Added package.json for browser extension with build, test, and lint scripts
-**Jest Configuration Fixed** - Resolved corrupted Jest config files that were preventing tests from running
-**TypeScript Issues Resolved** - Added proper type annotations to eliminate compilation errors
-**Database Integration Tests** - All 9 integration tests passing with proper database connectivity
-**API Smoke Tests** - All 6 smoke tests passing with security headers and CORS validation
+**Watch Management System** ✨ **MAJOR UPDATE** - Complete watch management system implemented:
+- Individual product watches with retailer filtering and price thresholds
+- Watch Packs for curated product collections with one-click subscriptions
+- CSV import/export for bulk watch management
+- Health monitoring and performance metrics
+- Advanced filtering, pagination, and search capabilities
+- Comprehensive validation and error handling
+
+**Enhanced API Coverage** - 20+ new endpoints for watch and watch pack management
+**Robust Testing** - Comprehensive test coverage for all watch management features
+**Performance Optimized** - Efficient database queries with pagination and caching
+**Admin Features** - System-wide health monitoring and cleanup utilities
+
+**Retailer Integration System** ✨ **MAJOR UPDATE** - Complete retailer monitoring system implemented:
+- Multi-retailer support: Best Buy (API), Walmart (API), Costco (scraping), Sam's Club (scraping)
+- Circuit breaker pattern for resilient API handling and automatic failure recovery
+- Polite scraping with rate limiting and compliance with retailer terms of service
+- Comprehensive health monitoring and performance metrics for all retailers
+- Advanced error handling with retry logic and exponential backoff
+- Rate limiting compliance testing to ensure respectful API usage
+
+**Alert Processing & Delivery System** ✨ **MAJOR UPDATE** - Complete alert system implemented:
+- **Multi-channel delivery**: Web Push, Email, SMS (Pro), and Discord (Pro) notifications
+- **Intelligent processing**: Deduplication, rate limiting, and spam prevention
+- **Smart scheduling**: Quiet hours and user preference filtering
+- **Priority-based alerts**: Automatic priority calculation based on product popularity and alert type
+- **Retry logic**: Automatic retry with exponential backoff for failed deliveries
+- **Rich templates**: HTML emails, Discord embeds, and formatted SMS messages
+- **Delivery tracking**: Comprehensive analytics and delivery status monitoring
+- **Circuit breaker**: Resilient external service integration with automatic recovery
+
+## 📚 Documentation
+
+- **[Watch Management Guide](docs/watch-management.md)** - Complete guide to the watch management system
+- **[Retailer Integration Guide](docs/retailer-integration.md)** - Multi-retailer monitoring system documentation
+- **[Alert System Guide](docs/alert-system.md)** - Complete alert processing and delivery system documentation
+- **[API Reference](docs/api-reference.md)** - Comprehensive API documentation
+- **[Deployment Guide](docs/deployment.md)** - Production deployment instructions
+- **[Changelog](docs/CHANGELOG.md)** - Detailed release history and feature updates
 
 ## 📄 License
 
