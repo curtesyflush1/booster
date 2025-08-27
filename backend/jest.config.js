@@ -2,6 +2,7 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   setupFiles: ['<rootDir>/tests/jest.setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: [
     '**/__tests__/**/*.ts',
@@ -19,11 +20,7 @@ module.exports = {
     '!src/**/*.spec.ts'
   ],
   coverageDirectory: 'coverage',
-  coverageReporters: [
-    'text',
-    'lcov',
-    'html'
-  ],
+  coverageReporters: ['text', 'lcov', 'html'],
   coverageThreshold: {
     global: {
       branches: 15,
@@ -32,11 +29,22 @@ module.exports = {
       statements: 40
     }
   },
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-  testTimeout: 10000,
-  verbose: true,
+  testTimeout: 15000,
+  verbose: false,
   forceExit: true,
   clearMocks: true,
   resetMocks: true,
-  restoreMocks: true
+  restoreMocks: true,
+  detectOpenHandles: true,
+  maxWorkers: 1,
+  // Prevent memory leaks
+  logHeapUsage: true,
+  // Handle async operations better
+  testEnvironmentOptions: {
+    node: {
+      experimental: {
+        wasm: false
+      }
+    }
+  }
 };

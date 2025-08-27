@@ -134,6 +134,9 @@ export class Alert extends BaseModel<IAlert> {
       status?: string;
       type?: string;
       unread_only?: boolean;
+      search?: string;
+      start_date?: Date;
+      end_date?: Date;
       page?: number;
       limit?: number;
     } = {}
@@ -143,6 +146,9 @@ export class Alert extends BaseModel<IAlert> {
         status,
         type,
         unread_only = false,
+        search,
+        start_date,
+        end_date,
         page = 1,
         limit = 20
       } = options;
@@ -159,6 +165,18 @@ export class Alert extends BaseModel<IAlert> {
       }
       if (unread_only) {
         query = query.whereNull('read_at');
+      }
+      if (search) {
+        query = query.where(function() {
+          this.whereRaw("data->>'product_name' ILIKE ?", [`%${search}%`])
+              .orWhereRaw("data->>'retailer_name' ILIKE ?", [`%${search}%`]);
+        });
+      }
+      if (start_date) {
+        query = query.where('created_at', '>=', start_date);
+      }
+      if (end_date) {
+        query = query.where('created_at', '<=', end_date);
       }
 
       return this.getPaginatedResults<IAlert>(query, page, limit, 'created_at', 'desc');

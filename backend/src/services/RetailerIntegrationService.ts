@@ -139,6 +139,52 @@ export class RetailerIntegrationService {
   }
 
   /**
+   * Get all retailers with their basic information
+   */
+  async getAllRetailers(): Promise<Array<{
+    id: string;
+    name: string;
+    slug: string;
+    isActive: boolean;
+    type: string;
+    logoUrl?: string;
+    website?: string;
+    healthStatus?: RetailerHealthStatus;
+  }>> {
+    const retailers = Array.from(this.retailers.entries()).map(([id, instance]) => ({
+      id,
+      name: instance.config.name,
+      slug: instance.config.slug,
+      isActive: instance.config.isActive,
+      type: instance.config.type,
+      logoUrl: this.getRetailerLogoUrl(instance.config.slug),
+      website: this.getRetailerWebsite(instance.config.slug)
+    }));
+
+    return retailers;
+  }
+
+  private getRetailerLogoUrl(slug: string): string {
+    const logoMap: Record<string, string> = {
+      'best-buy': '/images/retailers/bestbuy-logo.png',
+      'walmart': '/images/retailers/walmart-logo.png',
+      'costco': '/images/retailers/costco-logo.png',
+      'sams-club': '/images/retailers/samsclub-logo.png'
+    };
+    return logoMap[slug] || '/images/retailers/default-logo.png';
+  }
+
+  private getRetailerWebsite(slug: string): string {
+    const websiteMap: Record<string, string> = {
+      'best-buy': 'https://www.bestbuy.com',
+      'walmart': 'https://www.walmart.com',
+      'costco': 'https://www.costco.com',
+      'sams-club': 'https://www.samsclub.com'
+    };
+    return websiteMap[slug] || '';
+  }
+
+  /**
    * Check product availability across all active retailers
    */
   async checkProductAvailability(

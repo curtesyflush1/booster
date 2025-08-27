@@ -413,6 +413,133 @@ mockEmailService.sendAlert.mockResolvedValue({
 - **Service Down:** External service unavailable
 - **Rate Limit Hit:** Approaching external service limits
 
+## Alert Management UI
+
+### Alert Inbox
+The alert inbox provides a comprehensive interface for managing all user alerts:
+
+#### Features
+- **Read/Unread Status:** Visual indicators and filtering for unread alerts
+- **Bulk Operations:** Select multiple alerts for batch actions (mark as read, delete)
+- **Advanced Filtering:** Filter by status, type, date range, and search terms
+- **Pagination:** Efficient loading of large alert histories
+- **Mobile Responsive:** Touch-friendly interface optimized for mobile devices
+
+#### Alert Display
+```typescript
+interface AlertDisplay {
+  id: string;
+  type: AlertType;
+  priority: AlertPriority;
+  productName: string;
+  retailerName: string;
+  price: number;
+  isRead: boolean;
+  createdAt: string;
+  timeAgo: string;
+  actions: AlertAction[];
+}
+```
+
+#### Filtering Options
+- **Status Filter:** All, Pending, Sent, Failed, Read
+- **Type Filter:** Restock, Price Drop, Low Stock, Pre-order
+- **Date Range:** Custom start and end dates
+- **Search:** Product name or retailer name
+- **Read Status:** All alerts or unread only
+
+### Alert Analytics Dashboard
+
+#### Engagement Metrics
+- **Total Alerts:** Lifetime alert count
+- **Click-Through Rate:** Percentage of alerts clicked
+- **Read Rate:** Percentage of alerts read
+- **Daily Breakdown:** Activity charts with trend analysis
+
+#### Analytics Components
+```typescript
+interface AlertAnalytics {
+  period: {
+    days: number;
+    startDate: string;
+    endDate: string;
+  };
+  summary: {
+    totalAlerts: number;
+    sentAlerts: number;
+    clickedAlerts: number;
+    readAlerts: number;
+    clickThroughRate: number;
+    readRate: number;
+  };
+  dailyBreakdown: DailyMetrics[];
+}
+```
+
+#### Visual Components
+- **Summary Cards:** Key metrics with trend indicators
+- **Daily Activity Chart:** Bar chart showing alert volume over time
+- **Engagement Insights:** Performance analysis and recommendations
+- **Period Selection:** 7 days, 30 days, 90 days, 1 year
+
+### API Endpoints
+
+#### Alert Management
+```typescript
+// Get user alerts with filtering
+GET /api/alerts?page=1&limit=20&status=sent&type=restock&unread_only=true
+
+// Get specific alert
+GET /api/alerts/:id
+
+// Mark alert as read
+PATCH /api/alerts/:id/read
+
+// Mark alert as clicked
+PATCH /api/alerts/:id/clicked
+
+// Bulk mark as read
+PATCH /api/alerts/bulk/read
+Body: { alertIds: string[] }
+
+// Delete alert
+DELETE /api/alerts/:id
+
+// Get alert statistics
+GET /api/alerts/stats/summary
+
+// Get engagement analytics
+GET /api/alerts/analytics/engagement?days=30
+```
+
+#### Response Formats
+```typescript
+// Alert list response
+interface AlertListResponse {
+  alerts: Alert[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
+// Alert statistics response
+interface AlertStatsResponse {
+  stats: {
+    total: number;
+    unread: number;
+    byType: Record<string, number>;
+    byStatus: Record<string, number>;
+    clickThroughRate: number;
+    recentAlerts: number;
+  };
+}
+```
+
 ## Future Enhancements
 
 ### Planned Features
@@ -420,7 +547,7 @@ mockEmailService.sendAlert.mockResolvedValue({
 - **Personalization:** User behavior-based customization
 - **Rich Media:** Product images in notifications
 - **Interactive Alerts:** In-notification actions
-- **Bulk Operations:** Batch alert management
+- **Advanced Analytics:** Conversion tracking and ROI analysis
 
 ### Channel Expansions
 - **Slack Integration:** Workspace notifications

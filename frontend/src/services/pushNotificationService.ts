@@ -187,7 +187,7 @@ class PushNotificationService {
       // Create new subscription
       const subscription = await this.serviceWorkerRegistration!.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: this.urlBase64ToUint8Array(this.vapidPublicKey!)
+        applicationServerKey: this.urlBase64ToUint8Array(this.vapidPublicKey!) as BufferSource
       });
 
       console.log('New push subscription created:', subscription);

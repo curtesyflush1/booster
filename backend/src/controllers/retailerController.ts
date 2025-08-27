@@ -12,6 +12,24 @@ export class RetailerController {
   }
 
   /**
+   * Get all retailers
+   * GET /api/retailers
+   */
+  getAllRetailers = async (req: Request, res: Response): Promise<void> => {
+    try {
+      logger.info('Fetching all retailers');
+
+      const retailers = await this.retailerService.getAllRetailers();
+
+      successResponse(res, retailers);
+
+    } catch (error) {
+      logger.error('Error fetching retailers:', error);
+      errorResponse(res, 500, 'Failed to fetch retailers');
+    }
+  };
+
+  /**
    * Check product availability across retailers
    * GET /api/retailers/availability/:productId
    */

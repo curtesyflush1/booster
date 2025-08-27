@@ -1,0 +1,263 @@
+import React, { Suspense, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { UIProvider } from './context/UIContext';
+import OptimizedLayout from './components/OptimizedLayout';
+import LoadingSpinner from './components/LoadingSpinner';
+import ErrorBoundary from './components/ErrorBoundary';
+
+// Page Components (lazy loaded)
+const HomePage = React.lazy(() => import('./pages/HomePage'));
+const LoginPage = React.lazy(() => import('./pages/LoginPage'));
+const RegisterPage = React.lazy(() => import('./pages/RegisterPage'));
+const DashboardPage = React.lazy(() => import('./pages/DashboardPage'));
+const ProductsPage = React.lazy(() => import('./pages/ProductsPage'));
+const WatchesPage = React.lazy(() => import('./pages/WatchesPage'));
+const AlertsPage = React.lazy(() => import('./pages/AlertsPage'));
+const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
+const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
+const PricingPage = React.lazy(() => import('./pages/PricingPage'));
+const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage'));
+
+// Protected Route Component
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+ProtectedRoute.displayName = 'ProtectedRoute';
+
+// Public Route Component (redirect if authenticated)
+const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+PublicRoute.displayName = 'PublicRoute';
+
+// PWA Update Component
+const PWAUpdatePrompt: React.FC = React.memo(() => {
+  const [showUpdatePrompt, setShowUpdatePrompt] = React.useState(false);
+
+  useEffect(() => {
+    // Listen for service worker updates
+    const handleSWUpdate = () => {
+      setShowUpdatePrompt(true);
+    };
+
+    window.addEventListener('sw-update-available', handleSWUpdate);
+    return () => window.removeEventListener('sw-update-available', handleSWUpdate);
+  }, []);
+
+  const handleUpdate = () => {
+    window.location.reload();
+  };
+
+  const handleDismiss = () => {
+    setShowUpdatePrompt(false);
+  };
+
+  if (!showUpdatePrompt) return null;
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50 max-w-sm">
+      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4">
+        <div className="flex items-start space-x-3">
+          <div className="flex-shrink-0">
+            <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+              </svg>
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-sm font-medium text-gray-900">Update Available</h4>
+            <p className="text-sm text-gray-500">A new version of BoosterBeacon is available.</p>
+          </div>
+        </div>
+        <div className="mt-4 flex space-x-2">
+          <button
+            onClick={handleUpdate}
+            className="btn btn-primary text-xs px-3 py-1"
+          >
+            Update Now
+          </button>
+          <button
+            onClick={handleDismiss}
+            className="btn btn-ghost text-xs px-3 py-1"
+          >
+            Later
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// Route Configuration
+interface RouteConfig {
+  path: string;
+  element: React.ComponentType;
+  requiresAuth?: boolean;
+  requiresLayout?: boolean;
+  isPublicOnly?: boolean;
+}
+
+const routeConfig: RouteConfig[] = [
+  // Public Routes
+  { path: '/', element: HomePage },
+  { path: '/pricing', element: PricingPage },
+  
+  // Auth Routes (redirect if authenticated)
+  { path: '/login', element: LoginPage, isPublicOnly: true },
+  { path: '/register', element: RegisterPage, isPublicOnly: true },
+  
+  // Protected Routes with Layout
+  { path: '/dashboard', element: DashboardPage, requiresAuth: true, requiresLayout: true },
+  { path: '/products', element: ProductsPage, requiresAuth: true, requiresLayout: true },
+  { path: '/watches', element: WatchesPage, requiresAuth: true, requiresLayout: true },
+  { path: '/alerts', element: AlertsPage, requiresAuth: true, requiresLayout: true },
+  { path: '/profile', element: ProfilePage, requiresAuth: true, requiresLayout: true },
+  { path: '/settings', element: SettingsPage, requiresAuth: true, requiresLayout: true },
+];
+
+// Route Element Factory
+const createRouteElement = (config: RouteConfig): React.ReactElement => {
+  const { element: Component, requiresAuth, requiresLayout, isPublicOnly } = config;
+  
+  let element = <Component />;
+  
+  if (requiresLayout) {
+    element = <OptimizedLayout>{element}</OptimizedLayout>;
+  }
+  
+  if (requiresAuth) {
+    element = <ProtectedRoute>{element}</ProtectedRoute>;
+  } else if (isPublicOnly) {
+    element = <PublicRoute>{element}</PublicRoute>;
+  }
+  
+  return element;
+};
+
+// App Routes Component
+const AppRoutes: React.FC = () => {
+  return (
+    <Routes>
+      {routeConfig.map((config) => (
+        <Route
+          key={config.path}
+          path={config.path}
+          element={createRouteElement(config)}
+        />
+      ))}
+      {/* 404 Route */}
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
+  );
+};
+
+// Error Logging Service
+const logError = async (error: {
+  message: string;
+  stack?: string;
+  url: string;
+  timestamp: string;
+  type: 'unhandled-rejection' | 'global-error';
+}) => {
+  if (!import.meta.env.PROD) return;
+  
+  try {
+    await fetch('/api/errors', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(error)
+    });
+  } catch {
+    // Silently fail - don't create error loops
+  }
+};
+
+// Global Error Handler Hook
+const useGlobalErrorHandler = () => {
+  useEffect(() => {
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error('Unhandled promise rejection:', event.reason);
+
+      // Only show user notification for non-auth errors
+      if (!event.reason?.message?.includes('auth')) {
+        console.warn('An unexpected error occurred. Please try again.');
+      }
+
+      logError({
+        message: event.reason?.message || 'Unhandled promise rejection',
+        stack: event.reason?.stack,
+        url: window.location.href,
+        timestamp: new Date().toISOString(),
+        type: 'unhandled-rejection'
+      });
+    };
+
+    const handleError = (event: ErrorEvent) => {
+      console.error('Global error:', event.error);
+
+      logError({
+        message: event.error?.message || 'Unknown error',
+        stack: event.error?.stack,
+        url: window.location.href,
+        timestamp: new Date().toISOString(),
+        type: 'global-error'
+      });
+    };
+
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    window.addEventListener('error', handleError);
+
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      window.removeEventListener('error', handleError);
+    };
+  }, []);
+};
+
+// Main App Component
+const App: React.FC = () => {
+  useGlobalErrorHandler();
+
+  return (
+    <ErrorBoundary>
+      <AuthProvider>
+        <UIProvider>
+          <Router>
+            <div className="min-h-screen bg-background-primary">
+              <Suspense fallback={<LoadingSpinner />}>
+                <AppRoutes />
+              </Suspense>
+              <PWAUpdatePrompt />
+            </div>
+          </Router>
+        </UIProvider>
+      </AuthProvider>
+    </ErrorBoundary>
+  );
+};
+
+export default App;

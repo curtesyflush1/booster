@@ -24,8 +24,25 @@ export interface IUser {
   timezone: string;
   zip_code?: string;
   preferences: Record<string, any>;
+  // Subscription billing fields
+  stripe_customer_id?: string;
+  subscription_id?: string;
+  subscription_status?: 'active' | 'canceled' | 'past_due' | 'unpaid' | 'trialing';
+  subscription_start_date?: Date;
+  subscription_end_date?: Date;
+  trial_end_date?: Date;
+  cancel_at_period_end?: boolean;
+  usage_stats?: IUsageStats;
+  billing_address?: IAddress;
   created_at: Date;
   updated_at: Date;
+}
+
+export interface IUsageStats {
+  watches_used: number;
+  alerts_sent: number;
+  api_calls: number;
+  last_reset: string | null;
 }
 
 export interface IAddress {

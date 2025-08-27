@@ -1,0 +1,283 @@
+/* BoosterBeacon Extension Content Styles */
+
+/* Floating Action Button */
+.booster-beacon-fab {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.booster-beacon-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+.bb-fab-icon {
+  font-size: 24px;
+  color: white;
+}
+
+.bb-fab-tooltip {
+  position: absolute;
+  right: 70px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.booster-beacon-fab:hover .bb-fab-tooltip {
+  opacity: 1;
+}
+
+/* Product UI Widget */
+.booster-beacon-product-ui {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 320px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  z-index: 10001;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.bb-product-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.bb-logo {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.bb-close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.bb-close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.bb-product-info {
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.bb-product-info h4 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  line-height: 1.4;
+}
+
+.bb-price {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #059669;
+}
+
+.bb-actions {
+  padding: 20px;
+  display: flex;
+  gap: 12px;
+}
+
+.bb-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.bb-btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.bb-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.bb-btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.bb-btn-secondary:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+}
+
+/* Quick Actions Menu */
+.bb-quick-actions {
+  position: fixed;
+  bottom: 90px;
+  right: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  z-index: 10002;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  min-width: 200px;
+}
+
+.bb-menu-header {
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.bb-menu-item {
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 14px;
+  color: #374151;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.bb-menu-item:last-child {
+  border-bottom: none;
+}
+
+.bb-menu-item:hover {
+  background-color: #f9fafb;
+}
+
+/* Notifications */
+.bb-notification {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 10003;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: bb-slide-in 0.3s ease-out;
+}
+
+.bb-notification-success {
+  background: #10b981;
+  color: white;
+}
+
+.bb-notification-error {
+  background: #ef4444;
+  color: white;
+}
+
+.bb-notification-info {
+  background: #3b82f6;
+  color: white;
+}
+
+@keyframes bb-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .booster-beacon-product-ui {
+    width: calc(100vw - 40px);
+    right: 20px;
+    left: 20px;
+  }
+  
+  .bb-quick-actions {
+    width: calc(100vw - 40px);
+    right: 20px;
+    left: 20px;
+  }
+  
+  .bb-actions {
+    flex-direction: column;
+  }
+  
+  .bb-btn {
+    flex: none;
+  }
+}
+
+/* Ensure our styles don't conflict with retailer sites */
+.booster-beacon-fab *,
+.booster-beacon-product-ui *,
+.bb-quick-actions *,
+.bb-notification * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Hide our UI when printing */
+@media print {
+  .booster-beacon-fab,
+  .booster-beacon-product-ui,
+  .bb-quick-actions,
+  .bb-notification {
+    display: none !important;
+  }
+}

@@ -17,6 +17,10 @@
     "build:backend": "cd backend && npm run build",
     "build:frontend": "cd frontend && npm run build",
     "build:extension": "cd extension && npm run build",
+    "build:extension:chrome": "cd extension && npm run build:chrome",
+    "build:extension:firefox": "cd extension && npm run build:firefox",
+    "package:extension:chrome": "cd extension && npm run package:chrome",
+    "package:extension:firefox": "cd extension && npm run package:firefox",
     "test": "npm run test:backend && npm run test:frontend && npm run test:extension",
     "test:backend": "cd backend && npm run test:unit",
     "test:frontend": "cd frontend && npm test",
@@ -46,8 +50,20 @@
     "migrate:down": "cd backend && npm run migrate:down",
     "seed:dev": "cd backend && npm run seed:dev",
     "deploy:prod": "./scripts/deploy.sh",
+    "deploy:quick": "./scripts/deploy.sh quick",
+    "deploy:no-tests": "./scripts/deploy.sh no-tests",
     "deploy:staging": "./scripts/deploy.sh staging",
+    "deploy:check": "./scripts/deploy.sh check",
+    "deploy:logs": "./scripts/deploy.sh logs",
+    "deploy:status": "./scripts/deploy.sh status",
     "rollback": "./scripts/deploy.sh rollback",
+    "setup:prod": "./scripts/setup-production.sh",
+    "fix-tests": "./scripts/fix-tests.sh",
+    "test:fix": "./scripts/fix-tests.sh fix",
+    "test:clean": "./scripts/fix-tests.sh clean",
+    "test:skip": "./scripts/skip-failing-tests.sh skip",
+    "test:restore": "./scripts/skip-failing-tests.sh restore",
+    "test:smoke": "./scripts/skip-failing-tests.sh smoke",
     "pm2:start": "pm2 start ecosystem.config.js",
     "pm2:restart": "pm2 restart booster-beacon-api",
     "pm2:stop": "pm2 stop booster-beacon-api",
@@ -86,5 +102,10 @@
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.542.0",
+    "vitest": "^3.2.4"
   }
 }

@@ -1,0 +1,183 @@
+/**
+ * Add subscription and billing management fields
+ * @param { import("knex").Knex } knex
+ * @returns { Promise<void> }
+ */
+exports.up = function(knex) {
+  return knex.schema
+    // Add subscription fields to users table
+    .alterTable('users', function (table) {
+      table.string('stripe_customer_id', 255).unique().nullable();
+      table.string('subscription_id', 255).unique().nullable();
+      table.enu('subscription_status', ['active', 'canceled', 'past_due', 'unpaid', 'trialing']).nullable();
+      table.timestamp('subscription_start_date').nullable();
+      table.timestamp('subscription_end_date').nullable();
+      table.timestamp('trial_end_date').nullable();
+      table.boolean('cancel_at_period_end').notNullable().defaultTo(false);
+      table.jsonb('usage_stats').notNullable().defaultTo(JSON.stringify({
+        watches_used: 0,
+        alerts_sent: 0,
+        api_calls: 0,
+        last_reset: null
+      }));
+      table.jsonb('billing_address').notNullable().defaultTo(JSON.stringify({}));
+      
+      table.index('stripe_customer_id');
+      table.index('subscription_id');
+      table.index('subscription_status');
+      
+      // Add constraint to ensure subscription fields are consistent
+      table.check('subscription_consistency', knex.raw(`
+        (subscription_id IS NULL AND subscription_status IS NULL) OR 
+        (subscription_id IS NOT NULL AND subscription_status IS NOT NULL)
+      `));
+    })
+    
+    // Create subscription_plans table
+    .createTable('subscription_plans', function (table) {
+      table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.string('name', 100).notNullable();
+      table.string('slug', 50).notNullable().unique();
+      table.text('description').nullable();
+      table.decimal('price', 10, 2).notNullable();
+      table.enu('billing_period', ['monthly', 'yearly']).notNullable();
+      table.string('stripe_price_id', 255).unique().nullable();
+      table.jsonb('features').notNullable().defaultTo(JSON.stringify([]));
+      table.jsonb('limits').notNullable().defaultTo(JSON.stringify({
+        max_watches: null,
+        max_alerts_per_day: null,
+        api_rate_limit: null
+      }));
+      table.boolean('is_active').notNullable().defaultTo(true);
+      table.integer('trial_days').notNullable().defaultTo(0);
+      table.timestamps(true, true);
+      
+      table.index('slug');
+      table.index('stripe_price_id');
+      table.index('is_active');
+      table.index(['is_active', 'billing_period']); // Composite index for common queries
+      
+      // Business constraints
+      table.check('price_positive', knex.raw('price >= 0'));
+      table.check('trial_days_non_negative', knex.raw('trial_days >= 0'));
+      table.check('slug_format', knex.raw("slug ~ '^[a-z0-9-]+$'"));
+    })
+    
+    // Create subscription_usage table for tracking usage
+    .createTable('subscription_usage', function (table) {
+      table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
+      table.enu('usage_type', ['watch_created', 'alert_sent', 'api_call', 'sms_sent', 'discord_sent']).notNullable();
+      table.integer('quantity').notNullable().defaultTo(1);
+      table.jsonb('metadata').notNullable().defaultTo(JSON.stringify({}));
+      table.date('usage_date').notNullable();
+      table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
+      
+      // Optimized indexes for common query patterns
+      table.index('user_id');
+      table.index('usage_type');
+      table.index('usage_date');
+      table.index(['user_id', 'usage_date']); // For daily usage queries
+      table.index(['user_id', 'usage_type', 'usage_date']); // For specific usage type queries
+      table.index(['usage_date', 'usage_type']); // For analytics queries
+      
+      // Business constraints
+      table.check('quantity_positive', knex.raw('quantity > 0'));
+      table.unique(['user_id', 'usage_type', 'usage_date'], 'unique_daily_usage');
+    })
+    
+    // Create billing_events table for tracking billing history
+    .createTable('billing_events', function (table) {
+      table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
+      table.enu('event_type', [
+        'subscription_created',
+        'subscription_updated', 
+        'subscription_canceled',
+        'payment_succeeded',
+        'payment_failed',
+        'invoice_created',
+        'trial_started',
+        'trial_ended'
+      ]).notNullable();
+      table.string('stripe_event_id', 255).unique().nullable();
+      table.jsonb('event_data').notNullable().defaultTo(JSON.stringify({}));
+      table.decimal('amount', 10, 2).nullable();
+      table.string('currency', 3).notNullable().defaultTo('USD');
+      table.timestamp('event_date').notNullable().defaultTo(knex.fn.now());
+      table.timestamps(true, true);
+      
+      // Optimized indexes for billing queries
+      table.index('user_id');
+      table.index('event_type');
+      table.index('stripe_event_id');
+      table.index('event_date');
+      table.index(['user_id', 'event_date']); // For user billing history
+      table.index(['event_type', 'event_date']); // For analytics
+      
+      // Business constraints
+      table.check('amount_non_negative', knex.raw('amount IS NULL OR amount >= 0'));
+      table.check('currency_format', knex.raw("currency ~ '^[A-Z]{3}$'"));
+    })
+    
+    // Create conversion_analytics table for tracking subscription conversions
+    .createTable('conversion_analytics', function (table) {
+      table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
+      table.enu('event_type', [
+        'signup',
+        'pricing_page_view',
+        'upgrade_clicked',
+        'trial_started',
+        'trial_converted',
+        'subscription_canceled',
+        'subscription_reactivated'
+      ]).notNullable();
+      table.string('source').defaultTo('direct'); // utm_source, referrer, etc.
+      table.string('medium').defaultTo('organic'); // utm_medium
+      table.string('campaign'); // utm_campaign
+      table.jsonb('metadata').defaultTo(JSON.stringify({}));
+      table.timestamp('event_date').defaultTo(knex.fn.now());
+      
+      table.index('user_id');
+      table.index('event_type');
+      table.index('source');
+      table.index('event_date');
+    });
+};
+
+/**
+ * Rollback subscription and billing fields
+ * @param { import("knex").Knex } knex
+ * @returns { Promise<void> }
+ */
+exports.down = function(knex) {
+  return knex.schema
+    // Drop new tables
+    .dropTableIfExists('conversion_analytics')
+    .dropTableIfExists('billing_events')
+    .dropTableIfExists('subscription_usage')
+    .dropTableIfExists('subscription_plans')
+    
+    // Remove subscription fields from users table
+    .alterTable('users', function (table) {
+      // Drop constraints first (if they exist)
+      table.dropChecks('subscription_consistency');
+      
+      // Drop indexes (use dropIndex with array for safety)
+      table.dropIndex(['stripe_customer_id']);
+      table.dropIndex(['subscription_id']);
+      table.dropIndex(['subscription_status']);
+      
+      // Drop columns
+      table.dropColumn('stripe_customer_id');
+      table.dropColumn('subscription_id');
+      table.dropColumn('subscription_status');
+      table.dropColumn('subscription_start_date');
+      table.dropColumn('subscription_end_date');
+      table.dropColumn('trial_end_date');
+      table.dropColumn('cancel_at_period_end');
+      table.dropColumn('usage_stats');
+      table.dropColumn('billing_address');
+    });
+};

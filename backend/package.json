@@ -28,6 +28,7 @@
   "author": "BoosterBeacon",
   "license": "MIT",
   "dependencies": {
+    "@types/nodemailer": "^7.0.1",
     "axios": "^1.11.0",
     "bcrypt": "^5.1.1",
     "cheerio": "^1.1.2",
@@ -42,9 +43,12 @@
     "jsonwebtoken": "^9.0.2",
     "knex": "^3.1.0",
     "multer": "^2.0.2",
+    "nodemailer": "^7.0.5",
     "pg": "^8.11.3",
     "puppeteer-core": "^24.17.0",
     "redis": "^4.6.10",
+    "socket.io": "^4.8.1",
+    "stripe": "^18.4.0",
     "uuid": "^9.0.1",
     "web-push": "^3.6.7",
     "winston": "^3.11.0"

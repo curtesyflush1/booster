@@ -20,14 +20,12 @@ export const PushNotificationSettings: React.FC<PushNotificationSettingsProps> =
     error,
     permissionState,
     stats,
-    initialize,
     subscribe,
     unsubscribe,
     requestPermission,
     sendTestNotification,
     refreshStats,
     clearError,
-    canSubscribe,
     needsPermission,
     isSupported
   } = usePushNotifications();

@@ -17,6 +17,13 @@ router.use(createRateLimit({
 }));
 
 /**
+ * @route GET /api/retailers
+ * @desc Get all retailers
+ * @access Public
+ */
+router.get('/', retailerController.getAllRetailers);
+
+/**
  * @route GET /api/retailers/availability/:productId
  * @desc Check product availability across retailers
  * @access Private

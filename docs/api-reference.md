@@ -360,6 +360,208 @@ GET /api/v1/watches/packs/:packId/stats
 GET /api/v1/watches/products/:productId/packs
 ```
 
+## Product Search
+
+### Search Products
+```http
+GET /api/v1/products/search
+```
+
+**Query Parameters:**
+- `query` (string, optional): Search term for product name
+- `category` (string, optional): Product category filter
+- `retailer` (string, optional): Retailer filter
+- `minPrice` (number, optional): Minimum price filter
+- `maxPrice` (number, optional): Maximum price filter
+- `inStockOnly` (boolean, optional): Show only in-stock products
+- `sortBy` (string, optional): Sort field (`name`, `price`, `releaseDate`, `popularity`)
+- `sortOrder` (string, optional): Sort direction (`asc`, `desc`)
+- `page` (integer, optional): Page number (default: 1)
+- `limit` (integer, optional): Results per page (default: 20, max: 100)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "name": "Pokémon TCG: Scarlet & Violet Booster Pack",
+      "sku": "POK-SV-BP-001",
+      "upc": "820650123456",
+      "category": {
+        "id": "uuid",
+        "name": "Booster Packs",
+        "slug": "booster-packs"
+      },
+      "set": "Scarlet & Violet",
+      "series": "Scarlet & Violet Series",
+      "releaseDate": "2023-03-31",
+      "msrp": 4.99,
+      "imageUrl": "https://example.com/product.jpg",
+      "thumbnailUrl": "https://example.com/thumb.jpg",
+      "description": "Contains 11 cards including 1 rare card",
+      "metadata": {
+        "cardCount": 11,
+        "packType": "booster",
+        "language": "en",
+        "region": "US",
+        "tags": ["new", "popular"]
+      },
+      "availability": [
+        {
+          "id": "uuid",
+          "retailerId": "best-buy",
+          "retailerName": "Best Buy",
+          "inStock": true,
+          "price": 4.49,
+          "originalPrice": 4.99,
+          "url": "https://bestbuy.com/product/123",
+          "cartUrl": "https://bestbuy.com/cart/add/123",
+          "lastChecked": "2024-08-26T14:30:22Z"
+        }
+      ],
+      "createdAt": "2024-08-26T14:30:22Z",
+      "updatedAt": "2024-08-26T14:30:22Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 150,
+    "totalPages": 8,
+    "hasNext": true,
+    "hasPrev": false
+  }
+}
+```
+
+### Get Product Details
+```http
+GET /api/v1/products/:productId
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "name": "Pokémon TCG: Scarlet & Violet Booster Pack",
+    "sku": "POK-SV-BP-001",
+    "upc": "820650123456",
+    "category": {
+      "id": "uuid",
+      "name": "Booster Packs",
+      "slug": "booster-packs",
+      "description": "Individual booster packs",
+      "parentId": null
+    },
+    "set": "Scarlet & Violet",
+    "series": "Scarlet & Violet Series",
+    "releaseDate": "2023-03-31",
+    "msrp": 4.99,
+    "imageUrl": "https://example.com/product.jpg",
+    "thumbnailUrl": "https://example.com/thumb.jpg",
+    "description": "Contains 11 cards including 1 rare card",
+    "metadata": {
+      "cardCount": 11,
+      "packType": "booster",
+      "rarity": "common",
+      "language": "en",
+      "region": "US",
+      "tags": ["new", "popular"]
+    },
+    "availability": [
+      {
+        "id": "uuid",
+        "retailerId": "best-buy",
+        "retailerName": "Best Buy",
+        "inStock": true,
+        "price": 4.49,
+        "originalPrice": 4.99,
+        "url": "https://bestbuy.com/product/123",
+        "cartUrl": "https://bestbuy.com/cart/add/123",
+        "lastChecked": "2024-08-26T14:30:22Z",
+        "storeLocations": [
+          {
+            "id": "store-123",
+            "name": "Best Buy - Downtown",
+            "address": "123 Main St",
+            "city": "Seattle",
+            "state": "WA",
+            "zipCode": "98101",
+            "phone": "(555) 123-4567",
+            "inStock": true,
+            "quantity": 5
+          }
+        ]
+      }
+    ],
+    "priceHistory": [
+      {
+        "date": "2024-08-26",
+        "price": 4.49,
+        "retailerId": "best-buy"
+      }
+    ],
+    "createdAt": "2024-08-26T14:30:22Z",
+    "updatedAt": "2024-08-26T14:30:22Z"
+  }
+}
+```
+
+### Get Product Categories
+```http
+GET /api/v1/products/categories
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "name": "Booster Packs",
+      "slug": "booster-packs",
+      "description": "Individual booster packs",
+      "parentId": null,
+      "imageUrl": "https://example.com/category.jpg"
+    }
+  ]
+}
+```
+
+### Barcode Lookup
+```http
+GET /api/v1/products/barcode/:upc
+```
+
+**Parameters:**
+- `upc` (string, required): UPC barcode
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "name": "Pokémon TCG: Scarlet & Violet Booster Pack",
+    "upc": "820650123456",
+    "availability": [
+      {
+        "retailerId": "best-buy",
+        "retailerName": "Best Buy",
+        "inStock": true,
+        "price": 4.49,
+        "url": "https://bestbuy.com/product/123"
+      }
+    ]
+  }
+}
+```
+
 ## Health & Monitoring
 
 ### Get Watch Health
@@ -417,7 +619,7 @@ GET /api/v1/watches/metrics/performance
 
 ### Get User Alerts
 ```http
-GET /api/v1/alerts
+GET /api/alerts
 ```
 
 **Query Parameters:**
@@ -426,6 +628,9 @@ GET /api/v1/alerts
 - `status` (string, optional): Filter by status ('pending', 'sent', 'failed', 'read')
 - `type` (string, optional): Filter by type ('restock', 'price_drop', 'low_stock', 'pre_order')
 - `unread_only` (boolean, optional): Show only unread alerts
+- `search` (string, optional): Search product or retailer name
+- `start_date` (string, optional): Filter alerts from date (ISO 8601)
+- `end_date` (string, optional): Filter alerts to date (ISO 8601)
 
 **Response:**
 ```json
@@ -468,22 +673,22 @@ GET /api/v1/alerts
 
 ### Get Alert Details
 ```http
-GET /api/v1/alerts/:alertId
+GET /api/alerts/:alertId
 ```
 
 ### Mark Alert as Read
 ```http
-PATCH /api/v1/alerts/:alertId/read
+PATCH /api/alerts/:alertId/read
 ```
 
 ### Mark Alert as Clicked
 ```http
-PATCH /api/v1/alerts/:alertId/clicked
+PATCH /api/alerts/:alertId/clicked
 ```
 
 ### Bulk Mark Alerts as Read
 ```http
-PATCH /api/v1/alerts/bulk-read
+PATCH /api/alerts/bulk/read
 ```
 
 **Request Body:**
@@ -495,7 +700,53 @@ PATCH /api/v1/alerts/bulk-read
 
 ### Get Alert Statistics
 ```http
-GET /api/v1/alerts/stats
+GET /api/alerts/stats/summary
+```
+
+### Get Alert Analytics
+```http
+GET /api/alerts/analytics/engagement
+```
+
+**Query Parameters:**
+- `days` (integer, optional): Number of days for analytics (default: 30, max: 365)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "analytics": {
+      "period": {
+        "days": 30,
+        "startDate": "2024-07-27T14:30:22Z",
+        "endDate": "2024-08-26T14:30:22Z"
+      },
+      "summary": {
+        "totalAlerts": 150,
+        "sentAlerts": 145,
+        "clickedAlerts": 95,
+        "readAlerts": 120,
+        "clickThroughRate": 65.5,
+        "readRate": 80.0
+      },
+      "dailyBreakdown": [
+        {
+          "date": "2024-08-26",
+          "total": 8,
+          "sent": 8,
+          "clicked": 5,
+          "read": 6
+        }
+      ]
+    }
+  }
+}
+```
+
+### Delete Alert
+```http
+DELETE /api/alerts/:alertId
 ```
 
 **Response:**
@@ -950,7 +1201,140 @@ POST /api/v1/webhooks
 }
 ```
 
+## Email Management
+
+### Get Email Preferences
+```http
+GET /api/v1/email/preferences
+```
+
+**Response:**
+```json
+{
+  "preferences": {
+    "alertEmails": true,
+    "marketingEmails": true,
+    "weeklyDigest": false,
+    "updatedAt": "2024-08-27T14:30:22Z"
+  }
+}
+```
+
+### Update Email Preferences
+```http
+PUT /api/v1/email/preferences
+```
+
+**Request Body:**
+```json
+{
+  "alertEmails": true,
+  "marketingEmails": false,
+  "weeklyDigest": true
+}
+```
+
+### Process Unsubscribe
+```http
+GET /api/v1/email/unsubscribe?token=<unsubscribe_token>
+```
+
+**Response:**
+```json
+{
+  "message": "Successfully unsubscribed from alert emails",
+  "emailType": "alerts"
+}
+```
+
+### Get Email Statistics
+```http
+GET /api/v1/email/stats
+```
+
+**Response:**
+```json
+{
+  "stats": {
+    "totalSent": 150,
+    "totalDelivered": 145,
+    "totalBounced": 3,
+    "totalComplained": 2,
+    "deliveryRate": 96.67,
+    "lastEmailSent": "2024-08-27T14:30:22Z"
+  }
+}
+```
+
+### Send Test Email
+```http
+POST /api/v1/email/send-test
+```
+
+**Request Body:**
+```json
+{
+  "email": "test@example.com",
+  "type": "welcome"
+}
+```
+
+### Get Email Configuration
+```http
+GET /api/v1/email/config
+```
+
+**Response:**
+```json
+{
+  "configuration": {
+    "provider": "SES",
+    "host": "email-smtp.us-east-1.amazonaws.com",
+    "port": 587,
+    "secure": true,
+    "fromEmail": "alerts@boosterbeacon.com",
+    "fromName": "BoosterBeacon",
+    "authConfigured": true
+  },
+  "validation": {
+    "isValid": true,
+    "errors": [],
+    "warnings": []
+  }
+}
+```
+
+### Test Email Configuration
+```http
+POST /api/v1/email/config/test
+```
+
+**Request Body:**
+```json
+{
+  "email": "test@example.com"
+}
+```
+
 ## Changelog
+
+### v1.3.0 (2024-08-27)
+- **Frontend Application Foundation** - Complete React frontend implementation
+- React 18+ with TypeScript and Vite build system
+- PWA support with service worker and offline capabilities
+- Pokémon-themed UI with Tailwind CSS components
+- Advanced routing with protected routes and lazy loading
+- Authentication context with JWT token management
+- Error boundaries and comprehensive error handling
+- **User Authentication UI** - Complete authentication interface
+- Registration and login forms with advanced validation
+- Password security features and strength validation
+- Terms acceptance and newsletter subscription flows
+- **Email System Enhancements** - Advanced email management
+- Multiple SMTP configurations (SES, local SMTP, Ethereal)
+- Email preferences and unsubscribe management
+- Delivery analytics and bounce/complaint handling
+- Template system with responsive HTML designs
 
 ### v1.2.0 (2024-08-26)
 - **Alert Processing & Delivery System** - Complete alert system implementation

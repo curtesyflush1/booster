@@ -2,10 +2,13 @@ import express, { Request, Response } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { createServer } from 'http';
 import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware/requestLogger';
 import { generalRateLimit } from './middleware/rateLimiter';
+import { initializeWebSocketService } from './services/websocketService';
+import { DataCollectionService } from './services/dataCollectionService';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -14,12 +17,20 @@ import productRoutes from './routes/products';
 import watchRoutes from './routes/watches';
 import retailerRoutes from './routes/retailers';
 import notificationRoutes from './routes/notifications';
+import emailRoutes from './routes/emailRoutes';
+import dashboardRoutes from './routes/dashboard';
+import alertRoutes from './routes/alerts';
+import subscriptionRoutes from './routes/subscription';
+import mlRoutes from './routes/mlRoutes';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Create HTTP server for WebSocket support
+const server = createServer(app);
 
 // Security middleware
 app.use(helmet());
@@ -75,6 +86,21 @@ app.use('/api/retailers', retailerRoutes);
 // Notification routes
 app.use('/api/notifications', notificationRoutes);
 
+// Email management routes
+app.use('/api/email', emailRoutes);
+
+// Dashboard routes
+app.use('/api/dashboard', dashboardRoutes);
+
+// Alert management routes
+app.use('/api/alerts', alertRoutes);
+
+// Subscription and billing routes
+app.use('/api/subscription', subscriptionRoutes);
+
+// Machine learning and prediction routes
+app.use('/api/ml', mlRoutes);
+
 // Error handling middleware (must be last)
 app.use(errorHandler);
 
@@ -91,27 +117,35 @@ app.use('*', (_req: Request, res: Response) => {
 
 // Start server only if not in test environment
 if (process.env.NODE_ENV !== 'test') {
-  const server = app.listen(PORT, () => {
+  // Initialize WebSocket service
+  const websocketService = initializeWebSocketService(server);
+  
+  // Initialize ML data collection service
+  DataCollectionService.scheduleDataCollection();
+  
+  server.listen(PORT, () => {
     logger.info(`BoosterBeacon API server running on port ${PORT}`);
     logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    logger.info('WebSocket service initialized');
+    logger.info('ML data collection service scheduled');
   });
 
   // Graceful shutdown
-  process.on('SIGTERM', () => {
-    logger.info('SIGTERM received, shutting down gracefully');
+  const gracefulShutdown = async () => {
+    logger.info('Shutting down gracefully');
+    
+    // Shutdown WebSocket service first
+    await websocketService.shutdown();
+    
+    // Close HTTP server
     server.close(() => {
       logger.info('Process terminated');
       process.exit(0);
     });
-  });
+  };
 
-  process.on('SIGINT', () => {
-    logger.info('SIGINT received, shutting down gracefully');
-    server.close(() => {
-      logger.info('Process terminated');
-      process.exit(0);
-    });
-  });
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('SIGINT', gracefulShutdown);
 }
 
 export default app;

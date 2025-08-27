@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BoosterBeacon Extension Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="options-container">
+    <!-- Header -->
+    <header class="options-header">
+      <div class="header-content">
+        <div class="logo">
+          <span class="logo-icon">🔔</span>
+          <h1>BoosterBeacon Extension Settings</h1>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-secondary" id="reset-settings-btn">Reset to Defaults</button>
+          <button class="btn btn-primary" id="save-settings-btn">Save Settings</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="options-main">
+      <div class="settings-grid">
+        <!-- General Settings -->
+        <section class="settings-section">
+          <h2>General Settings</h2>
+          <div class="settings-content">
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="extension-enabled">Enable Extension</label>
+                <p class="setting-description">Turn the BoosterBeacon extension on or off</p>
+              </div>
+              <div class="setting-control">
+                <label class="toggle">
+                  <input type="checkbox" id="extension-enabled" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="notifications-enabled">Browser Notifications</label>
+                <p class="setting-description">Show browser notifications for alerts and updates</p>
+              </div>
+              <div class="setting-control">
+                <label class="toggle">
+                  <input type="checkbox" id="notifications-enabled" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="auto-fill-enabled">Auto-fill Checkout Forms</label>
+                <p class="setting-description">Automatically fill shipping and payment information during checkout</p>
+              </div>
+              <div class="setting-control">
+                <label class="toggle">
+                  <input type="checkbox" id="auto-fill-enabled" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="quick-actions-enabled">Show Quick Actions</label>
+                <p class="setting-description">Display floating action button and quick actions on retailer sites</p>
+              </div>
+              <div class="setting-control">
+                <label class="toggle">
+                  <input type="checkbox" id="quick-actions-enabled" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Retailer Settings -->
+        <section class="settings-section">
+          <h2>Supported Retailers</h2>
+          <div class="settings-content">
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="bestbuy-enabled">Best Buy</label>
+                <p class="setting-description">Enable extension features on Best Buy website</p>
+              </div>
+              <div class="setting-control">
+                <label class="toggle">
+                  <input type="checkbox" id="bestbuy-enabled" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="walmart-enabled">Walmart</label>
+                <p class="setting-description">Enable extension features on Walmart website</p>
+              </div>
+              <div class="setting-control">
+                <label class="toggle">
+                  <input type="checkbox" id="walmart-enabled" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="costco-enabled">Costco</label>
+                <p class="setting-description">Enable extension features on Costco website</p>
+              </div>
+              <div class="setting-control">
+                <label class="toggle">
+                  <input type="checkbox" id="costco-enabled" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="samsclub-enabled">Sam's Club</label>
+                <p class="setting-description">Enable extension features on Sam's Club website</p>
+              </div>
+              <div class="setting-control">
+                <label class="toggle">
+                  <input type="checkbox" id="samsclub-enabled" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Account Settings -->
+        <section class="settings-section">
+          <h2>Account & Sync</h2>
+          <div class="settings-content">
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label">Account Status</label>
+                <p class="setting-description" id="account-status-text">Checking account status...</p>
+              </div>
+              <div class="setting-control">
+                <button class="btn btn-secondary" id="sign-in-btn" style="display: none;">Sign In</button>
+                <button class="btn btn-secondary" id="sign-out-btn" style="display: none;">Sign Out</button>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label">Data Sync</label>
+                <p class="setting-description">Last synced: <span id="last-sync-time">Never</span></p>
+              </div>
+              <div class="setting-control">
+                <button class="btn btn-secondary" id="sync-now-btn">Sync Now</button>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label">Clear Extension Data</label>
+                <p class="setting-description">Remove all locally stored extension data</p>
+              </div>
+              <div class="setting-control">
+                <button class="btn btn-danger" id="clear-data-btn">Clear Data</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Advanced Settings -->
+        <section class="settings-section">
+          <h2>Advanced</h2>
+          <div class="settings-content">
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="debug-mode">Debug Mode</label>
+                <p class="setting-description">Enable detailed logging for troubleshooting</p>
+              </div>
+              <div class="setting-control">
+                <label class="toggle">
+                  <input type="checkbox" id="debug-mode">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label">Extension Version</label>
+                <p class="setting-description">Current version: <span id="extension-version">1.0.0</span></p>
+              </div>
+              <div class="setting-control">
+                <button class="btn btn-secondary" id="check-updates-btn">Check for Updates</button>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label">Export Settings</label>
+                <p class="setting-description">Download your extension settings as a backup</p>
+              </div>
+              <div class="setting-control">
+                <button class="btn btn-secondary" id="export-settings-btn">Export</button>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label">Import Settings</label>
+                <p class="setting-description">Restore settings from a backup file</p>
+              </div>
+              <div class="setting-control">
+                <input type="file" id="import-file-input" accept=".json" style="display: none;">
+                <button class="btn btn-secondary" id="import-settings-btn">Import</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="options-footer">
+      <div class="footer-content">
+        <div class="footer-links">
+          <a href="https://boosterbeacon.com/privacy" target="_blank">Privacy Policy</a>
+          <a href="https://boosterbeacon.com/terms" target="_blank">Terms of Service</a>
+          <a href="https://boosterbeacon.com/help" target="_blank">Help & Support</a>
+        </div>
+        <div class="footer-info">
+          <p>&copy; 2024 BoosterBeacon. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Status Messages -->
+  <div id="status-message" class="status-message" style="display: none;">
+    <span id="status-text"></span>
+    <button id="status-close" class="status-close">&times;</button>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
