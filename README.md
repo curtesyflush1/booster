@@ -473,6 +473,12 @@ When running locally, services are available at:
 - `POST /api/monitoring/alerts/rules` - Create or update alert rules
 - `DELETE /api/monitoring/alerts/rules/:ruleId` - Delete specific alert rule
 
+#### User Dashboard (Authenticated Users)
+- `GET /api/dashboard` - Get comprehensive dashboard data with stats, alerts, and insights
+- `GET /api/dashboard/insights` - Get predictive insights for watched products
+- `GET /api/dashboard/portfolio` - Get portfolio tracking data with collection analysis
+- `GET /api/dashboard/updates` - Get real-time dashboard updates since timestamp
+
 #### Admin Dashboard (Admin/Super Admin Only)
 - `GET /api/admin/dashboard/stats` - Get comprehensive dashboard statistics
 - `GET /api/admin/system/health` - Get system health status
@@ -758,9 +764,10 @@ This project is in active development with **24 of 26 major systems completed**.
 ## 📚 Documentation
 
 ### System Guides
+- **[User Dashboard Guide](docs/user-dashboard.md)** - Complete user dashboard with predictive insights and portfolio tracking
+- **[Admin Dashboard Guide](docs/admin-dashboard.md)** - Complete admin dashboard and management system documentation
 - **[Monitoring System Guide](docs/monitoring-system.md)** - Complete monitoring, metrics, and alerting system documentation
 - **[SEO System Guide](docs/seo-system.md)** - Complete SEO optimization and marketing features documentation
-- **[Admin Dashboard Guide](docs/admin-dashboard.md)** - Complete admin dashboard and management system documentationonon
 - **[Machine Learning System Guide](docs/ml-system.md)** - Complete ML prediction and analytics system documentation
 - **[Browser Extension Guide](docs/browser-extension.md)** - Complete browser extension development and usage guide
 - **[Automated Checkout System](docs/automated-checkout.md)** - Comprehensive guide to the automated checkout functionality

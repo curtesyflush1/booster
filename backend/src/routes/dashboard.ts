@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
 import { createRateLimit } from '../middleware/rateLimiter';
+import { validateProductIds, validateSinceDate } from '../middleware/dashboardValidation';
 import {
   getDashboardData,
   getPredictiveInsights,
@@ -34,7 +35,7 @@ router.get('/', getDashboardData as any);
  * @desc Get predictive insights for watched products
  * @access Private
  */
-router.get('/insights', getPredictiveInsights as any);
+router.get('/insights', validateProductIds, getPredictiveInsights as any);
 
 /**
  * @route GET /api/dashboard/portfolio
@@ -48,6 +49,6 @@ router.get('/portfolio', getPortfolioData as any);
  * @desc Get real-time dashboard updates
  * @access Private
  */
-router.get('/updates', getDashboardUpdates as any);
+router.get('/updates', validateSinceDate, getDashboardUpdates as any);
 
 export default router;

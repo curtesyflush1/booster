@@ -993,6 +993,216 @@ POST /api/v1/retailers/:retailerId/circuit-breaker/reset
 GET /api/v1/retailers/circuit-breaker/metrics
 ```
 
+## Dashboard Endpoints
+
+### Get Dashboard Data
+```http
+GET /api/dashboard
+```
+**Authentication:** Required  
+**Rate Limit:** 30 requests per minute
+
+Get comprehensive dashboard data including user statistics, recent alerts, watched products, and insights.
+
+**Response:**
+```json
+{
+  "success": true,
+  "dashboard": {
+    "stats": {
+      "totalWatches": 15,
+      "unreadAlerts": 3,
+      "totalAlerts": 47,
+      "successfulPurchases": 12,
+      "clickThroughRate": 65.5,
+      "recentAlerts": 8
+    },
+    "recentAlerts": [
+      {
+        "id": "uuid",
+        "type": "restock",
+        "product_name": "Pokémon Booster Box",
+        "retailer_name": "Best Buy",
+        "price": 89.99,
+        "created_at": "2024-08-26T14:30:22Z"
+      }
+    ],
+    "watchedProducts": [
+      {
+        "watch": {
+          "id": "uuid",
+          "product_id": "uuid",
+          "is_active": true,
+          "alert_count": 5
+        },
+        "product": {
+          "id": "uuid",
+          "name": "Pokémon TCG Product",
+          "msrp": 29.99
+        },
+        "insights": {
+          "hypeScore": 78,
+          "selloutRisk": {
+            "score": 65,
+            "timeframe": "2-3 days"
+          }
+        }
+      }
+    ],
+    "insights": {
+      "topPerformingProducts": [],
+      "alertTrends": {
+        "restock": 25,
+        "price_drop": 15,
+        "low_stock": 7
+      },
+      "engagementMetrics": {
+        "clickThroughRate": 65.5,
+        "totalClicks": 31,
+        "averageResponseTime": "< 5 seconds"
+      }
+    }
+  }
+}
+```
+
+### Get Predictive Insights
+```http
+GET /api/dashboard/insights
+```
+**Authentication:** Required  
+**Rate Limit:** 30 requests per minute
+
+Get predictive insights for user's watched products or specific products.
+
+**Query Parameters:**
+- `productIds` (string, optional): Comma-separated product IDs (max 50)
+
+**Response:**
+```json
+{
+  "success": true,
+  "insights": [
+    {
+      "productId": "uuid",
+      "productName": "Pokémon Booster Box - Paldea Evolved",
+      "priceForcast": {
+        "nextWeek": 92.50,
+        "nextMonth": 98.75,
+        "confidence": 0.78
+      },
+      "selloutRisk": {
+        "score": 85,
+        "timeframe": "2-3 days",
+        "confidence": 0.82
+      },
+      "roiEstimate": {
+        "shortTerm": 0.15,
+        "longTerm": 0.45,
+        "confidence": 0.65
+      },
+      "hypeScore": 78,
+      "updatedAt": "2024-08-26T14:30:22Z"
+    }
+  ]
+}
+```
+
+### Get Portfolio Data
+```http
+GET /api/dashboard/portfolio
+```
+**Authentication:** Required  
+**Rate Limit:** 30 requests per minute
+
+Get portfolio tracking data including collection value and performance metrics.
+
+**Response:**
+```json
+{
+  "success": true,
+  "portfolio": {
+    "totalValue": 1250.00,
+    "totalItems": 15,
+    "valueChange": {
+      "amount": 125.50,
+      "percentage": 11.2,
+      "period": "30d"
+    },
+    "topHoldings": [
+      {
+        "product": {
+          "id": "uuid",
+          "name": "Pokémon Booster Box",
+          "msrp": 89.99
+        },
+        "alertCount": 12,
+        "insights": {
+          "hypeScore": 85,
+          "roiEstimate": {
+            "shortTerm": 0.25,
+            "longTerm": 0.65
+          }
+        }
+      }
+    ],
+    "gapAnalysis": {
+      "missingSets": [
+        {
+          "setName": "Paldea Evolved",
+          "completionPercentage": 75,
+          "missingItems": 12
+        }
+      ],
+      "recommendedPurchases": [
+        {
+          "productId": "uuid",
+          "priority": "high",
+          "reason": "Completes popular set"
+        }
+      ]
+    },
+    "performance": {
+      "alertsGenerated": 47,
+      "successfulPurchases": 12,
+      "missedOpportunities": 3,
+      "averageResponseTime": "< 2 minutes"
+    }
+  }
+}
+```
+
+### Get Dashboard Updates
+```http
+GET /api/dashboard/updates
+```
+**Authentication:** Required  
+**Rate Limit:** 30 requests per minute
+
+Get real-time dashboard updates since a specific timestamp.
+
+**Query Parameters:**
+- `since` (string, optional): ISO 8601 timestamp (max 30 days ago, cannot be future)
+
+**Response:**
+```json
+{
+  "success": true,
+  "updates": {
+    "newAlerts": [
+      {
+        "id": "uuid",
+        "type": "restock",
+        "product_name": "Pokémon Product",
+        "created_at": "2024-08-26T14:30:22Z"
+      }
+    ],
+    "watchUpdates": [],
+    "timestamp": "2024-08-26T14:35:00Z"
+  }
+}
+```
+
 ## Admin Endpoints
 
 ### Get System Watch Health
