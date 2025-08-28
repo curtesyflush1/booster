@@ -360,7 +360,7 @@ export class Alert extends BaseModel<IAlert> {
       .whereNotNull('sent_at');
 
     const avgDeliveryTime = deliveryTimes.length > 0
-      ? deliveryTimes.reduce((sum, row) => sum + parseFloat(row.delivery_seconds), 0) / deliveryTimes.length
+      ? deliveryTimes.reduce((sum, row) => sum + parseFloat((row as any).delivery_seconds), 0) / deliveryTimes.length
       : 0;
 
     // Get counts by type

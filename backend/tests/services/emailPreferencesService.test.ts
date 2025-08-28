@@ -47,13 +47,13 @@ describe('EmailPreferencesService', () => {
 
     it('should create default preferences if none exist', async () => {
       // Mock no existing preferences
-      mockDatabase.mockReturnValueOnce({
+      mockDb.mockReturnValueOnce({
         where: jest.fn().mockReturnThis(),
         first: jest.fn().mockResolvedValue(null)
       } as any);
 
       // Mock insert for creating default preferences
-      mockDatabase.mockReturnValueOnce({
+      mockDb.mockReturnValueOnce({
         insert: jest.fn().mockResolvedValue([])
       } as any);
 
@@ -73,7 +73,7 @@ describe('EmailPreferencesService', () => {
 
   describe('updatePreferences', () => {
     it('should update preferences successfully', async () => {
-      mockDatabase.mockReturnValue({
+      mockDb.mockReturnValue({
         where: jest.fn().mockReturnThis(),
         update: jest.fn().mockResolvedValue(1)
       } as any);
@@ -87,7 +87,7 @@ describe('EmailPreferencesService', () => {
     });
 
     it('should handle update failure', async () => {
-      mockDatabase.mockReturnValue({
+      mockDb.mockReturnValue({
         where: jest.fn().mockReturnThis(),
         update: jest.fn().mockRejectedValue(new Error('Database error'))
       } as any);
@@ -102,7 +102,7 @@ describe('EmailPreferencesService', () => {
 
   describe('createUnsubscribeToken', () => {
     it('should create unsubscribe token successfully', async () => {
-      mockDatabase.mockReturnValue({
+      mockDb.mockReturnValue({
         insert: jest.fn().mockResolvedValue([])
       } as any);
 
@@ -121,19 +121,19 @@ describe('EmailPreferencesService', () => {
       };
 
       // Mock token lookup
-      mockDatabase.mockReturnValueOnce({
+      mockDb.mockReturnValueOnce({
         where: jest.fn().mockReturnThis(),
         first: jest.fn().mockResolvedValue(mockToken)
       } as any);
 
       // Mock preferences update
-      mockDatabase.mockReturnValueOnce({
+      mockDb.mockReturnValueOnce({
         where: jest.fn().mockReturnThis(),
         update: jest.fn().mockResolvedValue(1)
       } as any);
 
       // Mock token marking as used
-      mockDatabase.mockReturnValueOnce({
+      mockDb.mockReturnValueOnce({
         where: jest.fn().mockReturnThis(),
         update: jest.fn().mockResolvedValue(1)
       } as any);
@@ -149,7 +149,7 @@ describe('EmailPreferencesService', () => {
     it('should reject invalid token', async () => {
       const token = 'invalid-token';
 
-      mockDatabase.mockReturnValue({
+      mockDb.mockReturnValue({
         where: jest.fn().mockReturnThis(),
         first: jest.fn().mockResolvedValue(null)
       } as any);
@@ -168,19 +168,19 @@ describe('EmailPreferencesService', () => {
       };
 
       // Mock token lookup
-      mockDatabase.mockReturnValueOnce({
+      mockDb.mockReturnValueOnce({
         where: jest.fn().mockReturnThis(),
         first: jest.fn().mockResolvedValue(mockToken)
       } as any);
 
       // Mock preferences update
-      mockDatabase.mockReturnValueOnce({
+      mockDb.mockReturnValueOnce({
         where: jest.fn().mockReturnThis(),
         update: jest.fn().mockResolvedValue(1)
       } as any);
 
       // Mock token marking as used
-      mockDatabase.mockReturnValueOnce({
+      mockDb.mockReturnValueOnce({
         where: jest.fn().mockReturnThis(),
         update: jest.fn().mockResolvedValue(1)
       } as any);
@@ -204,7 +204,7 @@ describe('EmailPreferencesService', () => {
         updated_at: new Date()
       };
 
-      mockDatabase.mockReturnValue({
+      mockDb.mockReturnValue({
         where: jest.fn().mockReturnThis(),
         first: jest.fn().mockResolvedValue(mockPreferences)
       } as any);
@@ -225,7 +225,7 @@ describe('EmailPreferencesService', () => {
         updated_at: new Date()
       };
 
-      mockDatabase.mockReturnValue({
+      mockDb.mockReturnValue({
         where: jest.fn().mockReturnThis(),
         first: jest.fn().mockResolvedValue(mockPreferences)
       } as any);
@@ -236,7 +236,7 @@ describe('EmailPreferencesService', () => {
     });
 
     it('should return false if preferences not found', async () => {
-      mockDatabase.mockReturnValue({
+      mockDb.mockReturnValue({
         where: jest.fn().mockReturnThis(),
         first: jest.fn().mockResolvedValue(null)
       } as any);
@@ -256,7 +256,7 @@ describe('EmailPreferencesService', () => {
         total_complained: '2'
       };
 
-      mockDatabase.mockReturnValue({
+      mockDb.mockReturnValue({
         select: jest.fn().mockReturnThis(),
         first: jest.fn().mockResolvedValue(mockStats)
       } as any);
@@ -282,7 +282,7 @@ describe('EmailPreferencesService', () => {
         total_complained: '0'
       };
 
-      mockDatabase.mockReturnValue({
+      mockDb.mockReturnValue({
         select: jest.fn().mockReturnThis(),
         first: jest.fn().mockResolvedValue(mockStats)
       } as any);
@@ -308,7 +308,7 @@ describe('EmailPreferencesService', () => {
         total_complained: '1'
       };
 
-      mockDatabase.mockReturnValue({
+      mockDb.mockReturnValue({
         where: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
         first: jest.fn().mockResolvedValue(mockStats)

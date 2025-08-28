@@ -27,11 +27,11 @@ exports.up = function(knex) {
       table.index(['user_id', 'usage_date']);
       
       // Constraints
-      table.check('watches_created_non_negative', knex.raw('watches_created >= 0'));
-      table.check('alerts_sent_non_negative', knex.raw('alerts_sent >= 0'));
-      table.check('api_calls_non_negative', knex.raw('api_calls >= 0'));
-      table.check('sms_sent_non_negative', knex.raw('sms_sent >= 0'));
-      table.check('discord_sent_non_negative', knex.raw('discord_sent >= 0'));
+      table.check('watches_created >= 0');
+      table.check('alerts_sent >= 0');
+      table.check('api_calls >= 0');
+      table.check('sms_sent >= 0');
+      table.check('discord_sent >= 0');
     });
 };
 

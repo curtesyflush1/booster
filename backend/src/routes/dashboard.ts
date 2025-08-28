@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { authenticateToken } from '../middleware/auth';
-import { rateLimiter } from '../middleware/rateLimiter';
+import { authenticate } from '../middleware/auth';
+import { createRateLimit } from '../middleware/rateLimiter';
 import {
   getDashboardData,
   getPredictiveInsights,
@@ -11,12 +11,12 @@ import {
 const router = Router();
 
 // Apply authentication to all dashboard routes
-router.use(authenticateToken);
+router.use(authenticate);
 
 // Apply rate limiting to dashboard routes
-const dashboardLimiter = rateLimiter({
+const dashboardLimiter = createRateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 30, // 30 requests per minute
+  maxRequests: 30, // 30 requests per minute
   message: 'Too many dashboard requests, please try again later'
 });
 

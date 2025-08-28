@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { WatchController } from '../controllers/watchController';
 import { WatchPackController } from '../controllers/watchPackController';
 import { authenticate } from '../middleware/auth';
+import { requireAdmin } from '../middleware/adminAuth';
 import { validateRequest } from '../middleware/validation';
 import { body, param, query } from 'express-validator';
 import multer from 'multer';
@@ -153,14 +154,14 @@ router.get(
 router.get(
   '/admin/health/system',
   authenticate,
-  // TODO: Add admin middleware
+  requireAdmin,
   WatchController.getSystemWatchHealth
 );
 
 router.post(
   '/admin/cleanup',
   authenticate,
-  // TODO: Add admin middleware
+  requireAdmin,
   WatchController.cleanupWatches
 );
 
@@ -238,7 +239,7 @@ router.get(
 router.post(
   '/packs',
   authenticate,
-  // TODO: Add admin authentication middleware
+  requireAdmin,
   [
     body('name').notEmpty().isLength({ min: 1, max: 100 }).withMessage('Name is required and must be 1-100 characters'),
     body('slug').notEmpty().matches(/^[a-z0-9-]+$/).withMessage('Slug is required and must contain only lowercase letters, numbers, and hyphens'),
@@ -255,7 +256,7 @@ router.post(
 router.put(
   '/packs/:packId',
   authenticate,
-  // TODO: Add admin authentication middleware
+  requireAdmin,
   [
     param('packId').isUUID().withMessage('Pack ID must be a valid UUID'),
     body('name').optional().isLength({ min: 1, max: 100 }).withMessage('Name must be 1-100 characters'),
@@ -273,7 +274,7 @@ router.put(
 router.delete(
   '/packs/:packId',
   authenticate,
-  // TODO: Add admin authentication middleware
+  requireAdmin,
   [
     param('packId').isUUID().withMessage('Pack ID must be a valid UUID')
   ],

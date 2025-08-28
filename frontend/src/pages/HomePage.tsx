@@ -7,13 +7,31 @@ import {
   Shield, 
   Star, 
   ArrowRight,
-
   Crown,
   Users,
   TrendingUp
 } from 'lucide-react';
+import SEOHead from '../components/SEOHead';
+import SocialLinks from '../components/SocialLinks';
+import { generateWebsiteStructuredData } from '../utils/seo';
 
 const HomePage: React.FC = () => {
+  const seoConfig = {
+    title: 'Never Miss a Pokémon TCG Drop Again',
+    description: 'Get instant alerts when Pokémon TCG products restock at major retailers. Real-time notifications with one-tap cart links for collectors.',
+    keywords: [
+      'pokemon tcg',
+      'pokemon cards',
+      'restock alerts',
+      'collector alerts',
+      'booster packs',
+      'pokemon drops',
+      'tcg monitoring',
+      'card alerts',
+      'pokemon notifications'
+    ],
+    structuredData: generateWebsiteStructuredData()
+  };
   const features = [
     {
       icon: Bell,
@@ -70,7 +88,9 @@ const HomePage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background-primary">
+    <>
+      <SEOHead {...seoConfig} />
+      <div className="min-h-screen bg-background-primary">
       {/* Navigation */}
       <nav className="bg-background-secondary border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -303,16 +323,21 @@ const HomePage: React.FC = () => {
               </span>
             </div>
             
-            <div className="flex items-center space-x-6 text-gray-400">
-              <Link to="/privacy" className="hover:text-white transition-colors">
-                Privacy
-              </Link>
-              <Link to="/terms" className="hover:text-white transition-colors">
-                Terms
-              </Link>
-              <Link to="/contact" className="hover:text-white transition-colors">
-                Contact
-              </Link>
+            <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
+              <div className="flex items-center space-x-6 text-gray-400">
+                <Link to="/privacy" className="hover:text-white transition-colors">
+                  Privacy
+                </Link>
+                <Link to="/terms" className="hover:text-white transition-colors">
+                  Terms
+                </Link>
+                <Link to="/contact" className="hover:text-white transition-colors">
+                  Contact
+                </Link>
+              </div>
+              
+              {/* Social Media Links */}
+              <SocialLinks size="sm" />
             </div>
           </div>
           
@@ -321,7 +346,8 @@ const HomePage: React.FC = () => {
           </div>
         </div>
       </footer>
-    </div>
+      </div>
+    </>
   );
 };
 

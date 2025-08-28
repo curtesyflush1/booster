@@ -48,6 +48,62 @@ Target specific failing test categories:
 ```
 
 ### 4. Fix Tests Automatically
+
+```bash
+# Run automatic test fixes
+./scripts/fix-tests.sh
+
+# Clean and reset test environment
+npm run test:clean
+
+# Fix specific test types
+npm run test:fix
+```
+
+## Common Test Setup Issues
+
+### Performance Test Setup Errors
+
+**Issue**: `Module '"../integration/setup"' has no exported member 'setupTestApp'`
+
+**Solution**: The performance test setup has been updated to use the correct imports. If you encounter this error:
+
+1. Ensure you have the latest version of `backend/tests/performance/setup.ts`
+2. The file should import `request` from `supertest` and `app` from the main index
+3. Run `npm run test:performance` to verify the fix
+
+**Fixed in**: Performance test setup now uses proper supertest integration instead of missing setup functions.
+
+### E2E Test Setup Issues
+
+**Issue**: Unused variables in E2E test setup causing TypeScript warnings
+
+**Solution**: The E2E test setup has been cleaned up to remove unused variables and improve type safety.
+
+1. Check that `backend/tests/e2e/setup.ts` is up to date
+2. Run `npm run test:e2e` to verify E2E tests work correctly
+3. The setup now properly manages server lifecycle without unused variables
+
+### Integration Test Database Issues
+
+**Issue**: Test database connection failures or missing setup functions
+
+**Solution**: 
+1. Ensure Docker services are running: `npm run docker:dev`
+2. Check that the test database is accessible on port 5435
+3. Verify environment variables in `.env.test` are correct
+4. Run database migrations for test environment if needed
+
+```bash
+# Start Docker services
+npm run docker:dev
+
+# Check if test database is accessible
+docker-compose -f docker-compose.dev.yml ps
+
+# Run integration tests
+npm run test:integration
+```
 Run the test fixing script to resolve common issues:
 
 ```bash

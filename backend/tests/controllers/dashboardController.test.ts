@@ -5,6 +5,13 @@ import {
   getPortfolioData, 
   getDashboardUpdates 
 } from '../../src/controllers/dashboardController';
+
+interface AuthenticatedRequest extends Request {
+  user: {
+    id: string;
+    subscription_tier?: string;
+  };
+}
 import { User } from '../../src/models/User';
 import { Watch } from '../../src/models/Watch';
 import { Alert } from '../../src/models/Alert';
@@ -123,7 +130,7 @@ describe('Dashboard Controller', () => {
         popularity_score: 85
       });
 
-      await getDashboardData(mockReq as Request, mockRes as Response, mockNext);
+      await getDashboardData(mockReq as AuthenticatedRequest, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
@@ -144,7 +151,7 @@ describe('Dashboard Controller', () => {
     it('should return 401 for unauthenticated requests', async () => {
       delete mockReq.user;
 
-      await getDashboardData(mockReq as Request, mockRes as Response, mockNext);
+      await getDashboardData(mockReq as AuthenticatedRequest, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.json).toHaveBeenCalledWith({
@@ -267,7 +274,7 @@ describe('Dashboard Controller', () => {
           } as any
         ]);
 
-      await getPredictiveInsights(mockReq as Request, mockRes as Response, mockNext);
+      await getPredictiveInsights(mockReq as AuthenticatedRequest, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
@@ -296,7 +303,7 @@ describe('Dashboard Controller', () => {
 
       MockedAlert.findByProductId.mockResolvedValue([]);
 
-      await getPredictiveInsights(mockReq as Request, mockRes as Response, mockNext);
+      await getPredictiveInsights(mockReq as AuthenticatedRequest, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       const call = (mockRes.json as jest.Mock).mock.calls[0][0];
@@ -336,7 +343,7 @@ describe('Dashboard Controller', () => {
         popularity_score: 85
       });
 
-      await getPortfolioData(mockReq as Request, mockRes as Response, mockNext);
+      await getPortfolioData(mockReq as AuthenticatedRequest, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
@@ -385,7 +392,7 @@ describe('Dashboard Controller', () => {
         limit: 5
       });
 
-      await getDashboardUpdates(mockReq as Request, mockRes as Response, mockNext);
+      await getDashboardUpdates(mockReq as AuthenticatedRequest, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
@@ -405,7 +412,7 @@ describe('Dashboard Controller', () => {
         limit: 5
       });
 
-      await getDashboardUpdates(mockReq as Request, mockRes as Response, mockNext);
+      await getDashboardUpdates(mockReq as AuthenticatedRequest, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       const call = (mockRes.json as jest.Mock).mock.calls[0][0];
@@ -417,7 +424,7 @@ describe('Dashboard Controller', () => {
     it('should handle errors gracefully', async () => {
       MockedUser.getUserStats.mockRejectedValue(new Error('Database error'));
 
-      await getDashboardData(mockReq as Request, mockRes as Response, mockNext);
+      await getDashboardData(mockReq as AuthenticatedRequest, mockRes as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
     });

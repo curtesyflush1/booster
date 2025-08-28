@@ -10,6 +10,11 @@
     "test": "vitest --run",
     "test:watch": "vitest",
     "test:coverage": "vitest --coverage",
+    "test:browser": "vitest --run --browser.enabled --browser.name=chromium",
+    "test:browser:firefox": "vitest --run --browser.enabled --browser.name=firefox",
+    "test:browser:webkit": "vitest --run --browser.enabled --browser.name=webkit",
+    "test:cross-browser": "npm run test:browser && npm run test:browser:firefox && npm run test:browser:webkit",
+    "test:pwa": "playwright test tests/cross-browser/pwa.browser.test.ts",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext ts,tsx --fix",
     "type-check": "tsc --noEmit"
@@ -28,6 +33,7 @@
     "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.40.0",
     "@types/react": "^18.2.37",
     "@types/react-dom": "^18.2.15",
     "@types/react-router-dom": "^5.3.3",

@@ -20,6 +20,11 @@ export abstract class BaseModel<T = any> {
     return this.tableName;
   }
 
+  // Get Knex instance
+  static getKnex(): Knex {
+    return this.db;
+  }
+
   // Create a new record
   static async create<T>(data: Partial<T>): Promise<T> {
     try {

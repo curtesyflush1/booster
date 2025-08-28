@@ -44,9 +44,9 @@ describe('WebSocketService', () => {
     websocketService = new WebSocketService(httpServer);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     if (websocketService) {
-      websocketService.destroy();
+      await websocketService.shutdown();
     }
     if (httpServer) {
       httpServer.close();
@@ -187,7 +187,7 @@ describe('WebSocketService', () => {
     });
 
     it('should handle shutdown when already destroyed', async () => {
-      websocketService.destroy();
+      await websocketService.shutdown();
       await expect(websocketService.shutdown()).resolves.not.toThrow();
     });
   });

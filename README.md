@@ -108,6 +108,18 @@ npm run test:frontend
 # Run extension tests only
 npm run test:extension
 
+# Run performance tests
+npm run test:performance
+
+# Run security tests
+npm run test:security
+
+# Run E2E tests
+npm run test:e2e
+
+# Run all test types
+npm run test:all
+
 # Fix common test issues
 npm run fix-tests
 
@@ -295,9 +307,6 @@ sudo certbot renew           # Renew certificates
 - `npm run build:extension:chrome` - Build specifically for Chrome
 - `npm run build:extension:firefox` - Build specifically for Firefox
 - `npm run test:extension` - Run extension tests
-- `npm run test:extension:services` - Run extension service tests (checkout, credentials, etc.)
-- `npm run test:extension:integration` - Run extension integration tests
-- `npm run test:extension:checkout` - Run automated checkout tests
 - `npm run package:extension:chrome` - Create Chrome extension package
 - `npm run package:extension:firefox` - Create Firefox extension package
 
@@ -321,6 +330,19 @@ When running locally, services are available at:
 #### Core System
 - `GET /health` - Health check with uptime and environment info
 - `GET /api/v1/status` - API status with version and timestamp
+
+#### Authentication & Users
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User login
+- `POST /api/auth/logout` - User logout
+- `POST /api/auth/refresh` - Refresh JWT token
+- `POST /api/auth/forgot-password` - Request password reset
+- `POST /api/auth/reset-password` - Reset password with token
+- `GET /api/users/profile` - Get user profile
+- `PUT /api/users/profile` - Update user profile
+- `PUT /api/users/preferences` - Update user preferences
+- `PUT /api/users/notification-settings` - Update notification settings
+- `PUT /api/users/quiet-hours` - Update quiet hours settings
 
 #### Watch Management
 - `GET /api/v1/watches` - Get user's watches with filtering and pagination
@@ -346,6 +368,30 @@ When running locally, services are available at:
 - `GET /api/v1/watches/health/all` - Get all user watches health
 - `GET /api/v1/watches/metrics/performance` - Get watch performance metrics
 
+#### Products & Categories
+- `GET /api/products` - Get products with filtering and search
+- `GET /api/products/:id` - Get specific product details
+- `GET /api/products/categories` - Get product categories
+- `GET /api/products/search` - Search products with advanced filters
+
+#### Machine Learning & Analytics
+- `GET /api/ml/products/:productId/price-prediction` - Get price prediction for product
+- `GET /api/ml/products/:productId/sellout-risk` - Get sellout risk assessment
+- `GET /api/ml/products/:productId/roi-estimate` - Get ROI estimation
+- `GET /api/ml/products/:productId/hype-meter` - Get hype meter calculation
+- `GET /api/ml/products/:productId/market-insights` - Get market insights
+- `GET /api/ml/products/:productId/analysis` - Get comprehensive analysis
+- `GET /api/ml/trending-products` - Get trending products
+- `GET /api/ml/high-risk-products` - Get high-risk products
+
+#### Price Comparison System
+- `GET /api/price-comparison/products/:productId` - Get price comparison for a single product
+- `POST /api/price-comparison/products/batch` - Get price comparisons for multiple products (max 50)
+- `GET /api/price-comparison/products/:productId/history` - Get price history for a product
+- `GET /api/price-comparison/deals` - Get current deals across all products
+- `GET /api/price-comparison/products/:productId/trends` - Analyze price trends for a product
+- `GET /api/price-comparison/my-deals` - Get best deals for authenticated user's watchlist
+
 #### Alert Management
 - `GET /api/alerts` - Get user's alerts with filtering and pagination
 - `GET /api/alerts/:id` - Get specific alert details
@@ -355,6 +401,79 @@ When running locally, services are available at:
 - `DELETE /api/alerts/:id` - Delete alert
 - `GET /api/alerts/stats/summary` - Get alert statistics
 - `GET /api/alerts/analytics/engagement` - Get engagement analytics
+
+#### Community Features
+- `POST /api/community/testimonials` - Create testimonial
+- `GET /api/community/testimonials` - Get testimonials
+- `PUT /api/community/testimonials/:id` - Update testimonial
+- `DELETE /api/community/testimonials/:id` - Delete testimonial
+- `POST /api/community/posts` - Create community post
+- `GET /api/community/posts` - Get community posts
+- `POST /api/community/posts/:id/like` - Toggle post like
+- `POST /api/community/posts/:id/comments` - Add comment to post
+- `GET /api/community/posts/:id/comments` - Get post comments
+- `GET /api/community/stats` - Get community statistics
+- `GET /api/community/featured` - Get featured content
+- `POST /api/community/moderate` - Moderate content (admin only)
+
+#### Subscription Management
+- `GET /api/subscription/plans` - Get subscription plans
+- `GET /api/subscription/status` - Get user's subscription status
+- `GET /api/subscription/usage` - Get usage statistics
+- `GET /api/subscription/billing-history` - Get billing history
+- `POST /api/subscription/checkout` - Create checkout session
+- `POST /api/subscription/cancel` - Cancel subscription
+- `POST /api/subscription/reactivate` - Reactivate subscription
+- `POST /api/subscription/webhook/stripe` - Stripe webhook handler
+- `GET /api/subscription/analytics/conversion` - Get conversion analytics (admin)
+
+#### Email & Notifications
+- `GET /api/email/preferences` - Get email preferences
+- `PUT /api/email/preferences` - Update email preferences
+- `POST /api/email/unsubscribe` - Unsubscribe from emails
+- `GET /api/email/templates` - Get email templates (admin)
+- `POST /api/notifications/web-push/subscribe` - Subscribe to web push
+- `DELETE /api/notifications/web-push/unsubscribe` - Unsubscribe from web push
+
+#### Social & Integrations
+- `GET /api/social/links` - Get social media links
+- `POST /api/social/share` - Share content to social media
+- `POST /api/discord/webhook` - Discord webhook integration
+- `GET /api/webhooks/health` - Webhook health check
+
+#### CSV & Data Export
+- `POST /api/csv/import/watches` - Import watches from CSV
+- `GET /api/csv/export/watches` - Export watches to CSV
+- `GET /api/csv/template/watches` - Get CSV template for watches
+
+#### SEO and Sitemap System
+- `GET /sitemap.xml` - Main sitemap index
+- `GET /sitemap-static.xml` - Static pages sitemap
+- `GET /sitemap-products.xml` - Products sitemap
+- `GET /sitemap-categories.xml` - Categories sitemap
+- `GET /sitemap-locations.xml` - Location-based pages sitemap
+- `GET /sitemap-sets.xml` - Pokémon sets sitemap
+- `GET /robots.txt` - Search engine crawling guidelines
+- `GET /admin/sitemap/stats` - Sitemap statistics (admin only)
+- `POST /admin/sitemap/ping` - Ping search engines about sitemap updates (admin only)
+
+#### Admin Dashboard (Admin/Super Admin Only)
+- `GET /api/admin/dashboard/stats` - Get comprehensive dashboard statistics
+- `GET /api/admin/system/health` - Get system health status
+- `GET /api/admin/users` - Get users with filtering and pagination
+- `GET /api/admin/users/stats` - Get user statistics
+- `GET /api/admin/users/:userId` - Get specific user details
+- `PUT /api/admin/users/:userId/role` - Update user role and permissions
+- `PUT /api/admin/users/:userId/suspend` - Suspend or unsuspend user
+- `DELETE /api/admin/users/:userId` - Delete user (super admin only)
+- `GET /api/admin/ml/models` - Get ML models
+- `GET /api/admin/ml/stats` - Get ML statistics
+- `POST /api/admin/ml/models` - Create ML model training job
+- `POST /api/admin/ml/models/:modelId/deploy` - Deploy ML model
+- `POST /api/admin/ml/models/:modelName/retrain` - Trigger model retraining
+- `GET /api/admin/ml/training-data` - Get training data for review
+- `PUT /api/admin/ml/training-data/:dataId/review` - Review training data
+- `GET /api/admin/audit/logs` - Get audit logs
 
 ### Database Schema
 
@@ -454,6 +573,9 @@ TWILIO_PHONE_NUMBER=+1234567890
 # Discord Integration
 DISCORD_BOT_TOKEN=your_discord_token
 
+# SEO and Sitemap Configuration
+BASE_URL=https://boosterbeacon.com
+
 # Email Configuration
 FROM_EMAIL=alerts@boosterbeacon.com
 FROM_NAME=BoosterBeacon
@@ -477,7 +599,7 @@ FROM_NAME=BoosterBeacon
 
 ## 📋 Project Status
 
-This project is in active development. **Major systems completed:**
+This project is in active development with **23 of 26 major systems completed**. **Major systems completed:**
 
 - [x] Project foundation and development environment
 - [x] Core database schema and models
@@ -496,47 +618,75 @@ This project is in active development. **Major systems completed:**
 - [x] **Alert management and history UI** ✅ **COMPLETED**
 - [x] **Browser extension foundation** ✅ **COMPLETED**
 - [x] **Automated checkout functionality in extension** ✅ **COMPLETED**
-- [ ] Machine learning features
+- [x] **Machine learning prediction system** ✅ **COMPLETED**
+- [x] **Admin dashboard and management tools** ✅ **COMPLETED**
+- [x] **Community and integration features** ✅ **COMPLETED**
+- [x] **Cross-retailer price comparison** ✅ **COMPLETED**
+- [x] **SEO optimization and marketing features** ✅ **COMPLETED**
+
+### Current Development Focus
+- [ ] **Enhanced testing coverage and performance validation** - Improving test coverage to 90%+ and implementing comprehensive E2E testing
+- [ ] **Monitoring, logging, and deployment** - Production-ready monitoring, structured logging, and automated deployment pipeline
+- [ ] **Final integration and production readiness** - Security audit, performance optimization, and complete user workflow testing
 
 ### Recent Updates
 
-**Frontend Application Foundation** ✨ **MAJOR UPDATE** - Complete React frontend application implemented:
-- **React 18+ with TypeScript**: Modern development stack with full type safety
-- **Vite Build System**: Lightning-fast development and optimized production builds
-- **PWA Support**: Service worker, offline capability, and installable web app
-- **Pokémon-themed UI**: Custom Tailwind CSS components with collector-focused design
-- **Advanced Routing**: Protected routes, lazy loading, and seamless navigation
-- **Authentication System**: Complete auth context with JWT token management
-- **Error Boundaries**: Graceful error handling with user-friendly fallbacks
-- **Responsive Design**: Mobile-first approach with desktop optimization
+**SEO Optimization and Marketing Features** ✨ **MAJOR UPDATE** - Complete SEO system implemented:
+- **Comprehensive SEO Utilities**: Dynamic meta tags, Open Graph, Twitter Cards, and structured data
+- **Sitemap Generation**: XML sitemaps for static pages, products, categories, locations, and Pokémon sets
+- **SEO-Optimized Landing Pages**: Location-based pages and Pokémon TCG alert pages with rich content
+- **Social Media Integration**: Social sharing buttons, profile links, and community features
+- **Local SEO**: Location-specific content for major US cities with store information
+- **Search Engine Optimization**: Robots.txt, canonical URLs, and proper meta tag management
+- **Structured Data**: Schema.org markup for websites, products, breadcrumbs, FAQs, and local businesses
 
-**User Authentication UI** ✨ **MAJOR UPDATE** - Complete authentication interface implemented:
-- **Registration & Login Forms**: Advanced validation with real-time feedback
-- **Password Security**: Strength validation, visibility toggles, and secure handling
-- **Terms & Privacy**: Integrated acceptance flows with newsletter subscription options
-- **Error Handling**: Comprehensive error states with user-friendly messaging
-- **Responsive Layout**: Mobile-optimized forms with Pokémon-themed styling
-- **Loading States**: Smooth UX with loading spinners and disabled states
+**Cross-Retailer Price Comparison** ✨ **MAJOR UPDATE** - Complete price comparison system implemented:
+- **Price Comparison Engine**: Real-time price aggregation across all supported retailers
+- **Deal Identification System**: Automatic deal detection with advanced scoring algorithms
+- **Price Drop Alerts**: Intelligent price monitoring with user-configurable thresholds
+- **Historical Price Tracking**: Price history analysis with above/below average indicators
+- **Deal Scoring for Pro Users**: Advanced analytics with 100-point scoring system
+- **Trend Analysis**: Price movement patterns and forecasting capabilities
+- **Batch Processing**: Efficient multi-product comparison with rate limiting
 
-**Product Search & Watch Management UI** ✨ **MAJOR UPDATE** - Complete product search interface implemented:
-- **Advanced Search System**: Real-time search with debounced input and intelligent filtering
-- **Multi-Filter Support**: Category, retailer, price range, and availability filtering
-- **Responsive Product Grid**: Mobile-optimized cards with availability status and pricing
-- **Watch Management**: One-click watch creation with visual feedback
-- **Pagination & Infinite Scroll**: Efficient loading of large product catalogs
-- **Barcode Scanner**: PWA-enabled barcode scanning for mobile product lookup
-- **Price History**: Visual price tracking with historical data display
-- **Cart Integration**: Direct links to retailer cart pages for instant purchasing
+**Community and Integration Features** ✨ **MAJOR UPDATE** - Complete community system implemented:
+- **Discord Bot Integration**: Server-wide alerts and community notifications
+- **Webhook System**: Custom integrations for third-party services
+- **CSV Import/Export**: Bulk watch management with data portability
+- **Social Media Sharing**: Enhanced sharing capabilities for alerts and deals
+- **Community Features**: User-generated content and testimonials system
+- **Social Links Integration**: Prominent social media presence across the platform
 
-**Alert Management & History UI** ✨ **MAJOR UPDATE** - Complete alert management system implemented:
-- **Alert Inbox**: Comprehensive alert management with read/unread status and bulk operations
-- **Advanced Filtering**: Filter by status, type, date range, and search with real-time updates
-- **Alert Analytics**: Detailed engagement metrics with daily breakdowns and click-through rates
-- **Interactive Dashboard**: Visual analytics with charts and performance insights
-- **Bulk Operations**: Mark multiple alerts as read with efficient batch processing
-- **Mobile-Optimized**: Responsive design with touch-friendly interactions
-- **Real-time Updates**: Live alert status updates and notification counts
-- **Rich Alert Details**: Product information, pricing, and direct cart links
+**Admin Dashboard and Management Tools** ✨ **MAJOR UPDATE** - Complete admin system implemented:
+- **Role-Based Access Control**: Comprehensive permission system with admin, super_admin roles
+- **User Management Interface**: Advanced user search, filtering, and pagination with bulk operations
+- **User Administration**: Role updates, account suspension, and secure user deletion
+- **ML Model Management**: Training controls, model deployment, and data review system
+- **System Health Monitoring**: Real-time metrics, uptime tracking, and performance analytics
+- **Audit Logging**: Complete administrative action tracking with IP and user agent logging
+- **Dashboard Analytics**: User statistics, alert metrics, and system performance insights
+- **Responsive Interface**: Modern React-based admin dashboard with tabbed navigation
+
+**Machine Learning Prediction System** ✨ **MAJOR UPDATE** - Complete ML system implemented:
+- **Data Collection System**: Historical pricing and availability data aggregation
+- **Price Prediction Algorithms**: Advanced forecasting using historical trends and market patterns
+- **Sell-out Risk Assessment**: Intelligent availability pattern analysis for stock predictions
+- **ROI Estimation System**: Collectible item value forecasting with market trend analysis
+- **Hype Meter Calculation**: User engagement metrics and community sentiment analysis
+- **Predictive Dashboard**: Real-time insights with price forecasts and investment recommendations
+- **ML Model Training**: Automated model updates with performance monitoring and validation
+- **Data Analytics**: Comprehensive market analysis with trend identification and anomaly detection
+
+**Automated Checkout Functionality** ✨ **MAJOR UPDATE** - Complete checkout automation system implemented:
+- **Secure Credential Management**: Enterprise-grade encryption for retailer login credentials
+- **Automated Form Filling**: Intelligent form detection and auto-fill for shipping and billing
+- **Cart Management**: Automatic add-to-cart functionality with quantity and option selection
+- **Checkout Automation**: End-to-end checkout process with safety checks and user confirmation
+- **Purchase Tracking**: Automatic purchase detection and analytics with order confirmation
+- **Multi-Retailer Support**: Retailer-specific strategies for Best Buy, Walmart, Costco, Sam's Club
+- **Safety Features**: Order value limits, user confirmation dialogs, and error recovery
+- **Step Management**: Detailed checkout progress tracking with error handling and retry logic
+- **Performance Monitoring**: Checkout success rates, timing analytics, and failure diagnostics
 
 **Browser Extension Foundation** ✨ **MAJOR UPDATE** - Complete browser extension implemented:
 - **Multi-Browser Support**: Chrome (Manifest V3) and Firefox (Manifest V2) compatibility
@@ -550,16 +700,15 @@ This project is in active development. **Major systems completed:**
 - **Real-time Sync**: Automatic synchronization with BoosterBeacon account
 - **Responsive Design**: Mobile-optimized interface for all extension components
 
-**Automated Checkout Functionality** ✨ **MAJOR UPDATE** - Complete checkout automation system implemented:
-- **Secure Credential Management**: Enterprise-grade encryption for retailer login credentials
-- **Automated Form Filling**: Intelligent form detection and auto-fill for shipping and billing
-- **Cart Management**: Automatic add-to-cart functionality with quantity and option selection
-- **Checkout Automation**: End-to-end checkout process with safety checks and user confirmation
-- **Purchase Tracking**: Automatic purchase detection and analytics with order confirmation
-- **Multi-Retailer Support**: Retailer-specific strategies for Best Buy, Walmart, Costco, Sam's Club
-- **Safety Features**: Order value limits, user confirmation dialogs, and error recovery
-- **Step Management**: Detailed checkout progress tracking with error handling and retry logic
-- **Performance Monitoring**: Checkout success rates, timing analytics, and failure diagnostics
+**Alert Management & History UI** ✨ **MAJOR UPDATE** - Complete alert management system implemented:
+- **Alert Inbox**: Comprehensive alert management with read/unread status and bulk operations
+- **Advanced Filtering**: Filter by status, type, date range, and search with real-time updates
+- **Alert Analytics**: Detailed engagement metrics with daily breakdowns and click-through rates
+- **Interactive Dashboard**: Visual analytics with charts and performance insights
+- **Bulk Operations**: Mark multiple alerts as read with efficient batch processing
+- **Mobile-Optimized**: Responsive design with touch-friendly interactions
+- **Real-time Updates**: Live alert status updates and notification counts
+- **Rich Alert Details**: Product information, pricing, and direct cart links
 
 **Email Notification System** ✨ **MAJOR UPDATE** - Complete email system implemented:
 - **Multiple SMTP Configurations**: Amazon SES, local SMTP, and Ethereal for development
@@ -582,16 +731,31 @@ This project is in active development. **Major systems completed:**
 
 ## 📚 Documentation
 
+### System Guides
+- **[SEO System Guide](docs/seo-system.md)** - Complete SEO optimization and marketing features documentation
+- **[Admin Dashboard Guide](docs/admin-dashboard.md)** - Complete admin dashboard and management system documentation
+- **[Machine Learning System Guide](docs/ml-system.md)** - Complete ML prediction and analytics system documentation
 - **[Browser Extension Guide](docs/browser-extension.md)** - Complete browser extension development and usage guide
 - **[Automated Checkout System](docs/automated-checkout.md)** - Comprehensive guide to the automated checkout functionality
 - **[Watch Management Guide](docs/watch-management.md)** - Complete guide to the watch management system
 - **[Retailer Integration Guide](docs/retailer-integration.md)** - Multi-retailer monitoring system documentation
 - **[Alert System Guide](docs/alert-system.md)** - Complete alert processing and delivery system documentation
 - **[Email System Guide](docs/email-system.md)** - Comprehensive email notification system documentation
+
+### Development & API
 - **[Frontend Development Guide](docs/frontend-development.md)** - React frontend development documentation
 - **[API Reference](docs/api-reference.md)** - Comprehensive API documentation
 - **[Test Troubleshooting Guide](docs/troubleshooting-tests.md)** - Solutions for test failures and deployment issues
 - **[Deployment Guide](docs/deployment.md)** - Production deployment instructions
+
+### Implementation Summaries
+- **[SEO Implementation Summary](SEO_IMPLEMENTATION_SUMMARY.md)** - Technical implementation details and requirements fulfillment
+- **[Admin Dashboard Summary](ADMIN_DASHBOARD_SUMMARY.md)** - Admin dashboard implementation overview
+- **[Alert Management Summary](ALERT_MANAGEMENT_SUMMARY.md)** - Alert system implementation details
+- **[Dashboard Controller Improvements](DASHBOARD_CONTROLLER_IMPROVEMENTS.md)** - Dashboard optimization details
+- **[Price Comparison System Guide](backend/docs/PRICE_COMPARISON_SYSTEM.md)** - Cross-retailer price comparison and deal identification system
+
+### Project History
 - **[Changelog](docs/CHANGELOG.md)** - Detailed release history and feature updates
 
 ## 📄 License

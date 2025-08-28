@@ -602,7 +602,6 @@ export class WatchController {
   // Get system watch health (admin only)
   static async getSystemWatchHealth(req: Request, res: Response): Promise<void> {
     try {
-      // TODO: Add admin authentication check
       const systemHealth = await WatchMonitoringService.getSystemWatchHealth();
       successResponse(res, systemHealth, 'System watch health retrieved successfully');
     } catch (error) {
@@ -614,7 +613,6 @@ export class WatchController {
   // Cleanup watches (admin only)
   static async cleanupWatches(req: Request, res: Response): Promise<void> {
     try {
-      // TODO: Add admin authentication check
       const cleanupResults = await WatchMonitoringService.cleanupWatches();
       successResponse(res, cleanupResults, 'Watch cleanup completed successfully');
     } catch (error) {

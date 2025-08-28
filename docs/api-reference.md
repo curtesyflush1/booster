@@ -1316,7 +1316,330 @@ POST /api/v1/email/config/test
 }
 ```
 
+## Machine Learning & Predictions
+
+### Get Price Predictions
+```http
+GET /api/v1/ml/predictions/price/:productId
+```
+
+**Parameters:**
+- `productId` (UUID, required): Product identifier
+
+**Query Parameters:**
+- `days` (integer, optional): Prediction horizon in days (default: 30, max: 365)
+- `confidence` (number, optional): Confidence level (default: 0.95)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "productId": "uuid",
+    "predictions": [
+      {
+        "date": "2024-08-27",
+        "predictedPrice": 29.99,
+        "confidenceInterval": {
+          "lower": 27.50,
+          "upper": 32.48
+        },
+        "confidence": 0.95
+      }
+    ],
+    "currentPrice": 24.99,
+    "priceChange": {
+      "amount": 5.00,
+      "percentage": 20.0,
+      "direction": "increase"
+    },
+    "modelAccuracy": 0.87,
+    "lastUpdated": "2024-08-27T14:30:22Z"
+  }
+}
+```
+
+### Get Sell-out Risk Assessment
+```http
+GET /api/v1/ml/predictions/sellout/:productId
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "productId": "uuid",
+    "selloutRisk": {
+      "score": 0.85,
+      "level": "high",
+      "timeToSellout": {
+        "estimate": 72,
+        "unit": "hours",
+        "confidence": 0.78
+      }
+    },
+    "stockVelocity": {
+      "unitsPerHour": 15.5,
+      "trend": "increasing"
+    },
+    "restockProbability": {
+      "next7Days": 0.25,
+      "next30Days": 0.65
+    },
+    "alertPriority": "urgent",
+    "lastUpdated": "2024-08-27T14:30:22Z"
+  }
+}
+```
+
+### Get ROI Estimation
+```http
+GET /api/v1/ml/predictions/roi/:productId
+```
+
+**Query Parameters:**
+- `timeHorizon` (integer, optional): Investment horizon in months (default: 12)
+- `investmentAmount` (number, optional): Investment amount for analysis
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "productId": "uuid",
+    "roiEstimate": {
+      "expectedReturn": 0.35,
+      "confidenceInterval": {
+        "lower": 0.15,
+        "upper": 0.55
+      },
+      "riskLevel": "medium",
+      "investmentGrade": "B+"
+    },
+    "priceAppreciation": {
+      "historical": {
+        "1year": 0.28,
+        "2year": 0.45,
+        "5year": 1.25
+      },
+      "projected": {
+        "6months": 0.18,
+        "1year": 0.35,
+        "2year": 0.62
+      }
+    },
+    "marketFactors": {
+      "rarity": 0.75,
+      "demand": 0.82,
+      "collectibility": 0.68
+    },
+    "lastUpdated": "2024-08-27T14:30:22Z"
+  }
+}
+```
+
+### Get Hype Meter
+```http
+GET /api/v1/ml/analytics/hype/:productId
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "productId": "uuid",
+    "hypeScore": {
+      "overall": 0.78,
+      "level": "high",
+      "trend": "increasing"
+    },
+    "metrics": {
+      "watchCount": 1250,
+      "alertFrequency": 45.2,
+      "communityEngagement": 0.65,
+      "socialMentions": 892,
+      "priceVolatility": 0.23
+    },
+    "viralPotential": {
+      "score": 0.72,
+      "factors": [
+        "high_community_interest",
+        "limited_availability",
+        "price_momentum"
+      ]
+    },
+    "lastUpdated": "2024-08-27T14:30:22Z"
+  }
+}
+```
+
+### Get Personalized Recommendations
+```http
+GET /api/v1/ml/recommendations/user
+```
+
+**Query Parameters:**
+- `budget` (number, optional): Budget constraint for recommendations
+- `riskTolerance` (string, optional): "conservative" | "moderate" | "aggressive"
+- `category` (string, optional): Product category filter
+- `limit` (integer, optional): Number of recommendations (default: 10)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "recommendations": [
+      {
+        "productId": "uuid",
+        "score": 0.92,
+        "reasoning": [
+          "high_roi_potential",
+          "portfolio_diversification",
+          "price_momentum"
+        ],
+        "expectedRoi": 0.45,
+        "riskLevel": "medium",
+        "timeToAction": "urgent",
+        "priceTarget": 29.99,
+        "confidence": 0.87
+      }
+    ],
+    "portfolioAnalysis": {
+      "diversificationScore": 0.65,
+      "riskBalance": "moderate",
+      "gapAnalysis": [
+        {
+          "category": "Booster Boxes",
+          "recommendation": "underweight",
+          "suggestedAllocation": 0.25
+        }
+      ]
+    },
+    "lastUpdated": "2024-08-27T14:30:22Z"
+  }
+}
+```
+
+### Get Market Insights
+```http
+GET /api/v1/ml/insights/market
+```
+
+**Query Parameters:**
+- `category` (string, optional): Product category filter
+- `timeframe` (string, optional): "1d" | "7d" | "30d" | "90d" (default: "30d")
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "marketTrends": {
+      "overallDirection": "bullish",
+      "volatility": "moderate",
+      "momentum": 0.68
+    },
+    "topMovers": {
+      "gainers": [
+        {
+          "productId": "uuid",
+          "priceChange": 0.25,
+          "volume": 1250
+        }
+      ],
+      "losers": [
+        {
+          "productId": "uuid",
+          "priceChange": -0.15,
+          "volume": 890
+        }
+      ]
+    },
+    "opportunities": [
+      {
+        "type": "arbitrage",
+        "productId": "uuid",
+        "potential": 0.18,
+        "confidence": 0.82
+      }
+    ],
+    "lastUpdated": "2024-08-27T14:30:22Z"
+  }
+}
+```
+
+### Get Portfolio Analysis
+```http
+GET /api/v1/ml/portfolio/analysis
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "portfolioValue": {
+      "current": 2450.75,
+      "change24h": 45.20,
+      "changePercent": 1.88
+    },
+    "performance": {
+      "totalReturn": 0.32,
+      "annualizedReturn": 0.28,
+      "sharpeRatio": 1.45,
+      "maxDrawdown": 0.12
+    },
+    "allocation": [
+      {
+        "category": "Booster Boxes",
+        "value": 1200.50,
+        "percentage": 0.49,
+        "recommendation": "maintain"
+      }
+    ],
+    "riskMetrics": {
+      "portfolioRisk": "moderate",
+      "diversificationScore": 0.72,
+      "concentrationRisk": 0.35
+    },
+    "recommendations": [
+      {
+        "action": "rebalance",
+        "category": "Single Packs",
+        "suggestedChange": -0.10,
+        "reasoning": "overweight_position"
+      }
+    ],
+    "lastUpdated": "2024-08-27T14:30:22Z"
+  }
+}
+```
+
 ## Changelog
+
+### v1.5.0 (2024-08-27)
+- **Machine Learning Prediction System** - Complete ML analytics platform
+- Price forecasting with confidence intervals and trend analysis
+- Sell-out risk assessment with stock velocity and restock probability
+- ROI estimation with investment grade classification and risk assessment
+- Hype meter calculation with community sentiment and viral potential
+- Personalized recommendations with portfolio optimization
+- Market insights with trend analysis and opportunity identification
+- **ML API Endpoints** - Comprehensive prediction and analytics APIs
+- Advanced algorithms with time series forecasting and classification
+- Real-time inference with sub-100ms response times
+- Model performance monitoring with accuracy tracking
+
+### v1.4.0 (2024-08-27)
+- **Automated Checkout System** - Complete checkout automation
+- Secure credential management with enterprise-grade encryption
+- Intelligent form auto-fill with retailer-specific optimization
+- End-to-end checkout process with safety checks and confirmation
+- Purchase tracking with order confirmation detection
+- Multi-retailer support with specialized strategies
 
 ### v1.3.0 (2024-08-27)
 - **Frontend Application Foundation** - Complete React frontend implementation

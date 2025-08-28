@@ -33,6 +33,16 @@ export class User extends BaseModel<IUser> {
       if (tierError) errors.push(tierError);
     }
 
+    // Role validation
+    if (data.role !== undefined) {
+      const roleError = User.validateEnum(
+        data.role,
+        'role',
+        ['user', 'admin', 'super_admin']
+      );
+      if (roleError) errors.push(roleError);
+    }
+
     // Name validation
     if (data.first_name !== undefined && data.first_name !== null) {
       const firstNameError = User.validateLength(data.first_name, 'first_name', 1, 50);
@@ -100,6 +110,12 @@ export class User extends BaseModel<IUser> {
     }
     if (!sanitized.preferences) {
       sanitized.preferences = {};
+    }
+    if (!sanitized.admin_permissions) {
+      sanitized.admin_permissions = [];
+    }
+    if (!sanitized.role) {
+      sanitized.role = 'user';
     }
 
     return sanitized;

@@ -9,6 +9,7 @@ import { requestLogger } from './middleware/requestLogger';
 import { generalRateLimit } from './middleware/rateLimiter';
 import { initializeWebSocketService } from './services/websocketService';
 import { DataCollectionService } from './services/dataCollectionService';
+import { AdminSystemService } from './services/adminSystemService';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -22,6 +23,14 @@ import dashboardRoutes from './routes/dashboard';
 import alertRoutes from './routes/alerts';
 import subscriptionRoutes from './routes/subscription';
 import mlRoutes from './routes/mlRoutes';
+import adminRoutes from './routes/admin';
+import discordRoutes from './routes/discord';
+import webhookRoutes from './routes/webhooks';
+import csvRoutes from './routes/csv';
+import socialRoutes from './routes/social';
+import communityRoutes from './routes/community';
+import priceComparisonRoutes from './routes/priceComparisonRoutes';
+import sitemapRoutes from './routes/sitemapRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -101,6 +110,30 @@ app.use('/api/subscription', subscriptionRoutes);
 // Machine learning and prediction routes
 app.use('/api/ml', mlRoutes);
 
+// Admin management routes
+app.use('/api/admin', adminRoutes);
+
+// Discord bot integration routes
+app.use('/api/discord', discordRoutes);
+
+// Webhook system routes
+app.use('/api/webhooks', webhookRoutes);
+
+// CSV import/export routes
+app.use('/api/csv', csvRoutes);
+
+// Social sharing routes
+app.use('/api/social', socialRoutes);
+
+// Community features routes
+app.use('/api/community', communityRoutes);
+
+// Price comparison routes
+app.use('/api/price-comparison', priceComparisonRoutes);
+
+// SEO and sitemap routes
+app.use('/', sitemapRoutes);
+
 // Error handling middleware (must be last)
 app.use(errorHandler);
 
@@ -123,11 +156,15 @@ if (process.env.NODE_ENV !== 'test') {
   // Initialize ML data collection service
   DataCollectionService.scheduleDataCollection();
   
+  // Start system monitoring
+  AdminSystemService.startSystemMonitoring();
+  
   server.listen(PORT, () => {
     logger.info(`BoosterBeacon API server running on port ${PORT}`);
     logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
     logger.info('WebSocket service initialized');
     logger.info('ML data collection service scheduled');
+    logger.info('System monitoring started');
   });
 
   // Graceful shutdown

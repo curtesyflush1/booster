@@ -6,6 +6,7 @@ export interface IUser {
   email: string;
   password_hash: string;
   subscription_tier: SubscriptionTier;
+  role: 'user' | 'admin' | 'super_admin';
   first_name?: string;
   last_name?: string;
   email_verified: boolean;
@@ -15,6 +16,8 @@ export interface IUser {
   failed_login_attempts: number;
   locked_until?: Date | null;
   last_login?: Date;
+  last_admin_login?: Date;
+  admin_permissions: string[];
   shipping_addresses: IAddress[];
   payment_methods: IPaymentMethod[];
   retailer_credentials: Record<string, IRetailerCredential>;
@@ -401,4 +404,118 @@ export interface ISystemStats {
   pendingAlerts: number;
   failedAlerts: number;
   avgDeliveryTime: number;
+}
+
+// Admin-related interfaces
+export interface IAdminAuditLog {
+  id: string;
+  admin_user_id: string;
+  action: string;
+  target_type?: string;
+  target_id?: string;
+  details: Record<string, any>;
+  ip_address?: string;
+  user_agent?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface IMLModel {
+  id: string;
+  name: string;
+  version: string;
+  status: 'training' | 'active' | 'deprecated' | 'failed';
+  config: Record<string, any>;
+  metrics: Record<string, any>;
+  model_path?: string;
+  training_started_at?: Date;
+  training_completed_at?: Date;
+  deployed_at?: Date;
+  trained_by?: string;
+  training_notes?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface IMLTrainingData {
+  id: string;
+  dataset_name: string;
+  data_type: string;
+  data: Record<string, any>;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewed_by?: string;
+  reviewed_at?: Date;
+  review_notes?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface ISystemMetric {
+  id: string;
+  metric_name: string;
+  metric_type: 'gauge' | 'counter' | 'histogram';
+  value: number;
+  labels: Record<string, any>;
+  recorded_at: Date;
+}
+
+// Admin dashboard data types
+export interface IAdminDashboardStats {
+  users: {
+    total: number;
+    active: number;
+    new_today: number;
+    new_this_week: number;
+    pro_subscribers: number;
+    conversion_rate: number;
+  };
+  alerts: {
+    total_sent: number;
+    sent_today: number;
+    pending: number;
+    failed: number;
+    success_rate: number;
+    avg_delivery_time: number;
+  };
+  system: {
+    uptime: number;
+    cpu_usage: number;
+    memory_usage: number;
+    disk_usage: number;
+    api_response_time: number;
+    error_rate: number;
+  };
+  ml_models: {
+    active_models: number;
+    training_models: number;
+    last_training: Date | null;
+    prediction_accuracy: number;
+  };
+}
+
+export interface IUserManagementFilters {
+  search?: string;
+  role?: 'user' | 'admin' | 'super_admin';
+  subscription_tier?: SubscriptionTier;
+  email_verified?: boolean;
+  is_active?: boolean;
+  created_after?: Date;
+  created_before?: Date;
+}
+
+export interface IAdminUserDetails extends Omit<IUser, 'password_hash'> {
+  watch_count: number;
+  alert_count: number;
+  last_activity?: Date;
+  total_spent?: number;
+}
+
+export interface ISystemHealthMetrics {
+  service_name: string;
+  status: 'healthy' | 'degraded' | 'down';
+  response_time?: number;
+  error_rate?: number;
+  uptime_percentage?: number;
+  last_check: Date;
+  details?: Record<string, any>;
 }

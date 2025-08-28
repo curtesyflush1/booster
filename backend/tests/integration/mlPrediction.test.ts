@@ -1,9 +1,8 @@
 import request from 'supertest';
 import app from '../../src/index';
-import { BaseModel } from '../../src/models/BaseModel';
-import { User } from '../../src/models/User';
 import { Product } from '../../src/models/Product';
-import { authTestHelpers } from '../helpers/authTestHelpers';
+import { AuthTestHelpers } from '../helpers/authTestHelpers';
+import { db } from '../../src/config/database';
 
 describe('ML Prediction API Integration Tests', () => {
   let authToken: string;
@@ -12,8 +11,8 @@ describe('ML Prediction API Integration Tests', () => {
 
   beforeAll(async () => {
     // Create test user and get auth token
-    testUser = await authTestHelpers.createTestUser();
-    authToken = await authTestHelpers.generateTestToken(testUser.id);
+    testUser = await AuthTestHelpers.createTestUser();
+    authToken = await AuthTestHelpers.generateTestToken(testUser.id);
 
     // Create test product
     testProduct = await Product.createProduct({
@@ -28,7 +27,7 @@ describe('ML Prediction API Integration Tests', () => {
     });
 
     // Insert some test price history
-    await BaseModel.db('price_history').insert([
+    await db('price_history').insert([
       {
         product_id: testProduct.id,
         retailer_id: 'test-retailer-1',
@@ -53,7 +52,7 @@ describe('ML Prediction API Integration Tests', () => {
     ]);
 
     // Insert test availability data
-    await BaseModel.db('product_availability').insert({
+    await db('product_availability').insert({
       product_id: testProduct.id,
       retailer_id: 'test-retailer-1',
       in_stock: true,
@@ -64,7 +63,7 @@ describe('ML Prediction API Integration Tests', () => {
     });
 
     // Insert test watches for engagement metrics
-    await BaseModel.db('watches').insert([
+    await db('watches').insert([
       {
         user_id: testUser.id,
         product_id: testProduct.id,
@@ -74,7 +73,7 @@ describe('ML Prediction API Integration Tests', () => {
     ]);
 
     // Insert test alerts for engagement metrics
-    await BaseModel.db('alerts').insert([
+    await db('alerts').insert([
       {
         user_id: testUser.id,
         product_id: testProduct.id,
@@ -97,14 +96,14 @@ describe('ML Prediction API Integration Tests', () => {
   afterAll(async () => {
     // Clean up test data
     if (testProduct) {
-      await BaseModel.db('price_history').where('product_id', testProduct.id).del();
-      await BaseModel.db('product_availability').where('product_id', testProduct.id).del();
-      await BaseModel.db('watches').where('product_id', testProduct.id).del();
-      await BaseModel.db('alerts').where('product_id', testProduct.id).del();
-      await BaseModel.db('products').where('id', testProduct.id).del();
+      await db('price_history').where('product_id', testProduct.id).del();
+      await db('product_availability').where('product_id', testProduct.id).del();
+      await db('watches').where('product_id', testProduct.id).del();
+      await db('alerts').where('product_id', testProduct.id).del();
+      await db('products').where('id', testProduct.id).del();
     }
     if (testUser) {
-      await BaseModel.db('users').where('id', testUser.id).del();
+      await db('users').where('id', testUser.id).del();
     }
   });
 
@@ -211,7 +210,7 @@ describe('ML Prediction API Integration Tests', () => {
       expect(response.body.data).toHaveProperty('hypeLevel');
       expect(response.body.data).toHaveProperty('engagementMetrics');
       expect(response.body.data).toHaveProperty('trendDirection');
-      
+
       expect(response.body.data.hypeScore).toBeGreaterThanOrEqual(0);
       expect(response.body.data.hypeScore).toBeLessThanOrEqual(100);
       expect(['low', 'medium', 'high', 'viral']).toContain(response.body.data.hypeLevel);
@@ -239,7 +238,7 @@ describe('ML Prediction API Integration Tests', () => {
       expect(response.body.data).toHaveProperty('availabilityPattern');
       expect(response.body.data).toHaveProperty('seasonalTrends');
       expect(response.body.data).toHaveProperty('competitorAnalysis');
-      
+
       expect(Array.isArray(response.body.data.priceHistory)).toBe(true);
       expect(Array.isArray(response.body.data.availabilityPattern)).toBe(true);
       expect(Array.isArray(response.body.data.seasonalTrends)).toBe(true);
@@ -293,7 +292,7 @@ describe('ML Prediction API Integration Tests', () => {
 
       expect(response.body.success).toBe(true);
       expect(Array.isArray(response.body.data)).toBe(true);
-      
+
       if (response.body.data.length > 0) {
         const product = response.body.data[0];
         expect(product).toHaveProperty('id');
@@ -337,7 +336,7 @@ describe('ML Prediction API Integration Tests', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      
+
       // All returned products should have risk score >= 75
       response.body.data.forEach((product: any) => {
         if (product.riskAssessment) {
@@ -357,7 +356,7 @@ describe('ML Prediction API Integration Tests', () => {
       );
 
       const responses = await Promise.all(requests);
-      
+
       // Some requests should be rate limited (429 status)
       const rateLimitedResponses = responses.filter(res => res.status === 429);
       expect(rateLimitedResponses.length).toBeGreaterThan(0);
@@ -367,7 +366,7 @@ describe('ML Prediction API Integration Tests', () => {
   describe('Error Handling', () => {
     it('should handle non-existent product gracefully', async () => {
       const fakeProductId = '00000000-0000-0000-0000-000000000000';
-      
+
       const response = await request(app)
         .get(`/api/ml/products/${fakeProductId}/price-prediction`)
         .set('Authorization', `Bearer ${authToken}`)

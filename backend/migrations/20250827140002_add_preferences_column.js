@@ -1,0 +1,23 @@
+/**
+ * Add preferences column to users table
+ * @param { import("knex").Knex } knex
+ * @returns { Promise<void> }
+ */
+exports.up = function(knex) {
+  return knex.schema
+    .alterTable('users', function (table) {
+      table.jsonb('preferences').defaultTo(JSON.stringify({}));
+    });
+};
+
+/**
+ * Rollback preferences column
+ * @param { import("knex").Knex } knex
+ * @returns { Promise<void> }
+ */
+exports.down = function(knex) {
+  return knex.schema
+    .alterTable('users', function (table) {
+      table.dropColumn('preferences');
+    });
+};

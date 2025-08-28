@@ -103,17 +103,32 @@ npm run test:unit
 # Integration tests
 npm run test:integration
 
-# Extension tests
-npm run test:extension
-
-# E2E tests
-npm run test:e2e
+# Performance tests
+npm run test:performance
 
 # Security tests
 npm run test:security
 
-# Performance tests
-npm run test:load
+# E2E tests
+npm run test:e2e
+
+# Extension tests
+npm run test:extension
+
+# All backend tests
+npm run test:all
+
+# CI tests (coverage + integration)
+npm run test:ci
+
+# Test utilities
+npm run test:watch
+npm run test:coverage
+npm run fix-tests
+npm run test:clean
+npm run test:skip
+npm run test:restore
+npm run test:smoke
 ```
 
 ## Development Practices

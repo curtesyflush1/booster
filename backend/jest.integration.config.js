@@ -1,21 +1,34 @@
+const baseConfig = require('./jest.config.js');
+
 module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
-  roots: ['<rootDir>/tests/integration'],
+  ...baseConfig,
+  displayName: 'Integration Tests',
   testMatch: [
-    '**/integration/**/*.test.ts',
-    '**/integration/**/*.spec.ts'
+    '**/tests/integration/**/*.test.ts',
+    '**/tests/integration/**/*.spec.ts'
   ],
-  transform: {
-    '^.+\\.ts$': 'ts-jest'
-  },
-  setupFilesAfterEnv: ['<rootDir>/tests/integration/setup.ts'],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/',
+    '/coverage/',
+    'e2e',
+    'performance',
+    'security'
+  ],
+  // Integration tests need more time and resources
   testTimeout: 30000,
-  verbose: true,
-  forceExit: true,
-  clearMocks: true,
-  resetMocks: true,
-  restoreMocks: true,
-  // Run integration tests sequentially to avoid database conflicts
-  maxWorkers: 1
+  maxWorkers: 1, // Sequential execution for database tests
+  setupFilesAfterEnv: [
+    '<rootDir>/tests/setup.ts',
+    '<rootDir>/tests/integration/setup.ts'
+  ],
+  // Lower coverage thresholds for integration tests
+  coverageThreshold: {
+    global: {
+      branches: 50,
+      functions: 60,
+      lines: 55,
+      statements: 55
+    }
+  }
 };

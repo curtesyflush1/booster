@@ -40,7 +40,7 @@ interface MockProduct {
   name: string;
   slug: string;
   upc: string;
-  sku?: string | undefined;
+  sku: string;
   msrp?: number | undefined;
   set_name?: string | undefined;
   series?: string | undefined;
@@ -208,7 +208,7 @@ export const createMockProduct = (overrides: Partial<MockProduct> = {}): MockPro
     name: 'Test Product',
     slug: 'test-product',
     upc: '123456789012',
-    sku: undefined, // Use undefined instead of null for optional fields
+    sku: 'TEST-SKU-001', // Provide a default SKU
     msrp: undefined,
     set_name: undefined,
     series: undefined,

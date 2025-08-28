@@ -23,6 +23,10 @@ const SubscriptionPage = React.lazy(() => import('./pages/SubscriptionPage'));
 const SubscriptionSuccessPage = React.lazy(() => import('./pages/SubscriptionSuccessPage'));
 const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage'));
 
+// SEO-optimized landing pages
+const PokemonTCGAlertsPage = React.lazy(() => import('./pages/PokemonTCGAlertsPage'));
+const LocationBasedPage = React.lazy(() => import('./pages/LocationBasedPage'));
+
 // Types
 interface RouteWrapperProps {
   children: React.ReactNode;
@@ -87,6 +91,10 @@ const routeConfig: RouteConfig[] = [
   // Public Routes
   { path: '/', element: HomePage },
   { path: '/pricing', element: PricingPage },
+
+  // SEO-optimized landing pages
+  { path: '/pokemon-tcg-alerts', element: PokemonTCGAlertsPage },
+  { path: '/locations/:city/:state', element: LocationBasedPage },
 
   // Auth Routes (redirect if authenticated)
   { path: '/login', element: LoginPage, isPublicOnly: true },

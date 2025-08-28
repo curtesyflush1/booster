@@ -43,8 +43,8 @@ export class WebSocketService {
           return next(new Error('User not found'));
         }
 
-        (socket as AuthenticatedSocket).userId = user.id;
-        (socket as AuthenticatedSocket).user = user;
+        (socket as AuthenticatedSocket).userId = (user as any).id;
+        (socket as AuthenticatedSocket).user = user as any;
         next();
       } catch (error) {
         logger.error('WebSocket authentication failed', { error: error instanceof Error ? error.message : 'Unknown error' });

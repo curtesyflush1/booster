@@ -2,6 +2,7 @@ import { logger } from '../utils/logger';
 import { handleDatabaseError } from '../config/database';
 import { DatabaseHelper } from '../utils/dbHelper';
 import { Product } from '../models/Product';
+import { BaseModel } from '../models/BaseModel';
 
 export interface PricePrediction {
   productId: string;
@@ -125,7 +126,8 @@ class MLDataAccess {
   }
 
   static async getPriceHistory(productId: string, startDate: Date) {
-    return this.db('price_history')
+    const knex = BaseModel.getKnex();
+    return knex('price_history')
       .select(
         'recorded_at as date',
         'price',
@@ -138,7 +140,8 @@ class MLDataAccess {
   }
 
   static async getAvailabilityData(productId: string, startDate: Date) {
-    return this.db('product_availability')
+    const knex = BaseModel.getKnex();
+    return knex('product_availability')
       .select(
         'updated_at as date',
         'in_stock',
@@ -151,13 +154,15 @@ class MLDataAccess {
   }
 
   static async getCurrentAvailability(productId: string) {
-    return this.db('product_availability')
+    const knex = BaseModel.getKnex();
+    return knex('product_availability')
       .select('in_stock')
       .where('product_id', productId);
   }
 
   static async getWatchCount(productId: string) {
-    return this.db('watches')
+    const knex = BaseModel.getKnex();
+    return knex('watches')
       .where('product_id', productId)
       .where('is_active', true)
       .count('* as count')
@@ -166,19 +171,21 @@ class MLDataAccess {
 
   static async getAlertStats(productId: string, daysBack: number) {
     const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
-    return this.db('alerts')
+    const knex = BaseModel.getKnex();
+    return knex('alerts')
       .where('product_id', productId)
       .where('created_at', '>=', startDate)
       .select(
-        this.db.raw('COUNT(*) as alert_count'),
-        this.db.raw('COUNT(CASE WHEN clicked_at IS NOT NULL THEN 1 END) as clicked_count')
+        knex.raw('COUNT(*) as alert_count'),
+        knex.raw('COUNT(CASE WHEN clicked_at IS NOT NULL THEN 1 END) as clicked_count')
       )
       .first();
   }
 
   static async getRecentWatches(productId: string, daysBack: number) {
     const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
-    return this.db('watches')
+    const knex = BaseModel.getKnex();
+    return knex('watches')
       .where('product_id', productId)
       .where('created_at', '>=', startDate)
       .count('* as count')
@@ -186,11 +193,12 @@ class MLDataAccess {
   }
 
   static async getCompetitorData(productId: string, startDate: Date) {
-    return this.db('product_availability')
+    const knex = BaseModel.getKnex();
+    return knex('product_availability')
       .select(
         'retailer_id',
-        this.db.raw('AVG(price) as avg_price'),
-        this.db.raw('AVG(CASE WHEN in_stock THEN 1 ELSE 0 END) * 100 as availability_pct')
+        knex.raw('AVG(price) as avg_price'),
+        knex.raw('AVG(CASE WHEN in_stock THEN 1 ELSE 0 END) * 100 as availability_pct')
       )
       .where('product_id', productId)
       .where('updated_at', '>=', startDate)
@@ -476,18 +484,19 @@ export class MLPredictionService {
   static async calculateHypeMeter(productId: string): Promise<HypeMeter> {
     try {
       // Get engagement metrics
-      const watchCount = await this.db('watches')
+      const knex = BaseModel.getKnex();
+      const watchCount = await knex('watches')
         .where('product_id', productId)
         .where('is_active', true)
         .count('* as count')
         .first();
 
-      const alertStats = await this.db('alerts')
+      const alertStats = await knex('alerts')
         .where('product_id', productId)
         .where('created_at', '>=', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)) // Last 30 days
         .select(
-          this.db.raw('COUNT(*) as alert_count'),
-          this.db.raw('COUNT(CASE WHEN clicked_at IS NOT NULL THEN 1 END) as clicked_count')
+          knex.raw('COUNT(*) as alert_count'),
+          knex.raw('COUNT(CASE WHEN clicked_at IS NOT NULL THEN 1 END) as clicked_count')
         )
         .first();
 
@@ -691,13 +700,14 @@ export class MLPredictionService {
 
   private static async calculateHypeTrend(productId: string): Promise<'rising' | 'falling' | 'stable'> {
     // Compare recent engagement vs historical
-    const recentWatches = await this.db('watches')
+    const knex = BaseModel.getKnex();
+    const recentWatches = await knex('watches')
       .where('product_id', productId)
       .where('created_at', '>=', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
       .count('* as count')
       .first();
 
-    const olderWatches = await this.db('watches')
+    const olderWatches = await knex('watches')
       .where('product_id', productId)
       .where('created_at', '>=', new Date(Date.now() - 14 * 24 * 60 * 60 * 1000))
       .where('created_at', '<', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
@@ -734,17 +744,18 @@ export class MLPredictionService {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    const competitorData = await this.db('product_availability')
+    const knex = BaseModel.getKnex();
+    const competitorData = await knex('product_availability')
       .select(
         'retailer_id',
-        this.db.raw('AVG(price) as avg_price'),
-        this.db.raw('AVG(CASE WHEN in_stock THEN 1 ELSE 0 END) * 100 as availability_pct')
+        knex.raw('AVG(price) as avg_price'),
+        knex.raw('AVG(CASE WHEN in_stock THEN 1 ELSE 0 END) * 100 as availability_pct')
       )
       .where('product_id', productId)
       .where('updated_at', '>=', startDate)
       .groupBy('retailer_id');
 
-    return competitorData.map(row => ({
+    return competitorData.map((row: any) => ({
       retailerId: row.retailer_id,
       avgPrice: parseFloat(row.avg_price || '0'),
       availability: parseFloat(row.availability_pct || '0'),
