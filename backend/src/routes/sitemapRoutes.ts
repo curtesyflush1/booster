@@ -5,7 +5,7 @@
 
 import { Router } from 'express';
 import sitemapController from '../controllers/sitemapController';
-import { adminAuth } from '../middleware/adminAuth';
+import { requireAdmin } from '../middleware/adminAuth';
 
 const router = Router();
 
@@ -19,7 +19,7 @@ router.get('/sitemap-sets.xml', sitemapController.getSetsSitemap);
 router.get('/robots.txt', sitemapController.getRobotsTxt);
 
 // Admin sitemap management routes
-router.get('/admin/sitemap/stats', adminAuth, sitemapController.getSitemapStats);
-router.post('/admin/sitemap/ping', adminAuth, sitemapController.pingSitemaps);
+router.get('/admin/sitemap/stats', requireAdmin, sitemapController.getSitemapStats);
+router.post('/admin/sitemap/ping', requireAdmin, sitemapController.pingSitemaps);
 
 export default router;

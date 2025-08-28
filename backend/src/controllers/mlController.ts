@@ -9,22 +9,14 @@ export class MLController {
   /**
    * Get price prediction for a product
    * GET /api/ml/products/:productId/price-prediction
+   * Validation handled by middleware
    */
   static async getPricePrediction(req: Request, res: Response): Promise<void> {
     try {
       const { productId } = req.params;
       const { timeframe = 30 } = req.query;
 
-      if (!productId) {
-        errorResponse(res, 400, 'Product ID is required');
-        return;
-      }
-
       const timeframeDays = parseInt(timeframe as string, 10);
-      if (isNaN(timeframeDays) || timeframeDays < 1 || timeframeDays > 365) {
-        errorResponse(res, 400, 'Invalid timeframe. Must be between 1 and 365 days.');
-        return;
-      }
 
       const prediction = await MLPredictionService.predictPrice(productId, timeframeDays);
       
@@ -38,15 +30,11 @@ export class MLController {
   /**
    * Get sellout risk assessment for a product
    * GET /api/ml/products/:productId/sellout-risk
+   * Validation handled by middleware
    */
   static async getSelloutRisk(req: Request, res: Response): Promise<void> {
     try {
       const { productId } = req.params;
-
-      if (!productId) {
-        errorResponse(res, 400, 'Product ID is required');
-        return;
-      }
 
       const riskAssessment = await MLPredictionService.calculateSelloutRisk(productId);
       
@@ -65,11 +53,6 @@ export class MLController {
     try {
       const { productId } = req.params;
       const { currentPrice, timeframe = 365 } = req.query;
-
-      if (!productId) {
-        errorResponse(res, 400, 'Product ID is required');
-        return;
-      }
 
       if (!currentPrice) {
         errorResponse(res, 400, 'Current price is required');
@@ -106,11 +89,6 @@ export class MLController {
     try {
       const { productId } = req.params;
 
-      if (!productId) {
-        errorResponse(res, 400, 'Product ID is required');
-        return;
-      }
-
       const hypeMeter = await MLPredictionService.calculateHypeMeter(productId);
       
       successResponse(res, hypeMeter, 'Hype meter calculated successfully');
@@ -128,11 +106,6 @@ export class MLController {
     try {
       const { productId } = req.params;
       const { days = 90 } = req.query;
-
-      if (!productId) {
-        errorResponse(res, 400, 'Product ID is required');
-        return;
-      }
 
       const daysPeriod = parseInt(days as string, 10);
       if (isNaN(daysPeriod) || daysPeriod < 7 || daysPeriod > 365) {
@@ -157,11 +130,6 @@ export class MLController {
     try {
       const { productId } = req.params;
       const { currentPrice, priceTimeframe = 30, roiTimeframe = 365 } = req.query;
-
-      if (!productId) {
-        errorResponse(res, 400, 'Product ID is required');
-        return;
-      }
 
       // Get all ML predictions in parallel
       const [

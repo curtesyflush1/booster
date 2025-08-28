@@ -1,101 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
-import Joi from 'joi';
 import { authService } from '../services/authService';
 import { User } from '../models/User';
 import { logger } from '../utils/logger';
 import { IUserRegistration, ILoginCredentials } from '../types/database';
 
-// Validation schemas
-const registrationSchema = Joi.object({
-  email: Joi.string().email().required().messages({
-    'string.email': 'Please provide a valid email address',
-    'any.required': 'Email is required'
-  }),
-  password: Joi.string().min(8).max(128).required().messages({
-    'string.min': 'Password must be at least 8 characters long',
-    'string.max': 'Password must not exceed 128 characters',
-    'any.required': 'Password is required'
-  }),
-  first_name: Joi.string().min(1).max(50).optional().messages({
-    'string.min': 'First name cannot be empty',
-    'string.max': 'First name must not exceed 50 characters'
-  }),
-  last_name: Joi.string().min(1).max(50).optional().messages({
-    'string.min': 'Last name cannot be empty',
-    'string.max': 'Last name must not exceed 50 characters'
-  })
-});
-
-const loginSchema = Joi.object({
-  email: Joi.string().email().required().messages({
-    'string.email': 'Please provide a valid email address',
-    'any.required': 'Email is required'
-  }),
-  password: Joi.string().required().messages({
-    'any.required': 'Password is required'
-  })
-});
-
-const refreshTokenSchema = Joi.object({
-  refresh_token: Joi.string().required().messages({
-    'any.required': 'Refresh token is required'
-  })
-});
-
-const passwordResetRequestSchema = Joi.object({
-  email: Joi.string().email().required().messages({
-    'string.email': 'Please provide a valid email address',
-    'any.required': 'Email is required'
-  })
-});
-
-const passwordResetSchema = Joi.object({
-  token: Joi.string().required().messages({
-    'any.required': 'Reset token is required'
-  }),
-  password: Joi.string().min(8).max(128).required().messages({
-    'string.min': 'Password must be at least 8 characters long',
-    'string.max': 'Password must not exceed 128 characters',
-    'any.required': 'Password is required'
-  })
-});
-
-const changePasswordSchema = Joi.object({
-  current_password: Joi.string().required().messages({
-    'any.required': 'Current password is required'
-  }),
-  new_password: Joi.string().min(8).max(128).required().messages({
-    'string.min': 'New password must be at least 8 characters long',
-    'string.max': 'New password must not exceed 128 characters',
-    'any.required': 'New password is required'
-  })
-});
-
-const emailVerificationSchema = Joi.object({
-  token: Joi.string().required().messages({
-    'any.required': 'Verification token is required'
-  })
-});
-
 /**
  * Register a new user
+ * Validation handled by middleware
  */
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    // Validate request body
-    const { error, value } = registrationSchema.validate(req.body);
-    if (error) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: error.details?.[0]?.message || "Validation failed",
-          timestamp: new Date().toISOString()
-        }
-      });
-      return;
-    }
-
-    const userData: IUserRegistration = value;
+    const userData: IUserRegistration = req.body;
 
     // Register user
     const result = await authService.register(userData);
@@ -128,23 +43,11 @@ export const register = async (req: Request, res: Response, next: NextFunction):
 
 /**
  * Login user
+ * Validation handled by middleware
  */
 export const login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    // Validate request body
-    const { error, value } = loginSchema.validate(req.body);
-    if (error) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: error.details?.[0]?.message || "Validation failed",
-          timestamp: new Date().toISOString()
-        }
-      });
-      return;
-    }
-
-    const credentials: ILoginCredentials = value;
+    const credentials: ILoginCredentials = req.body;
 
     // Login user
     const result = await authService.login(credentials);
@@ -188,23 +91,11 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
 
 /**
  * Refresh access token
+ * Validation handled by middleware
  */
 export const refreshToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    // Validate request body
-    const { error, value } = refreshTokenSchema.validate(req.body);
-    if (error) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: error.details?.[0]?.message || "Validation failed",
-          timestamp: new Date().toISOString()
-        }
-      });
-      return;
-    }
-
-    const { refresh_token } = value;
+    const { refresh_token } = req.body;
 
     // Refresh token
     const tokens = await authService.refreshToken(refresh_token);
@@ -266,23 +157,11 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
 
 /**
  * Request password reset
+ * Validation handled by middleware
  */
 export const requestPasswordReset = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    // Validate request body
-    const { error, value } = passwordResetRequestSchema.validate(req.body);
-    if (error) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: error.details?.[0]?.message || "Validation failed",
-          timestamp: new Date().toISOString()
-        }
-      });
-      return;
-    }
-
-    const { email } = value;
+    const { email } = req.body;
 
     // Initiate password reset
     await authService.initiatePasswordReset(email);
@@ -298,23 +177,11 @@ export const requestPasswordReset = async (req: Request, res: Response, next: Ne
 
 /**
  * Reset password using token
+ * Validation handled by middleware
  */
 export const resetPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    // Validate request body
-    const { error, value } = passwordResetSchema.validate(req.body);
-    if (error) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: error.details?.[0]?.message || "Validation failed",
-          timestamp: new Date().toISOString()
-        }
-      });
-      return;
-    }
-
-    const { token, password } = value;
+    const { token, password } = req.body;
 
     // Reset password
     await authService.resetPassword(token, password);
@@ -340,6 +207,7 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
 
 /**
  * Change password (requires current password)
+ * Validation handled by middleware
  */
 export const changePassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -354,20 +222,7 @@ export const changePassword = async (req: Request, res: Response, next: NextFunc
       return;
     }
 
-    // Validate request body
-    const { error, value } = changePasswordSchema.validate(req.body);
-    if (error) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: error.details?.[0]?.message || "Validation failed",
-          timestamp: new Date().toISOString()
-        }
-      });
-      return;
-    }
-
-    const { current_password, new_password } = value;
+    const { current_password, new_password } = req.body;
 
     // Change password
     await authService.changePassword(req.user.id, current_password, new_password);
@@ -393,23 +248,11 @@ export const changePassword = async (req: Request, res: Response, next: NextFunc
 
 /**
  * Verify email using token
+ * Validation handled by middleware
  */
 export const verifyEmail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    // Validate request body
-    const { error, value } = emailVerificationSchema.validate(req.body);
-    if (error) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: error.details?.[0]?.message || "Validation failed",
-          timestamp: new Date().toISOString()
-        }
-      });
-      return;
-    }
-
-    const { token } = value;
+    const { token } = req.body;
 
     // Verify email
     await authService.verifyEmail(token);
@@ -434,14 +277,60 @@ export const verifyEmail = async (req: Request, res: Response, next: NextFunctio
 };
 
 /**
- * Logout user (client-side token invalidation)
+ * Logout user by blacklisting tokens
  */
-export const logout = async (req: Request, res: Response): Promise<void> => {
-  // In a JWT-based system, logout is typically handled client-side
-  // by removing the tokens from storage. Server-side logout would
-  // require token blacklisting, which we can implement later if needed.
-  
-  res.status(200).json({
-    message: 'Logout successful'
-  });
+export const logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    // Extract tokens from request
+    const authHeader = req.headers.authorization;
+    const accessToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+    const { refresh_token } = req.body;
+
+    if (!accessToken) {
+      res.status(400).json({
+        error: {
+          code: 'MISSING_TOKEN',
+          message: 'Access token is required for logout',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    // Logout user by blacklisting tokens
+    await authService.logout(accessToken, refresh_token);
+
+    res.status(200).json({
+      message: 'Logout successful'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Logout user from all devices
+ */
+export const logoutAllDevices = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: {
+          code: 'AUTHENTICATION_REQUIRED',
+          message: 'Authentication is required',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    // Logout user from all devices
+    await authService.logoutAllDevices(req.user.id);
+
+    res.status(200).json({
+      message: 'Logged out from all devices successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
 };

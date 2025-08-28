@@ -4,7 +4,7 @@ import { logger } from '../utils/logger';
 // Database configuration interface
 interface IDatabaseConfig {
   client: string;
-  connection: {
+  connection: string | {
     host: string;
     port: number;
     database: string;
@@ -34,9 +34,12 @@ interface IDatabaseConfig {
 function getDatabaseConfig(): IDatabaseConfig {
   const env = process.env.NODE_ENV || 'development';
   
+  // Use DATABASE_URL if available, otherwise fall back to individual env vars
+  const databaseUrl = env === 'test' ? process.env.TEST_DATABASE_URL : process.env.DATABASE_URL;
+  
   const baseConfig: IDatabaseConfig = {
     client: 'postgresql',
-    connection: {
+    connection: databaseUrl || {
       host: process.env.DB_HOST || 'localhost',
       port: parseInt(process.env.DB_PORT || '5432'),
       database: process.env.DB_NAME || `boosterbeacon_${env}`,
@@ -64,7 +67,10 @@ function getDatabaseConfig(): IDatabaseConfig {
 
   // Environment-specific overrides
   if (env === 'test') {
-    baseConfig.connection.database = process.env.DB_NAME_TEST || 'boosterbeacon_test';
+    // For test environment, override connection if using object format
+    if (!databaseUrl && typeof baseConfig.connection === 'object') {
+      baseConfig.connection.database = process.env.DB_NAME_TEST || 'boosterbeacon_test';
+    }
     baseConfig.pool.min = 1;
     baseConfig.pool.max = 5;
   } else if (env === 'production') {

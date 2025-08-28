@@ -1,19 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import Joi from 'joi';
 import { ProductCategory } from '../models/ProductCategory';
 import { logger } from '../utils/logger';
 import { IProductCategory } from '../types/database';
 
-// Validation schemas
-const categoryIdSchema = Joi.object({
-  id: Joi.string().uuid().required().messages({
-    'string.uuid': 'Category ID must be a valid UUID',
-    'any.required': 'Category ID is required'
-  })
-});
-
 /**
  * Get all categories with hierarchy
+ * Validation handled by middleware
  */
 export const getAllCategories = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -43,23 +35,11 @@ export const getAllCategories = async (req: Request, res: Response, next: NextFu
 
 /**
  * Get category by ID
+ * Validation handled by middleware
  */
 export const getCategoryById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    // Validate category ID
-    const { error, value } = categoryIdSchema.validate(req.params);
-    if (error) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: error.details?.[0]?.message || 'Validation error',
-          timestamp: new Date().toISOString()
-        }
-      });
-      return;
-    }
-
-    const { id } = value;
+    const { id } = req.params;
 
     const category = await ProductCategory.findById<IProductCategory>(id);
     if (!category) {

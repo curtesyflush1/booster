@@ -6,7 +6,7 @@ export interface IUser {
   email: string;
   password_hash: string;
   subscription_tier: SubscriptionTier;
-  role: 'user' | 'admin' | 'super_admin';
+  role: 'user' | 'admin' | 'super_admin' | 'user_manager' | 'content_manager' | 'ml_engineer' | 'analyst' | 'support_agent' | 'billing_manager' | 'security_officer';
   first_name?: string;
   last_name?: string;
   email_verified: boolean;
@@ -17,7 +17,11 @@ export interface IUser {
   locked_until?: Date | null;
   last_login?: Date;
   last_admin_login?: Date;
-  admin_permissions: string[];
+  admin_permissions: string[] | string;
+  direct_permissions?: string[];
+  role_last_updated?: Date;
+  role_updated_by?: string;
+  permission_metadata?: Record<string, any>;
   shipping_addresses: IAddress[];
   payment_methods: IPaymentMethod[];
   retailer_credentials: Record<string, IRetailerCredential>;
@@ -518,4 +522,22 @@ export interface ISystemHealthMetrics {
   uptime_percentage?: number;
   last_check: Date;
   details?: Record<string, any>;
+}
+
+// Email delivery statistics interfaces
+export interface IEmailDeliveryStats {
+  totalSent: number;
+  totalDelivered: number;
+  totalBounced: number;
+  totalComplained: number;
+  deliveryRate: number;
+  lastEmailSent?: Date;
+}
+
+export interface IEmailDeliveryStatsQueryResult {
+  total_sent: string | number;
+  total_delivered: string | number;
+  total_bounced: string | number;
+  total_complained: string | number;
+  last_email_sent: string | Date | null;
 }

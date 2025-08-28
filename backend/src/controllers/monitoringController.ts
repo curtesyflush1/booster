@@ -119,33 +119,6 @@ export const createAlertRule = async (req: Request, res: Response): Promise<void
   try {
     const rule = req.body;
     
-    // Validate required fields
-    const requiredFields = ['id', 'name', 'metric', 'operator', 'threshold', 'duration', 'severity'];
-    for (const field of requiredFields) {
-      if (!rule[field]) {
-        errorResponse(res, 400, `Field '${field}' is required`);
-        return;
-      }
-    }
-    
-    // Validate operator
-    const validOperators = ['gt', 'lt', 'eq', 'gte', 'lte'];
-    if (!validOperators.includes(rule.operator)) {
-      errorResponse(res, 400, 'Invalid operator. Must be one of: ' + validOperators.join(', '));
-      return;
-    }
-    
-    // Validate severity
-    const validSeverities = ['low', 'medium', 'high', 'critical'];
-    if (!validSeverities.includes(rule.severity)) {
-      errorResponse(res, 400, 'Invalid severity. Must be one of: ' + validSeverities.join(', '));
-      return;
-    }
-    
-    // Set defaults
-    rule.enabled = rule.enabled !== false;
-    rule.notificationChannels = rule.notificationChannels || ['email'];
-    
     monitoringService.addAlertRule(rule);
     
     loggerWithContext.audit('alert_rule_created', req.user?.id, {

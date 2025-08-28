@@ -28,6 +28,10 @@
     "lint:fix": "echo 'Fixing backend code...'",
     "migrate:up": "knex migrate:latest",
     "migrate:down": "knex migrate:rollback",
+    "rbac:init": "ts-node scripts/initialize-rbac.ts",
+    "rbac:validate": "ts-node scripts/initialize-rbac.ts -- --validate",
+    "rbac:repair": "ts-node scripts/initialize-rbac.ts -- --repair",
+    "rbac:test": "ts-node scripts/test-rbac.ts",
     "seed:dev": "knex seed:run",
     "db:backup": "pg_dump $DATABASE_URL > backups/backup-$(date +%Y%m%d-%H%M%S).sql"
   },

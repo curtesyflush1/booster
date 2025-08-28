@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { User } from '../models/User';
 import { IUser, IUserRegistration, ILoginCredentials, IAuthToken } from '../types/database';
 import { logger } from '../utils/logger';
+import { TokenBlacklistService } from './tokenBlacklistService';
 import {
   ValidationError,
   UserNotFoundError,
@@ -20,27 +21,55 @@ export interface AuthServiceConfig {
   refreshTokenExpiry: string;
 }
 
+export interface JWTPayload {
+  userId: string;
+  iat?: number;
+  exp?: number;
+  jti?: string;
+}
+
+export interface TokenMetadata {
+  issuedAt: number;
+  userAgent?: string;
+  ipAddress?: string;
+}
+
 const AUTH_CONSTANTS = {
   RESET_TOKEN_EXPIRY_HOURS: 1,
   ACCOUNT_LOCK_DURATION_MINUTES: 30,
   MAX_FAILED_LOGIN_ATTEMPTS: 5,
   BCRYPT_SALT_ROUNDS: 12,
-  TOKEN_BYTES_LENGTH: 32
+  TOKEN_BYTES_LENGTH: 32,
+  DEFAULT_ACCESS_TOKEN_EXPIRY: '15m',
+  DEFAULT_REFRESH_TOKEN_EXPIRY: '7d',
+  TOKEN_REVOCATION_BATCH_SIZE: 100
 } as const;
 
 export class AuthService {
   private config: AuthServiceConfig;
 
   constructor(config?: Partial<AuthServiceConfig>) {
-    this.config = {
+    this.config = this.buildConfig(config);
+    this.validateSecurityConfiguration();
+  }
+
+  private buildConfig(config?: Partial<AuthServiceConfig>): AuthServiceConfig {
+    return {
       jwtSecret: config?.jwtSecret || process.env.JWT_SECRET || 'your-secret-key',
       jwtRefreshSecret: config?.jwtRefreshSecret || process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key',
       accessTokenExpiry: config?.accessTokenExpiry || '15m',
       refreshTokenExpiry: config?.refreshTokenExpiry || '7d'
     };
+  }
 
+  private validateSecurityConfiguration(): void {
     if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
       logger.warn('JWT secrets not set in environment variables, using defaults (not secure for production)');
+    }
+
+    if (process.env.NODE_ENV === 'production' && 
+        (this.config.jwtSecret === 'your-secret-key' || this.config.jwtRefreshSecret === 'your-refresh-secret-key')) {
+      throw new Error('Production environment requires secure JWT secrets');
     }
   }
 
@@ -49,10 +78,7 @@ export class AuthService {
    */
   async register(userData: IUserRegistration): Promise<{ user: Omit<IUser, 'password_hash'>, tokens: IAuthToken }> {
     try {
-      this.validateEmail(userData.email);
-      this.validatePassword(userData.password);
-      
-      await this.validateUserDoesNotExist(userData.email);
+      await this.validateRegistrationData(userData);
       const user = await this.createUserWithVerification(userData);
       const tokens = await this.generateTokens(user.id);
       const userWithoutPassword = this.sanitizeUserResponse(user);
@@ -64,6 +90,15 @@ export class AuthService {
       logger.error('Registration failed', { error: error instanceof Error ? error.message : String(error), email: userData.email });
       throw error;
     }
+  }
+
+  /**
+   * Validate registration data comprehensively
+   */
+  private async validateRegistrationData(userData: IUserRegistration): Promise<void> {
+    this.validateEmail(userData.email);
+    this.validatePassword(userData.password);
+    await this.validateUserDoesNotExist(userData.email);
   }
 
   /**
@@ -159,14 +194,23 @@ export class AuthService {
     try {
       this.validateToken(refreshToken);
       
+      // Check if refresh token is blacklisted
+      const isBlacklisted = await TokenBlacklistService.isTokenRevoked(refreshToken);
+      if (isBlacklisted) {
+        throw new TokenExpiredError('Token has been revoked');
+      }
+      
       // Verify refresh token
       const decoded = jwt.verify(refreshToken, this.config.jwtRefreshSecret) as { userId: string };
       
       // Check if user still exists
       const user = await User.findById<IUser>(decoded.userId);
       if (!user) {
-        throw new Error('User not found');
+        throw new UserNotFoundError('User associated with token no longer exists');
       }
+
+      // Blacklist the old refresh token
+      await TokenBlacklistService.revokeToken(refreshToken);
 
       // Generate new tokens
       const tokens = await this.generateTokens(user.id);
@@ -176,7 +220,10 @@ export class AuthService {
       return tokens;
     } catch (error) {
       logger.error('Token refresh failed', { error: error instanceof Error ? error.message : String(error) });
-      throw new Error('Invalid refresh token');
+      if (error instanceof UserNotFoundError || error instanceof TokenExpiredError || error instanceof InvalidTokenError) {
+        throw error;
+      }
+      throw new InvalidTokenError('Invalid refresh token');
     }
   }
 
@@ -185,22 +232,39 @@ export class AuthService {
    */
   async validateAccessToken(token: string): Promise<Omit<IUser, 'password_hash'>> {
     try {
-      this.validateToken(token);
-      
-      // Verify token
-      const decoded = jwt.verify(token, this.config.jwtSecret) as { userId: string };
-      
-      // Get user from database
-      const user = await User.findById<IUser>(decoded.userId);
-      if (!user) {
-        throw new Error('User not found');
-      }
-
+      const { user } = await this.validateAndDecodeToken(token, this.config.jwtSecret);
       return this.sanitizeUserResponse(user);
     } catch (error) {
       logger.error('Token validation failed', { error: error instanceof Error ? error.message : String(error) });
-      throw new Error('Invalid token');
+      if (error instanceof UserNotFoundError || error instanceof InvalidTokenError || error instanceof TokenExpiredError) {
+        throw error;
+      }
+      throw new InvalidTokenError('Invalid token');
     }
+  }
+
+  /**
+   * Common token validation and decoding logic
+   */
+  private async validateAndDecodeToken(token: string, secret: string): Promise<{ decoded: { userId: string }, user: IUser }> {
+    this.validateToken(token);
+    
+    // Check if token is blacklisted
+    const isBlacklisted = await TokenBlacklistService.isTokenRevoked(token);
+    if (isBlacklisted) {
+      throw new InvalidTokenError('Token has been revoked');
+    }
+    
+    // Verify token
+    const decoded = jwt.verify(token, secret) as { userId: string };
+    
+    // Get user from database
+    const user = await User.findById<IUser>(decoded.userId);
+    if (!user) {
+      throw new UserNotFoundError('User associated with token not found');
+    }
+
+    return { decoded, user };
   }
 
   /**
@@ -257,6 +321,9 @@ export class AuthService {
         throw new Error('Failed to update password');
       }
 
+      // Blacklist all existing tokens for this user
+      await TokenBlacklistService.revokeAllUserTokens(user.id, 'password_reset');
+
       logger.info('Password reset successfully', { userId: user.id });
     } catch (error) {
       logger.error('Password reset failed', { error: error instanceof Error ? error.message : String(error) });
@@ -312,9 +379,56 @@ export class AuthService {
         throw new Error('Failed to update password');
       }
 
+      // Blacklist all existing tokens for this user
+      await TokenBlacklistService.revokeAllUserTokens(userId, 'password_change');
+
       logger.info('Password changed successfully', { userId });
     } catch (error) {
       logger.error('Password change failed', { error: error instanceof Error ? error.message : String(error), userId });
+      throw error;
+    }
+  }
+
+  /**
+   * Logout user by blacklisting their tokens
+   */
+  async logout(accessToken: string, refreshToken?: string): Promise<void> {
+    try {
+      // Blacklist the access token
+      await TokenBlacklistService.revokeToken(accessToken);
+      
+      // Blacklist the refresh token if provided
+      if (refreshToken) {
+        await TokenBlacklistService.revokeToken(refreshToken);
+      }
+
+      // Extract user ID from access token for logging
+      try {
+        const decoded = jwt.decode(accessToken) as any;
+        if (decoded?.userId) {
+          logger.info('User logged out successfully', { userId: decoded.userId });
+        }
+      } catch (error) {
+        // Ignore decode errors for logging
+      }
+    } catch (error) {
+      logger.error('Logout failed', { error: error instanceof Error ? error.message : String(error) });
+      throw error;
+    }
+  }
+
+  /**
+   * Logout user from all devices by revoking all their tokens
+   */
+  async logoutAllDevices(userId: string): Promise<void> {
+    try {
+      await TokenBlacklistService.revokeAllUserTokens(userId, 'user_logout_all');
+      logger.info('User logged out from all devices', { userId });
+    } catch (error) {
+      logger.error('Logout all devices failed', { 
+        userId,
+        error: error instanceof Error ? error.message : String(error) 
+      });
       throw error;
     }
   }
@@ -332,6 +446,9 @@ export class AuthService {
     const refreshToken = jwt.sign(payload, this.config.jwtRefreshSecret, {
       expiresIn: this.config.refreshTokenExpiry
     } as jwt.SignOptions);
+
+    // Note: Token tracking is handled internally by the TokenBlacklistService
+    // when tokens are created and revoked
 
     // Calculate expiry time in seconds
     const expiresIn = this.parseExpiryToSeconds(this.config.accessTokenExpiry);

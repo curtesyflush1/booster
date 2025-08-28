@@ -7,6 +7,7 @@ import { IProduct } from '../types/database';
 
 /**
  * Search products with advanced filtering
+ * Validation and sanitization handled by middleware
  */
 export const searchProducts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -24,7 +25,23 @@ export const searchProducts = async (req: Request, res: Response, next: NextFunc
       limit,
       sort_by,
       sort_order
-    } = req.query as any; // Validation handled by middleware
+    } = req.query as any;
+
+    // Additional validation for sanitized parameters
+    if (searchTerm && typeof searchTerm === 'string' && searchTerm.length > 200) {
+      ResponseHelper.error(res, 'INVALID_SEARCH_TERM', 'Search term is too long', 400);
+      return;
+    }
+
+    if (set_name && typeof set_name === 'string' && set_name.length > 100) {
+      ResponseHelper.error(res, 'INVALID_SET_NAME', 'Set name is too long', 400);
+      return;
+    }
+
+    if (series && typeof series === 'string' && series.length > 100) {
+      ResponseHelper.error(res, 'INVALID_SERIES', 'Series name is too long', 400);
+      return;
+    }
 
     const searchOptions = {
       category_id,
@@ -50,7 +67,8 @@ export const searchProducts = async (req: Request, res: Response, next: NextFunc
       searchTerm,
       filters: searchOptions,
       resultCount: results.data.length,
-      totalResults: results.total
+      totalResults: results.total,
+      correlationId: req.correlationId
     });
 
     ResponseHelper.successWithPagination(res, results.data, {
@@ -61,7 +79,8 @@ export const searchProducts = async (req: Request, res: Response, next: NextFunc
   } catch (error) {
     logger.error('Error searching products', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      query: req.query
+      query: req.query,
+      correlationId: req.correlationId
     });
     next(error);
   }
@@ -69,14 +88,15 @@ export const searchProducts = async (req: Request, res: Response, next: NextFunc
 
 /**
  * Get product by ID with availability information
+ * Validation and sanitization handled by middleware
  */
 export const getProductById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { id } = req.params; // Validation handled by middleware
-    
-    // TypeScript assertion: validation middleware ensures id exists
-    if (!id) {
-      ResponseHelper.badRequest(res, 'Product ID is required');
+    const { id } = req.params;
+
+    // Additional validation for sanitized UUID
+    if (!id || id.trim().length === 0) {
+      ResponseHelper.error(res, 'INVALID_PRODUCT_ID', 'Product ID cannot be empty', 400);
       return;
     }
 
@@ -89,13 +109,18 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
     // Track product view for analytics
     analyticsService.trackProductView(id, { source: 'api' });
 
-    logger.info('Product viewed', { productId: id, productName: product.name });
+    logger.info('Product viewed', { 
+      productId: id, 
+      productName: product.name,
+      correlationId: req.correlationId 
+    });
 
     ResponseHelper.success(res, { product });
   } catch (error) {
     logger.error('Error retrieving product', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      productId: req.params.id
+      productId: req.params.id,
+      correlationId: req.correlationId
     });
     next(error);
   }
@@ -103,13 +128,20 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
 
 /**
  * Get product by slug
+ * Validation and sanitization handled by middleware
  */
 export const getProductBySlug = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { slug } = req.params; // Validation handled by middleware
-    
-    if (!slug) {
-      ResponseHelper.badRequest(res, 'Product slug is required');
+    const { slug } = req.params;
+
+    // Additional validation for sanitized slug
+    if (!slug || slug.trim().length === 0) {
+      ResponseHelper.error(res, 'INVALID_SLUG', 'Slug cannot be empty', 400);
+      return;
+    }
+
+    if (slug.length > 100) {
+      ResponseHelper.error(res, 'INVALID_SLUG', 'Slug is too long', 400);
       return;
     }
 
@@ -124,13 +156,18 @@ export const getProductBySlug = async (req: Request, res: Response, next: NextFu
     // Track product view for analytics
     analyticsService.trackProductView(product.id, { source: 'slug', slug });
 
-    logger.info('Product viewed by slug', { slug, productId: product.id });
+    logger.info('Product viewed by slug', { 
+      slug, 
+      productId: product.id,
+      correlationId: req.correlationId 
+    });
 
     ResponseHelper.success(res, { product: productWithAvailability });
   } catch (error) {
     logger.error('Error retrieving product by slug', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      slug: req.params.slug
+      slug: req.params.slug,
+      correlationId: req.correlationId
     });
     next(error);
   }
@@ -138,10 +175,23 @@ export const getProductBySlug = async (req: Request, res: Response, next: NextFu
 
 /**
  * Barcode lookup for UPC-to-product mapping
+ * Validation and sanitization handled by middleware
  */
 export const lookupByBarcode = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { upc } = req.query as { upc: string }; // Validation handled by middleware
+    const { upc } = req.query as { upc: string };
+
+    // Additional validation for sanitized UPC
+    if (!upc || upc.trim().length === 0) {
+      ResponseHelper.error(res, 'INVALID_UPC', 'UPC cannot be empty', 400);
+      return;
+    }
+
+    // UPC should be 8-14 digits after sanitization
+    if (!/^\d{8,14}$/.test(upc)) {
+      ResponseHelper.error(res, 'INVALID_UPC', 'UPC must be 8-14 digits', 400);
+      return;
+    }
 
     const product = await Product.findByUPC(upc);
     if (!product) {
@@ -154,13 +204,19 @@ export const lookupByBarcode = async (req: Request, res: Response, next: NextFun
     // Track barcode scan for analytics (higher weight)
     analyticsService.trackProductScan(product.id, { upc });
 
-    logger.info('Product found by UPC', { upc, productId: product.id, productName: product.name });
+    logger.info('Product found by UPC', { 
+      upc, 
+      productId: product.id, 
+      productName: product.name,
+      correlationId: req.correlationId 
+    });
 
     ResponseHelper.success(res, { product: productWithAvailability });
   } catch (error) {
     logger.error('Error looking up product by UPC', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      upc: req.query.upc
+      upc: req.query.upc,
+      correlationId: req.correlationId
     });
     next(error);
   }
@@ -231,13 +287,15 @@ export const getUpcomingProducts = async (req: Request, res: Response, next: Nex
 
 /**
  * Get products by category
+ * Validation and sanitization handled by middleware
  */
 export const getProductsByCategory = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { categoryId } = req.params; // Validation handled by middleware
+    const { categoryId } = req.params;
     
-    if (!categoryId) {
-      ResponseHelper.badRequest(res, 'Category ID is required');
+    // Additional validation for sanitized category ID
+    if (!categoryId || categoryId.trim().length === 0) {
+      ResponseHelper.error(res, 'INVALID_CATEGORY_ID', 'Category ID cannot be empty', 400);
       return;
     }
     
@@ -253,6 +311,13 @@ export const getProductsByCategory = async (req: Request, res: Response, next: N
       limit: Math.min(parseInt(limit || '20'), 100)
     });
 
+    logger.info('Products retrieved by category', {
+      categoryId,
+      productCount: results.data.length,
+      page: results.page,
+      correlationId: req.correlationId
+    });
+
     ResponseHelper.successWithPagination(res, results.data, {
       page: results.page,
       limit: results.limit,
@@ -261,7 +326,8 @@ export const getProductsByCategory = async (req: Request, res: Response, next: N
   } catch (error) {
     logger.error('Error retrieving products by category', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      categoryId: req.params.categoryId
+      categoryId: req.params.categoryId,
+      correlationId: req.correlationId
     });
     next(error);
   }
@@ -269,23 +335,38 @@ export const getProductsByCategory = async (req: Request, res: Response, next: N
 
 /**
  * Get products by set name
+ * Validation and sanitization handled by middleware
  */
 export const getProductsBySet = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { setName } = req.params; // Validation handled by middleware
-    
-    if (!setName) {
-      ResponseHelper.badRequest(res, 'Set name is required');
+    const { setName } = req.params;
+
+    // Parameter is already sanitized by middleware, no need for decodeURIComponent
+    // Additional validation to ensure setName is safe for database query
+    if (!setName || setName.trim().length === 0) {
+      ResponseHelper.error(res, 'INVALID_SET_NAME', 'Set name cannot be empty', 400);
       return;
     }
 
-    const products = await Product.findBySet(decodeURIComponent(setName));
+    if (setName.length > 100) {
+      ResponseHelper.error(res, 'INVALID_SET_NAME', 'Set name is too long', 400);
+      return;
+    }
+
+    const products = await Product.findBySet(setName);
+
+    logger.info('Products retrieved by set', { 
+      setName, 
+      productCount: products.length,
+      correlationId: req.correlationId 
+    });
 
     ResponseHelper.success(res, { products });
   } catch (error) {
     logger.error('Error retrieving products by set', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      setName: req.params.setName
+      setName: req.params.setName,
+      correlationId: req.correlationId
     });
     next(error);
   }
@@ -293,17 +374,25 @@ export const getProductsBySet = async (req: Request, res: Response, next: NextFu
 
 /**
  * Get product pricing history
+ * Validation and sanitization handled by middleware
  */
 export const getProductPriceHistory = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { id } = req.params; // Validation handled by middleware
+    const { id } = req.params;
     
-    if (!id) {
-      ResponseHelper.badRequest(res, 'Product ID is required');
+    // Additional validation for sanitized product ID
+    if (!id || id.trim().length === 0) {
+      ResponseHelper.error(res, 'INVALID_PRODUCT_ID', 'Product ID cannot be empty', 400);
       return;
     }
     
     const { days, retailer_id } = req.query as { days?: string; retailer_id?: string };
+
+    // Validate retailer_id if provided (already sanitized by middleware)
+    if (retailer_id && retailer_id.trim().length === 0) {
+      ResponseHelper.error(res, 'INVALID_RETAILER_ID', 'Retailer ID cannot be empty', 400);
+      return;
+    }
 
     const priceHistory = await Product.getPriceHistory(
       id, 
@@ -311,11 +400,20 @@ export const getProductPriceHistory = async (req: Request, res: Response, next: 
       retailer_id
     );
 
+    logger.info('Product price history retrieved', {
+      productId: id,
+      days: days || '30',
+      retailerId: retailer_id,
+      historyCount: priceHistory.length,
+      correlationId: req.correlationId
+    });
+
     ResponseHelper.success(res, { priceHistory });
   } catch (error) {
     logger.error('Error retrieving product price history', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      productId: req.params.id
+      productId: req.params.id,
+      correlationId: req.correlationId
     });
     next(error);
   }

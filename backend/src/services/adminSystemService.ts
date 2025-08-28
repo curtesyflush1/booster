@@ -219,7 +219,7 @@ export class AdminSystemService {
       const alertsToday = parseInt(alertsTodayResult?.count as string) || 0;
       const pendingAlerts = parseInt(pendingAlertsResult?.count as string) || 0;
       const failedAlerts = parseInt(failedAlertsResult?.count as string) || 0;
-      const avgDeliveryTime = parseFloat(avgDeliveryResult?.avg_seconds) || 0;
+      const avgDeliveryTime = parseFloat((avgDeliveryResult as any)?.avg_seconds) || 0;
 
       // Get ML model statistics
       const [

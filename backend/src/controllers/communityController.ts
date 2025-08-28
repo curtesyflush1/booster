@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
 import { communityService } from '../services/communityService';
 import { logger } from '../utils/logger';
-import { validateRequest } from '../middleware/validation';
-import { body, param, query } from 'express-validator';
 
 interface AuthenticatedRequest extends Request {
     user?: {
@@ -13,43 +11,6 @@ interface AuthenticatedRequest extends Request {
 }
 
 export class CommunityController {
-    // Validation middleware for testimonials
-    static validateTestimonial = [
-        body('content').isString().isLength({ min: 10, max: 1000 }).withMessage('Content must be between 10 and 1000 characters'),
-        body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
-        body('isPublic').optional().isBoolean().withMessage('isPublic must be a boolean'),
-        body('tags').optional().isArray(),
-        body('metadata').optional().isObject(),
-        body('metadata.productsSaved').optional().isInt({ min: 0 }),
-        body('metadata.moneySaved').optional().isNumeric({ no_symbols: false }),
-        body('metadata.timeUsing').optional().isString(),
-        body('metadata.favoriteFeature').optional().isString(),
-        validateRequest
-    ];
-
-    // Validation middleware for posts
-    static validatePost = [
-        body('type').isIn(['success_story', 'tip', 'collection_showcase', 'deal_share', 'question'])
-            .withMessage('Invalid post type'),
-        body('title').isString().isLength({ min: 5, max: 200 }).withMessage('Title must be between 5 and 200 characters'),
-        body('content').isString().isLength({ min: 10, max: 5000 }).withMessage('Content must be between 10 and 5000 characters'),
-        body('images').optional().isArray(),
-        body('tags').optional().isArray(),
-        body('isPublic').optional().isBoolean(),
-        validateRequest
-    ];
-
-    // Validation middleware for comments
-    static validateComment = [
-        body('content').isString().isLength({ min: 1, max: 500 }).withMessage('Comment must be between 1 and 500 characters'),
-        body('isPublic').optional().isBoolean(),
-        validateRequest
-    ];
-
-    static validateId = [
-        param('id').isString().notEmpty().withMessage('ID is required'),
-        validateRequest
-    ];
 
     /**
      * Create testimonial

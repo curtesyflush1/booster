@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
 import { requireAdmin } from '../middleware/adminAuth';
+import { validateBody, monitoringSchemas } from '../validators';
 import {
   getMetrics,
   recordMetric,
@@ -25,7 +26,7 @@ router.post('/metrics', authenticate, recordMetric);
 
 // Alert rule management (admin only)
 router.get('/alerts/rules', requireAdmin, getAlertRules);
-router.post('/alerts/rules', requireAdmin, createAlertRule);
+router.post('/alerts/rules', requireAdmin, validateBody(monitoringSchemas.addAlertRule), createAlertRule);
 router.delete('/alerts/rules/:ruleId', requireAdmin, deleteAlertRule);
 
 // Alert viewing (authenticated users)

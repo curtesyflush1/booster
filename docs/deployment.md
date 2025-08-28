@@ -93,8 +93,21 @@ Ensure the following are configured on the production server:
 ```bash
 NODE_ENV=production
 DATABASE_URL=postgresql://user:pass@localhost:5432/boosterbeacon
+
+# Redis Configuration
 REDIS_URL=redis://localhost:6379
+
+# Redis Advanced Configuration (Optional)
+REDIS_CONNECT_TIMEOUT=10000
+REDIS_COMMAND_TIMEOUT=5000
+REDIS_KEEPALIVE=30000
+REDIS_POOL_MIN=2
+REDIS_POOL_MAX=10
+
+# JWT Configuration
 JWT_SECRET=your_production_secret
+JWT_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
 ```
 
 #### Directory Structure

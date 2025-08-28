@@ -1,5 +1,5 @@
 import Joi from 'joi';
-import { commonSchemas } from '../middleware/validationMiddleware';
+import { commonSchemas } from './schemas';
 
 export const productValidationSchemas = {
   searchProducts: {

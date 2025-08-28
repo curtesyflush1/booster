@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService } from '../services/authService';
+import { TokenBlacklistService } from '../services/tokenBlacklistService';
 import { logger } from '../utils/logger';
 import { IUser } from '../types/database';
 import { AuthResponseFactory } from '../utils/authResponseFactory';
@@ -37,6 +38,18 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     
     if (!token) {
       AuthResponseFactory.sendMissingToken(res);
+      return;
+    }
+
+    // Check if token is blacklisted first (faster check)
+    const isBlacklisted = await TokenBlacklistService.isTokenRevoked(token);
+    if (isBlacklisted) {
+      logger.warn('Blacklisted token used', { 
+        path: req.path,
+        method: req.method,
+        ip: req.ip
+      });
+      AuthResponseFactory.sendInvalidToken(res);
       return;
     }
 
@@ -103,8 +116,12 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
     const token = extractToken(req);
     
     if (token) {
-      const user = await authService.validateAccessToken(token);
-      req.user = user;
+      // Check if token is blacklisted
+      const isBlacklisted = await TokenBlacklistService.isTokenRevoked(token);
+      if (!isBlacklisted) {
+        const user = await authService.validateAccessToken(token);
+        req.user = user;
+      }
     }
 
     next();

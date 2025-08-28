@@ -3,8 +3,7 @@ import { WatchController } from '../controllers/watchController';
 import { WatchPackController } from '../controllers/watchPackController';
 import { authenticate } from '../middleware/auth';
 import { requireAdmin } from '../middleware/adminAuth';
-import { validateRequest } from '../middleware/validation';
-import { body, param, query } from 'express-validator';
+import { validateJoi, validateJoiBody, validateJoiQuery, validateJoiParams, watchSchemas, watchPackSchemas } from '../validators';
 import multer from 'multer';
 
 
@@ -30,14 +29,7 @@ const upload = multer({
 router.get(
   '/',
   authenticate,
-  [
-    query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
-    query('is_active').optional().isBoolean().withMessage('is_active must be a boolean'),
-    query('product_id').optional().isUUID().withMessage('product_id must be a valid UUID'),
-    query('retailer_id').optional().isUUID().withMessage('retailer_id must be a valid UUID')
-  ],
-  validateRequest,
+  validateJoiQuery(watchSchemas.getUserWatches.query),
   WatchController.getUserWatches
 );
 
@@ -50,10 +42,7 @@ router.get(
 router.get(
   '/export',
   authenticate,
-  [
-    query('is_active').optional().isBoolean().withMessage('is_active must be a boolean')
-  ],
-  validateRequest,
+  validateJoiQuery(watchSchemas.exportWatches.query),
   WatchController.exportWatches
 );
 
@@ -67,75 +56,45 @@ router.post(
 router.get(
   '/:watchId',
   authenticate,
-  [
-    param('watchId').isUUID().withMessage('Watch ID must be a valid UUID')
-  ],
-  validateRequest,
+  validateJoiParams(watchSchemas.getById.params),
   WatchController.getWatch
 );
 
 router.post(
   '/',
   authenticate,
-  [
-    body('product_id').isUUID().withMessage('Product ID must be a valid UUID'),
-    body('retailer_ids').optional().isArray().withMessage('Retailer IDs must be an array'),
-    body('retailer_ids.*').optional().isUUID().withMessage('Each retailer ID must be a valid UUID'),
-    body('max_price').optional().isFloat({ min: 0 }).withMessage('Max price must be a positive number'),
-    body('availability_type').optional().isIn(['online', 'in_store', 'both']).withMessage('Invalid availability type'),
-    body('zip_code').optional().matches(/^\d{5}(-\d{4})?$/).withMessage('ZIP code must be in format 12345 or 12345-6789'),
-    body('radius_miles').optional().isInt({ min: 1, max: 500 }).withMessage('Radius must be between 1 and 500 miles'),
-    body('alert_preferences').optional().isObject().withMessage('Alert preferences must be an object')
-  ],
-  validateRequest,
+  validateJoiBody(watchSchemas.create),
   WatchController.createWatch
 );
 
 router.put(
   '/:watchId',
   authenticate,
-  [
-    param('watchId').isUUID().withMessage('Watch ID must be a valid UUID'),
-    body('retailer_ids').optional().isArray().withMessage('Retailer IDs must be an array'),
-    body('retailer_ids.*').optional().isUUID().withMessage('Each retailer ID must be a valid UUID'),
-    body('max_price').optional().isFloat({ min: 0 }).withMessage('Max price must be a positive number'),
-    body('availability_type').optional().isIn(['online', 'in_store', 'both']).withMessage('Invalid availability type'),
-    body('zip_code').optional().matches(/^\d{5}(-\d{4})?$/).withMessage('ZIP code must be in format 12345 or 12345-6789'),
-    body('radius_miles').optional().isInt({ min: 1, max: 500 }).withMessage('Radius must be between 1 and 500 miles'),
-    body('alert_preferences').optional().isObject().withMessage('Alert preferences must be an object'),
-    body('is_active').optional().isBoolean().withMessage('is_active must be a boolean')
-  ],
-  validateRequest,
+  validateJoi({
+    params: watchSchemas.update.params,
+    body: watchSchemas.update.body
+  }),
   WatchController.updateWatch
 );
 
 router.delete(
   '/:watchId',
   authenticate,
-  [
-    param('watchId').isUUID().withMessage('Watch ID must be a valid UUID')
-  ],
-  validateRequest,
+  validateJoiParams(watchSchemas.deleteWatch.params),
   WatchController.deleteWatch
 );
 
 router.patch(
   '/:watchId/toggle',
   authenticate,
-  [
-    param('watchId').isUUID().withMessage('Watch ID must be a valid UUID')
-  ],
-  validateRequest,
+  validateJoiParams(watchSchemas.toggleWatch.params),
   WatchController.toggleWatch
 );
 
 router.get(
   '/:watchId/health',
   authenticate,
-  [
-    param('watchId').isUUID().withMessage('Watch ID must be a valid UUID')
-  ],
-  validateRequest,
+  validateJoiParams(watchSchemas.getWatchHealth.params),
   WatchController.getWatchHealth
 );
 
@@ -168,33 +127,20 @@ router.post(
 // Watch Pack routes
 router.get(
   '/packs',
-  [
-    query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
-    query('search').optional().isString().withMessage('Search must be a string')
-  ],
-  validateRequest,
+  validateJoiQuery(watchPackSchemas.getWatchPacks.query),
   WatchPackController.getWatchPacks
 );
 
 router.get(
   '/packs/popular',
-  [
-    query('limit').optional().isInt({ min: 1, max: 50 }).withMessage('Limit must be between 1 and 50')
-  ],
-  validateRequest,
+  validateJoiQuery(watchPackSchemas.getPopularWatchPacks.query),
   WatchPackController.getPopularWatchPacks
 );
 
 router.get(
   '/packs/subscriptions',
   authenticate,
-  [
-    query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
-    query('is_active').optional().isBoolean().withMessage('is_active must be a boolean')
-  ],
-  validateRequest,
+  validateJoiQuery(watchPackSchemas.getUserSubscriptions.query),
   WatchPackController.getUserSubscriptions
 );
 
@@ -212,27 +158,13 @@ router.get(
 
 router.get(
   '/packs/:packId',
-  [
-    param('packId').custom((value: any) => {
-      // Allow either UUID or slug
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const slugRegex = /^[a-z0-9-]+$/;
-      if (!uuidRegex.test(value) && !slugRegex.test(value)) {
-        throw new Error('Pack ID must be a valid UUID or slug');
-      }
-      return true;
-    })
-  ],
-  validateRequest,
+  validateJoiParams(watchPackSchemas.getWatchPack.params),
   WatchPackController.getWatchPack
 );
 
 router.get(
   '/packs/:packId/stats',
-  [
-    param('packId').isUUID().withMessage('Pack ID must be a valid UUID')
-  ],
-  validateRequest,
+  validateJoiParams(watchPackSchemas.getWatchPackStats.params),
   WatchPackController.getWatchPackStats
 );
 
@@ -240,16 +172,7 @@ router.post(
   '/packs',
   authenticate,
   requireAdmin,
-  [
-    body('name').notEmpty().isLength({ min: 1, max: 100 }).withMessage('Name is required and must be 1-100 characters'),
-    body('slug').notEmpty().matches(/^[a-z0-9-]+$/).withMessage('Slug is required and must contain only lowercase letters, numbers, and hyphens'),
-    body('description').optional().isLength({ max: 1000 }).withMessage('Description must be less than 1000 characters'),
-    body('product_ids').isArray({ min: 1 }).withMessage('Product IDs array is required with at least one item'),
-    body('product_ids.*').isUUID().withMessage('Each product ID must be a valid UUID'),
-    body('auto_update').optional().isBoolean().withMessage('auto_update must be a boolean'),
-    body('update_criteria').optional().isString().withMessage('update_criteria must be a string')
-  ],
-  validateRequest,
+  validateJoiBody(watchPackSchemas.createWatchPack.body),
   WatchPackController.createWatchPack
 );
 
@@ -257,17 +180,10 @@ router.put(
   '/packs/:packId',
   authenticate,
   requireAdmin,
-  [
-    param('packId').isUUID().withMessage('Pack ID must be a valid UUID'),
-    body('name').optional().isLength({ min: 1, max: 100 }).withMessage('Name must be 1-100 characters'),
-    body('description').optional().isLength({ max: 1000 }).withMessage('Description must be less than 1000 characters'),
-    body('product_ids').optional().isArray().withMessage('Product IDs must be an array'),
-    body('product_ids.*').optional().isUUID().withMessage('Each product ID must be a valid UUID'),
-    body('auto_update').optional().isBoolean().withMessage('auto_update must be a boolean'),
-    body('update_criteria').optional().isString().withMessage('update_criteria must be a string'),
-    body('is_active').optional().isBoolean().withMessage('is_active must be a boolean')
-  ],
-  validateRequest,
+  validateJoi({
+    params: watchPackSchemas.updateWatchPack.params,
+    body: watchPackSchemas.updateWatchPack.body
+  }),
   WatchPackController.updateWatchPack
 );
 
@@ -275,52 +191,43 @@ router.delete(
   '/packs/:packId',
   authenticate,
   requireAdmin,
-  [
-    param('packId').isUUID().withMessage('Pack ID must be a valid UUID')
-  ],
-  validateRequest,
+  validateJoiParams(watchPackSchemas.deleteWatchPack.params),
   WatchPackController.deleteWatchPack
 );
 
 router.post(
   '/packs/:packId/subscribe',
   authenticate,
-  [
-    param('packId').isUUID().withMessage('Pack ID must be a valid UUID'),
-    body('customizations').optional().isObject().withMessage('Customizations must be an object')
-  ],
-  validateRequest,
+  validateJoi({
+    params: watchPackSchemas.subscribeToWatchPack.params,
+    body: watchPackSchemas.subscribeToWatchPack.body
+  }),
   WatchPackController.subscribeToWatchPack
 );
 
 router.delete(
   '/packs/:packId/subscribe',
   authenticate,
-  [
-    param('packId').isUUID().withMessage('Pack ID must be a valid UUID'),
-    body('remove_watches').optional().isBoolean().withMessage('remove_watches must be a boolean')
-  ],
-  validateRequest,
+  validateJoi({
+    params: watchPackSchemas.unsubscribeFromWatchPack.params,
+    body: watchPackSchemas.unsubscribeFromWatchPack.body
+  }),
   WatchPackController.unsubscribeFromWatchPack
 );
 
 router.put(
   '/packs/:packId/customizations',
   authenticate,
-  [
-    param('packId').isUUID().withMessage('Pack ID must be a valid UUID'),
-    body('customizations').isObject().withMessage('Customizations object is required')
-  ],
-  validateRequest,
+  validateJoi({
+    params: watchPackSchemas.updateSubscriptionCustomizations.params,
+    body: watchPackSchemas.updateSubscriptionCustomizations.body
+  }),
   WatchPackController.updateSubscriptionCustomizations
 );
 
 router.get(
   '/products/:productId/packs',
-  [
-    param('productId').isUUID().withMessage('Product ID must be a valid UUID')
-  ],
-  validateRequest,
+  validateJoiParams(watchPackSchemas.findPacksContainingProduct.params),
   WatchPackController.findPacksContainingProduct
 );
 

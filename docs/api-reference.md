@@ -17,6 +17,34 @@ All authenticated endpoints require a JWT token in the Authorization header:
 Authorization: Bearer <jwt_token>
 ```
 
+## Request Validation & Security
+
+All API endpoints use a standardized Joi validation system with comprehensive security features:
+
+### Input Validation
+- **Centralized Schemas**: All validation rules defined in centralized schemas (`/src/validators/schemas.ts`) for consistency
+- **Type Safety**: Automatic type coercion and validation with TypeScript integration
+- **Field-Level Errors**: Detailed error messages for each invalid field with context
+- **Performance Optimized**: Schema caching with 90%+ hit rate for optimal performance
+- **Comprehensive Coverage**: 1400+ lines of validation schemas covering all endpoints
+
+### Parameter Sanitization
+- **Automatic Sanitization**: All URL parameters and query strings are automatically sanitized before validation
+- **XSS Prevention**: Removal of dangerous characters, HTML tags, and script injection attempts
+- **SQL Injection Protection**: Input validation and sanitization to prevent injection attacks
+- **Length Limits**: Automatic truncation of overly long parameters (200 char limit for most fields)
+- **UUID Validation**: Strict validation of UUID parameters with format checking and case normalization
+- **UPC Validation**: Specialized validation for product barcodes (8-14 digits only)
+- **Set Name Handling**: Special sanitization for Pokemon TCG set names with Unicode support
+- **Search Query Safety**: Safe handling of search terms with whitespace normalization
+
+### Security Features
+- **Correlation IDs**: All requests include correlation IDs for debugging and audit trails
+- **Rate Limiting**: Endpoint-specific rate limiting to prevent abuse
+- **RBAC Integration**: Role-based access control with granular permissions
+- **Token Validation**: JWT token validation with Redis-based blacklist support
+- **Security Logging**: Comprehensive logging of sanitization events and potential attacks
+
 ## Response Format
 
 All API responses follow a consistent format:
@@ -32,12 +60,77 @@ All API responses follow a consistent format:
 ```
 
 ### Error Response
+
+BoosterBeacon uses an enhanced error logging system that provides comprehensive error context while maintaining security. Error responses vary by environment:
+
+#### Production Error Response
 ```json
 {
-  "success": false,
-  "error": "Error description",
-  "message": "User-friendly error message",
-  "timestamp": "2024-08-26T14:30:22Z"
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid email format",
+    "statusCode": 400,
+    "timestamp": "2024-08-26T14:30:22Z",
+    "requestId": "req-123-456",
+    "correlationId": "req-123-456"
+  }
+}
+```
+
+#### Development Error Response (includes debug info)
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid email format",
+    "statusCode": 400,
+    "timestamp": "2024-08-26T14:30:22Z",
+    "requestId": "req-123-456",
+    "correlationId": "req-123-456",
+    "stack": "ValidationError: Invalid email format\n    at UserController.createUser...",
+    "methodNames": ["UserController.createUser", "Router.handle"],
+    "operation": "validateUserInput",
+    "context": {
+      "field": "email",
+      "value": "invalid-email",
+      "expectedFormat": "user@domain.com"
+    }
+  }
+}
+```
+
+**Key Features:**
+- **Correlation IDs**: Every request gets a unique correlation ID for tracing
+- **Environment-Specific**: Debug information only included in development
+- **Security**: Sensitive data automatically sanitized from error logs
+- **Context**: Rich error context for debugging (development only)
+- **Performance**: Request timing and system metrics included in server logs
+
+See [Error Logging System Documentation](error-logging.md) for complete details.
+
+### Validation Error Response
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Request validation failed",
+    "details": [
+      {
+        "field": "body.email",
+        "message": "Must be a valid email address",
+        "value": "invalid-email",
+        "code": "string.email"
+      },
+      {
+        "field": "query.limit",
+        "message": "Must be between 1 and 100",
+        "value": 150,
+        "code": "number.max"
+      }
+    ],
+    "timestamp": "2024-08-28T16:00:00.000Z",
+    "correlationId": "req-123-456"
+  }
 }
 ```
 
@@ -84,6 +177,271 @@ Returns system health status and uptime information.
 GET /api/v1/status
 ```
 Returns API version and status information.
+
+## Authentication & User Management
+
+### User Registration
+```http
+POST /api/auth/register
+```
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "securePassword123",
+  "firstName": "John",
+  "lastName": "Doe",
+  "acceptTerms": true,
+  "subscribeNewsletter": false
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "uuid",
+      "email": "user@example.com",
+      "firstName": "John",
+      "lastName": "Doe",
+      "subscriptionTier": "free"
+    },
+    "tokens": {
+      "accessToken": "jwt_access_token",
+      "refreshToken": "jwt_refresh_token"
+    }
+  }
+}
+```
+
+### User Login
+```http
+POST /api/auth/login
+```
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "securePassword123"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "uuid",
+      "email": "user@example.com",
+      "firstName": "John",
+      "lastName": "Doe",
+      "subscriptionTier": "free"
+    },
+    "tokens": {
+      "accessToken": "jwt_access_token",
+      "refreshToken": "jwt_refresh_token"
+    }
+  }
+}
+```
+
+### User Logout
+```http
+POST /api/auth/logout
+```
+
+**Authentication:** Required  
+**Request Body:**
+```json
+{
+  "refreshToken": "jwt_refresh_token"
+}
+```
+
+**Features:**
+- **Immediate Token Revocation**: Uses `TokenBlacklistService` for instant token invalidation
+- **Redis-based Blacklist**: High-performance token revocation with sub-millisecond lookup
+- **Dual Token Support**: Revokes both access and refresh tokens if provided
+- **Fail-Safe Security**: Tokens cannot be used after logout, even if blacklist check fails
+- **Comprehensive Logging**: Detailed audit trail for security monitoring
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Successfully logged out"
+}
+```
+
+### Logout from All Devices
+```http
+POST /api/auth/logout-all
+```
+
+**Authentication:** Required  
+
+**Features:**
+- **Multi-Device Security**: Revokes all tokens for the authenticated user across all devices
+- **Session Invalidation**: Immediately invalidates all active sessions
+- **Security Incident Response**: Essential for compromised accounts or password changes
+- **24-Hour Blacklist**: Prevents token reuse for maximum JWT expiration time
+- **Audit Logging**: Tracks reason for mass logout (password_change, security_incident, etc.)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Successfully logged out from all devices"
+}
+```
+
+### Token Revocation (Admin Only)
+```http
+POST /api/admin/security/revoke-tokens/:userId
+```
+
+**Authentication:** Required (Admin with `SECURITY_TOKENS_REVOKE` permission)  
+**Request Body:**
+```json
+{
+  "reason": "security_incident"
+}
+```
+
+**Features:**
+- **Administrative Control**: Allows admins to revoke user tokens for security purposes
+- **Audit Trail**: Comprehensive logging of administrative token revocation
+- **Reason Tracking**: Records justification for token revocation
+- **Immediate Effect**: Tokens are invalidated instantly across all services
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "All tokens revoked for user",
+  "data": {
+    "userId": "uuid",
+    "reason": "security_incident",
+    "revokedAt": "2024-08-28T14:30:22Z"
+  }
+}
+```
+
+### Refresh Token
+```http
+POST /api/auth/refresh
+```
+
+**Request Body:**
+```json
+{
+  "refreshToken": "jwt_refresh_token"
+}
+```
+
+**Features:**
+- **Token Validation**: Comprehensive validation using `TokenBlacklistService`
+- **Automatic Revocation**: Old refresh token is immediately blacklisted
+- **New Token Generation**: Issues fresh access and refresh tokens
+- **Blacklist Prevention**: Uses Redis blacklist to prevent token reuse attacks
+- **User Verification**: Ensures user account still exists and is active
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "tokens": {
+      "accessToken": "new_jwt_access_token",
+      "refreshToken": "new_jwt_refresh_token",
+      "expiresIn": 900,
+      "tokenType": "Bearer"
+    }
+  }
+}
+```
+
+### Password Reset Request
+```http
+POST /api/auth/forgot-password
+```
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+### Reset Password
+```http
+POST /api/auth/reset-password
+```
+
+**Request Body:**
+```json
+{
+  "token": "reset_token",
+  "newPassword": "newSecurePassword123"
+}
+```
+
+**Features:**
+- **Security Token Revocation**: Automatically revokes all existing user tokens using `TokenBlacklistService`
+- **Multi-Device Logout**: Forces re-authentication on all devices and sessions
+- **24-Hour Blacklist**: Prevents any existing tokens from being used for maximum security
+- **Audit Logging**: Records password reset events for security monitoring
+
+## Security & Token Management
+
+### Get Token Blacklist Statistics (Admin Only)
+```http
+GET /api/admin/security/blacklist/stats
+```
+
+**Authentication:** Required (Admin with `SECURITY_AUDIT_VIEW` permission)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "totalTokensBlacklisted": 1250,
+    "totalUsersBlacklisted": 45,
+    "oldestEntry": "2024-08-20T10:00:00Z",
+    "newestEntry": "2024-08-28T14:30:22Z"
+  }
+}
+```
+
+### Cleanup Expired Blacklist Entries (Admin Only)
+```http
+POST /api/admin/security/blacklist/cleanup
+```
+
+**Authentication:** Required (Admin with `SECURITY_TOKENS_REVOKE` permission)
+
+**Features:**
+- **Automatic Cleanup**: Redis TTL handles expiration automatically
+- **Monitoring Support**: Returns count of cleaned entries for system monitoring
+- **Performance Optimization**: Helps maintain optimal Redis performance
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "cleanedUp": 125,
+    "totalKeys": 1250,
+    "timestamp": "2024-08-28T14:30:22Z"
+  }
+}
+```
 
 ## Watch Management
 
@@ -1461,20 +1819,41 @@ GET /api/v1/email/unsubscribe?token=<unsubscribe_token>
 ```http
 GET /api/v1/email/stats
 ```
+**Authentication:** Required  
+**Rate Limit:** 30 requests per minute
+
+Get comprehensive email delivery statistics for the authenticated user.
 
 **Response:**
 ```json
 {
-  "stats": {
+  "success": true,
+  "data": {
     "totalSent": 150,
     "totalDelivered": 145,
     "totalBounced": 3,
     "totalComplained": 2,
     "deliveryRate": 96.67,
     "lastEmailSent": "2024-08-27T14:30:22Z"
-  }
+  },
+  "message": "Email statistics retrieved successfully",
+  "timestamp": "2024-08-27T14:30:22Z"
 }
 ```
+
+**Response Fields:**
+- `totalSent` (number): Total number of emails sent to the user
+- `totalDelivered` (number): Number of emails successfully delivered
+- `totalBounced` (number): Number of emails that bounced (hard/soft bounces)
+- `totalComplained` (number): Number of spam complaints received
+- `deliveryRate` (number): Delivery success rate as a percentage (0-100)
+- `lastEmailSent` (string, optional): ISO 8601 timestamp of the last email sent
+
+**Enhanced Features:**
+- Type-safe data parsing with robust error handling
+- Performance monitoring and query optimization
+- Comprehensive input validation and sanitization
+- Detailed error logging for troubleshooting
 
 ### Send Test Email
 ```http

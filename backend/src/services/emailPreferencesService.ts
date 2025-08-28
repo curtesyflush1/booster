@@ -1,5 +1,6 @@
 import { logger } from '../utils/logger';
 import { db } from '../config/database';
+import { IEmailDeliveryStatsQueryResult } from '../types/database';
 
 export interface EmailPreferences {
   userId: string;
@@ -19,6 +20,16 @@ export interface UnsubscribeToken {
 }
 
 export class EmailPreferencesService {
+  /**
+   * Safely parse string or number to integer
+   * @private
+   */
+  private static parseIntSafely(value: string | number | null | undefined): number {
+    if (value === null || value === undefined) return 0;
+    if (typeof value === 'number') return Math.floor(value);
+    const parsed = parseInt(value.toString(), 10);
+    return isNaN(parsed) ? 0 : parsed;
+  }
   /**
    * Get user email preferences
    */
@@ -306,12 +317,12 @@ export class EmailPreferencesService {
           db.raw('SUM(CASE WHEN bounced_at IS NOT NULL THEN 1 ELSE 0 END) as total_bounced'),
           db.raw('SUM(CASE WHEN complained_at IS NOT NULL THEN 1 ELSE 0 END) as total_complained')
         )
-        .first();
+        .first() as unknown as IEmailDeliveryStatsQueryResult | undefined;
 
-      const totalSent = parseInt(stats.total_sent) || 0;
-      const totalDelivered = parseInt(stats.total_delivered) || 0;
-      const totalBounced = parseInt(stats.total_bounced) || 0;
-      const totalComplained = parseInt(stats.total_complained) || 0;
+      const totalSent = this.parseIntSafely(stats?.total_sent);
+      const totalDelivered = this.parseIntSafely(stats?.total_delivered);
+      const totalBounced = this.parseIntSafely(stats?.total_bounced);
+      const totalComplained = this.parseIntSafely(stats?.total_complained);
 
       return {
         totalSent,

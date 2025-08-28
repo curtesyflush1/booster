@@ -338,7 +338,8 @@ When running locally, services are available at:
 #### Authentication & Users
 - `POST /api/auth/register` - User registration
 - `POST /api/auth/login` - User login
-- `POST /api/auth/logout` - User logout
+- `POST /api/auth/logout` - User logout with token revocation
+- `POST /api/auth/logout-all` - Logout from all devices (revoke all user tokens)
 - `POST /api/auth/refresh` - Refresh JWT token
 - `POST /api/auth/forgot-password` - Request password reset
 - `POST /api/auth/reset-password` - Reset password with token
@@ -497,6 +498,35 @@ When running locally, services are available at:
 - `PUT /api/admin/ml/training-data/:dataId/review` - Review training data
 - `GET /api/admin/audit/logs` - Get audit logs
 
+### Redis Service Features
+
+BoosterBeacon includes a comprehensive Redis service with advanced features:
+
+#### Advanced JWT Token Revocation System
+- **Individual Token Blacklisting**: Revoke specific JWT tokens immediately on logout with `TokenBlacklistService`
+- **User-wide Token Revocation**: Invalidate all tokens for a user (password changes, account suspension, security incidents)
+- **Multi-Device Logout**: Support for logging out from all devices simultaneously
+- **Automatic Expiration**: Blacklist entries automatically expire with token TTL to prevent memory bloat
+- **Fast Lookup**: Sub-millisecond token validation using Redis with fail-secure approach
+- **Token Metadata Tracking**: Comprehensive logging of token issuance, revocation, and validation events
+- **Blacklist Statistics**: Monitoring and analytics for token revocation patterns and system health
+
+#### Advanced Caching Utilities
+- **JSON Caching**: Automatic serialization/deserialization with type safety
+- **Cache-or-Fetch Pattern**: Intelligent cache miss handling with automatic refresh
+- **Performance Optimized**: Reduced database load and improved response times
+
+#### Rate Limiting Infrastructure
+- **API Protection**: Configurable rate limits per endpoint/user
+- **Atomic Operations**: Race-condition-free rate limiting using Redis pipelines
+- **Real-time Monitoring**: Rate limit status and reset time tracking
+
+#### Connection Management
+- **Connection Pooling**: Optimized connection pool (2-10 connections)
+- **Automatic Reconnection**: Exponential backoff with retry limits
+- **Health Monitoring**: Connection status and performance tracking
+- **Timeout Configuration**: Configurable connect and command timeouts
+
 ### Database Schema
 
 Current tables:
@@ -537,7 +567,7 @@ Current tables:
 ### Backend
 - **Runtime**: Node.js 18+ with TypeScript
 - **Framework**: Express.js with Helmet.js security
-- **Database**: PostgreSQL 15+ with Redis cache
+- **Database**: PostgreSQL 15+ with advanced Redis caching and token revocation
 - **Authentication**: JWT tokens with bcrypt
 - **Retailer Integration**: Multi-retailer API and scraping with circuit breakers
 - **Testing**: Jest with Supertest
@@ -553,19 +583,24 @@ Current tables:
 - **Containerization**: Docker with Docker Compose
 - **Process Management**: PM2 with cluster mode
 - **Reverse Proxy**: NGINX
-- **Logging**: Winston with structured JSON
+- **Logging**: Winston with structured JSON, correlation IDs, and enhanced error context
 - **CI/CD**: GitHub Actions
 - **Deployment**: Automated deployment with rollback support
 
 ## 🔒 Security
 
-- Helmet.js security headers
-- CORS configuration
-- JWT token authentication
-- bcrypt password hashing
-- Input validation with Joi
-- Rate limiting
-- SQL injection prevention
+- **Advanced JWT Authentication**: Token revocation system with Redis-based blacklist
+- **Multi-Device Session Management**: Logout from all devices capability
+- **Comprehensive RBAC**: Granular permissions with 50+ security controls
+- **Token Security**: Immediate revocation, fail-safe validation, audit logging
+- **Password Security**: bcrypt hashing, strength validation, account lockout
+- **API Security**: Helmet.js headers, CORS, rate limiting, input validation
+- **Parameter Sanitization**: Comprehensive input sanitization middleware with XSS/SQL injection prevention
+- **Enhanced Error Logging**: Comprehensive error context with correlation IDs, stack trace analysis, and sensitive data sanitization
+- **Data Protection**: SQL injection prevention, XSS protection, secure headers
+- **Validation System**: Centralized Joi validation with schema caching and performance optimization
+
+See [Authentication Security Documentation](docs/authentication-security.md), [Parameter Sanitization Guide](docs/parameter-sanitization.md), [Enhanced Error Logging System](docs/error-logging.md), and [BaseRetailerService Architecture](docs/base-retailer-service.md) for detailed security features and system architecture.
 
 ## 📝 Environment Variables
 
@@ -577,6 +612,13 @@ DATABASE_URL=postgresql://user:pass@localhost:5432/boosterbeacon_dev
 
 # Redis
 REDIS_URL=redis://:password@localhost:6379
+
+# Redis Advanced Configuration (Optional)
+REDIS_CONNECT_TIMEOUT=10000
+REDIS_COMMAND_TIMEOUT=5000
+REDIS_KEEPALIVE=30000
+REDIS_POOL_MIN=2
+REDIS_POOL_MAX=10
 
 # JWT
 JWT_SECRET=your_secret_key_here
@@ -629,7 +671,7 @@ This project is in active development with **24 of 26 major systems completed**.
 - [x] User preferences and settings management
 - [x] Product catalog and search functionality
 - [x] **Watch management system** ✅ **COMPLETED**
-- [x] **Retailer integration and monitoring system** ✅ **COMPLETED**
+- [x] **Retailer integration and monitoring system** ✅ **COMPLETED** 🔄 **RECENTLY ENHANCED**
 - [x] **Alert processing and delivery system** ✅ **COMPLETED**
 - [x] **Web push notification system** ✅ **COMPLETED**
 - [x] **Email notification system with Amazon SES** ✅ **COMPLETED**
@@ -652,6 +694,47 @@ This project is in active development with **24 of 26 major systems completed**.
 - [ ] **Final integration and production readiness** - Security audit, performance optimization, and complete user workflow testing
 
 ### Recent Updates
+
+**Validation System Standardization & Retailer Refactoring** ✅ **COMPLETED** - Comprehensive system improvements:
+- **Joi Validation Standardization**: Successfully migrated all endpoints to centralized Joi validation system
+- **Schema Compilation Fixes**: Resolved schema caching and compilation issues with performance optimizations
+- **Route Validation Updates**: Updated all routes (watch, admin, user, community) to use proper validation structure
+- **Error Handling Improvements**: Standardized validation error responses with detailed field-level feedback
+- **Performance Optimizations**: Implemented schema caching for improved validation performance (90%+ hit rate)
+- **Type Safety Enhancements**: Fixed TypeScript validation issues and improved type definitions
+- **Parameter Sanitization**: Enhanced security with comprehensive input sanitization middleware
+- **BaseRetailerService Refactoring**: Eliminated ~325 lines of duplicate code with enhanced base class architecture
+- **Retailer Integration Improvements**: Standardized behavior, intelligent rate limiting, and comprehensive testing
+- **Documentation Updates**: Updated validation standards and migration guides with complete API reference
+
+**Authentication Security Enhancements** 🆕 **SECURITY UPDATE** - Advanced JWT token management and security improvements:
+- **JWT Token Revocation System**: Comprehensive Redis-based token blacklist for immediate token invalidation
+- **Multi-Device Logout**: Support for logging out from all devices with `logout-all` endpoint
+- **Enhanced Session Management**: Password changes and security events now invalidate all user sessions
+- **Token Blacklist Service**: High-performance token revocation with automatic expiration handling
+- **Security Permissions**: New RBAC permissions for token revocation and session management
+- **Fail-Safe Security**: Tokens are considered revoked if blacklist check fails (fail-secure approach)
+- **Comprehensive Logging**: Detailed audit trail for all authentication and token management events
+
+**Enhanced Error Logging System** 🆕 **MAJOR SYSTEM UPDATE** - Comprehensive error handling and debugging system implemented:
+- **Comprehensive Error Context**: Stack trace analysis with method name extraction and request context capture
+- **Request Tracing**: Correlation ID system for tracking requests across distributed systems and microservices
+- **Security Features**: Automatic sensitive data sanitization (passwords, tokens, secrets) from error logs
+- **Performance Monitoring**: Request timing, memory usage tracking, and slow operation detection (>1000ms)
+- **Environment-Specific Responses**: Rich debug information in development, secure error responses in production
+- **Structured Logging**: Winston-based JSON logging with automatic log rotation, retention, and performance tracking
+- **Error Classification**: Type-safe error classes with operational vs system error distinction and context preservation
+- **Integration Testing**: Comprehensive test coverage for error handling middleware, utilities, and end-to-end workflows
+- **Complete Documentation**: Error logging system guide with usage examples, best practices, and security considerations
+
+**Email Delivery Service Improvements** 🆕 **CODE QUALITY UPDATE** - Enhanced email system reliability and maintainability:
+- **Type Safety Enhancements**: Eliminated unsafe type assertions with proper TypeScript interfaces
+- **Robust Data Parsing**: Implemented `parseIntSafely()` utility for safe integer conversion from database queries
+- **Enhanced Error Handling**: Comprehensive input validation and contextual error logging with stack traces
+- **Performance Monitoring**: Added query timing and debug logging for database operations
+- **Improved Documentation**: Added comprehensive JSDoc with usage examples and type definitions
+- **Shared Type Definitions**: Created reusable interfaces in `backend/src/types/database.ts`
+- **Backward Compatibility**: All improvements maintain existing API contracts
 
 **Monitoring, Logging, and Deployment** ✨ **MAJOR UPDATE** - Complete monitoring and deployment system implemented:
 - **Comprehensive Health Checks**: Multi-level health monitoring with basic, detailed, readiness, and liveness probes
@@ -742,14 +825,17 @@ This project is in active development with **24 of 26 major systems completed**.
 - **Real-time Updates**: Live alert status updates and notification counts
 - **Rich Alert Details**: Product information, pricing, and direct cart links
 
-**Email Notification System** ✨ **MAJOR UPDATE** - Complete email system implemented:
+**Email Notification System** ✨ **MAJOR UPDATE** - Complete email system implemented with recent enhancements:
 - **Multiple SMTP Configurations**: Amazon SES, local SMTP, and Ethereal for development
 - **Advanced Template System**: Responsive HTML templates with rich formatting
 - **Email Preferences**: Granular user control over alert, marketing, and digest emails
-- **Delivery Analytics**: Comprehensive tracking with bounce and complaint handling
+- **Enhanced Delivery Analytics**: Type-safe statistics with comprehensive tracking and bounce/complaint handling
 - **Unsubscribe Management**: One-click unsubscribe with token-based security
 - **Template Variety**: Welcome emails, password resets, alerts, and digest emails
 - **Development Support**: Ethereal email testing and preview URLs
+- **🆕 Code Quality Improvements**: Enhanced type safety, input validation, and error handling
+- **🆕 Performance Monitoring**: Query timing, debug logging, and metrics collection
+- **🆕 Robust Data Parsing**: Safe integer parsing with `parseIntSafely()` utility method
 
 **Alert Processing & Delivery System** ✨ **MAJOR UPDATE** - Complete alert system implemented:
 - **Multi-channel delivery**: Web Push, Email, SMS (Pro), and Discord (Pro) notifications

@@ -2,6 +2,8 @@ import { Router } from 'express';
 import * as productController from '../controllers/productController';
 import * as categoryController from '../controllers/categoryController';
 import { generalRateLimit } from '../middleware/rateLimiter';
+import { sanitizeParameters, sanitizeProductParameters } from '../middleware/parameterSanitization';
+import { validate, validateQuery, validateParams, productSchemas, categorySchemas } from '../validators';
 
 const router = Router();
 
@@ -11,21 +13,21 @@ const router = Router();
  * @desc    Search products with advanced filtering
  * @access  Public
  */
-router.get('/search', generalRateLimit, productController.searchProducts);
+router.get('/search', generalRateLimit, sanitizeParameters, validateQuery(productSchemas.search.query), productController.searchProducts);
 
 /**
  * @route   GET /api/products/barcode
  * @desc    Lookup product by UPC barcode
  * @access  Public
  */
-router.get('/barcode', generalRateLimit, productController.lookupByBarcode);
+router.get('/barcode', generalRateLimit, sanitizeParameters, validateQuery(productSchemas.lookupByBarcode.query), productController.lookupByBarcode);
 
 /**
  * @route   GET /api/products/popular
  * @desc    Get popular products
  * @access  Public
  */
-router.get('/popular', productController.getPopularProducts);
+router.get('/popular', validateQuery(productSchemas.getPopular.query), productController.getPopularProducts);
 
 /**
  * @route   GET /api/products/recent
@@ -53,35 +55,35 @@ router.get('/stats', productController.getProductStats);
  * @desc    Get products by category
  * @access  Public
  */
-router.get('/category/:categoryId', productController.getProductsByCategory);
+router.get('/category/:categoryId', sanitizeParameters, validate(productSchemas.getByCategory), productController.getProductsByCategory);
 
 /**
  * @route   GET /api/products/set/:setName
  * @desc    Get products by set name
  * @access  Public
  */
-router.get('/set/:setName', productController.getProductsBySet);
+router.get('/set/:setName', sanitizeProductParameters, validate(productSchemas.getBySet), productController.getProductsBySet);
 
 /**
  * @route   GET /api/products/:id
  * @desc    Get product by ID with availability
  * @access  Public
  */
-router.get('/:id', productController.getProductById);
+router.get('/:id', sanitizeParameters, validate(productSchemas.getById), productController.getProductById);
 
 /**
  * @route   GET /api/products/:id/price-history
  * @desc    Get product pricing history
  * @access  Public
  */
-router.get('/:id/price-history', productController.getProductPriceHistory);
+router.get('/:id/price-history', sanitizeParameters, validate(productSchemas.getPriceHistory), productController.getProductPriceHistory);
 
 /**
  * @route   GET /api/products/slug/:slug
  * @desc    Get product by slug
  * @access  Public
  */
-router.get('/slug/:slug', productController.getProductBySlug);
+router.get('/slug/:slug', sanitizeParameters, validate(productSchemas.getBySlug), productController.getProductBySlug);
 
 // Category endpoints
 /**
@@ -89,7 +91,7 @@ router.get('/slug/:slug', productController.getProductBySlug);
  * @desc    Get all categories
  * @access  Public
  */
-router.get('/categories', categoryController.getAllCategories);
+router.get('/categories', validate(categorySchemas.getAll), categoryController.getAllCategories);
 
 /**
  * @route   GET /api/products/categories/root
@@ -103,7 +105,7 @@ router.get('/categories/root', categoryController.getRootCategories);
  * @desc    Get category tree
  * @access  Public
  */
-router.get('/categories/tree', categoryController.getCategoryTree);
+router.get('/categories/tree', validate(categorySchemas.getTree), categoryController.getCategoryTree);
 
 /**
  * @route   GET /api/products/categories/stats
@@ -117,27 +119,27 @@ router.get('/categories/stats', categoryController.getCategoryStats);
  * @desc    Get category by ID
  * @access  Public
  */
-router.get('/categories/:id', categoryController.getCategoryById);
+router.get('/categories/:id', sanitizeParameters, validate(categorySchemas.getById), categoryController.getCategoryById);
 
 /**
  * @route   GET /api/products/categories/:id/path
  * @desc    Get category path (breadcrumb)
  * @access  Public
  */
-router.get('/categories/:id/path', categoryController.getCategoryPath);
+router.get('/categories/:id/path', sanitizeParameters, validate(categorySchemas.getPath), categoryController.getCategoryPath);
 
 /**
  * @route   GET /api/products/categories/:parentId/children
  * @desc    Get child categories
  * @access  Public
  */
-router.get('/categories/:parentId/children', categoryController.getChildCategories);
+router.get('/categories/:parentId/children', sanitizeParameters, validate(categorySchemas.getChildren), categoryController.getChildCategories);
 
 /**
  * @route   GET /api/products/categories/slug/:slug
  * @desc    Get category by slug
  * @access  Public
  */
-router.get('/categories/slug/:slug', categoryController.getCategoryBySlug);
+router.get('/categories/slug/:slug', sanitizeParameters, validate(categorySchemas.getBySlug), categoryController.getCategoryBySlug);
 
 export default router;

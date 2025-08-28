@@ -19,27 +19,40 @@ The main orchestration service that manages all retailer integrations with:
 - Rate limiting and compliance enforcement
 - Unified API for product availability checking
 
+### BaseRetailerService Architecture ✨ **RECENTLY ENHANCED**
+All retailer services now extend a comprehensive `BaseRetailerService` class that provides:
+- **HTTP Client Management**: Automatic setup with retailer-type-specific headers
+- **Rate Limiting**: Built-in rate limiting with polite delays for scraping retailers
+- **Authentication**: Automatic API key injection based on retailer configuration
+- **Error Handling**: Standardized error handling with retry logic and circuit breaker patterns
+- **Health Checks**: Common health check implementation with retailer-specific overrides
+- **Utility Methods**: Shared utilities for Pokemon TCG filtering, price parsing, and availability determination
+
 ### Individual Retailer Services
-Each retailer has a dedicated service implementing the `BaseRetailerService` interface:
-- `BestBuyService` - API-based integration
-- `WalmartService` - API-based integration
-- `CostcoService` - Scraping-based integration
-- `SamsClubService` - Scraping-based integration
+Each retailer has a dedicated service extending `BaseRetailerService`:
+- `BestBuyService` - API-based integration with official Best Buy API
+- `WalmartService` - API-based integration with Walmart Open API
+- `CostcoService` - Scraping-based integration with polite delays and Pokemon TCG filtering
+- `SamsClubService` - Scraping-based integration with member pricing support
+
+**Code Reduction**: The BaseRetailerService refactoring eliminated ~325 lines of duplicated code while enhancing functionality and maintainability.
 
 ## Compliance and Rate Limiting
 
 ### API-Based Retailers (Best Buy, Walmart)
-- **Rate Limits**: 5 requests/minute, 100 requests/hour
+- **Rate Limits**: Configurable per retailer (default: 60 requests/minute, 3600/hour)
 - **Timeout**: 10 seconds
-- **Retry Policy**: 3 attempts with 1-second delays
-- **Authentication**: API keys required
+- **Retry Policy**: 3 attempts with exponential backoff
+- **Authentication**: Automatic API key injection via BaseRetailerService
+- **Headers**: Standard API headers with BoosterBeacon user agent
 
-### Scraping-Based Retailers (Costco, Sam's Club)
-- **Rate Limits**: 2 requests/minute, 50 requests/hour (conservative)
-- **Timeout**: 15 seconds (patient)
+### Scraping-Based Retailers (Costco, Sam's Club) ✨ **ENHANCED**
+- **Rate Limits**: Intelligent rate limiting with minimum 2-second delays
+- **Timeout**: 15 seconds (patient for page loads)
 - **Retry Policy**: 2 attempts with 2-second delays
-- **Politeness**: 2-second minimum delay between requests
-- **User Agent**: Standard browser headers to avoid detection
+- **Politeness**: Automatic polite delay enforcement via BaseRetailerService
+- **User Agent**: Realistic browser headers to avoid bot detection
+- **Pokemon TCG Filtering**: Built-in product filtering for relevant items only
 
 ## Circuit Breaker Pattern
 

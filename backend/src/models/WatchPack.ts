@@ -334,8 +334,8 @@ export class WatchPack extends BaseModel<IWatchPack> {
         totalPacks,
         activePacks,
         totalSubscribers: Number(subscriberResult[0]?.total_subscribers || 0),
-        avgProductsPerPack: Math.round(Number(avgProductsResult[0]?.avg_products || 0) * 100) / 100,
-        avgSubscribersPerPack: Math.round(Number(avgSubscribersResult[0]?.avg_subscribers || 0) * 100) / 100
+        avgProductsPerPack: Math.round(Number((avgProductsResult[0] as any)?.avg_products || 0) * 100) / 100,
+        avgSubscribersPerPack: Math.round(Number((avgSubscribersResult[0] as any)?.avg_subscribers || 0) * 100) / 100
       };
     } catch (error) {
       logger.error(`Error getting system watch pack statistics:`, error);

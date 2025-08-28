@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
-import { body, query, param } from 'express-validator';
 import { authenticate } from '../middleware/auth';
-import { validateRequest } from '../middleware/validation';
+import { sanitizeParameters } from '../middleware/parameterSanitization';
+import { validate, validateBody, validateQuery, validateParams, alertSchemas } from '../validators';
 import { verifyAlertOwnership } from '../middleware/alertOwnership';
 import { Alert } from '../models/Alert';
 import { AlertAnalyticsService } from '../services/alertAnalyticsService';
@@ -14,8 +14,7 @@ const router = express.Router();
 // Get user's alerts with filtering and pagination
 router.get('/',
   authenticate,
-  AlertValidationService.getAlertsValidation(),
-  validateRequest,
+  validate(alertSchemas.getAlerts),
   async (req: Request, res: Response) => {
     try {
       const userId = req.user!.id;
@@ -67,10 +66,8 @@ router.get('/',
 // Get specific alert by ID
 router.get('/:id',
   authenticate,
-  [
-    param('id').isUUID().withMessage('Alert ID must be a valid UUID')
-  ],
-  validateRequest,
+  sanitizeParameters,
+  validate(alertSchemas.getById),
   async (req: Request, res: Response) => {
     try {
       // Alert is attached by verifyAlertOwnership middleware
@@ -86,10 +83,7 @@ router.get('/:id',
 // Mark alert as read
 router.patch('/:id/read',
   authenticate,
-  [
-    param('id').isUUID().withMessage('Alert ID must be a valid UUID')
-  ],
-  validateRequest,
+  validate(alertSchemas.markAsRead),
   async (req: Request, res: Response) => {
     try {
       const alertId = req.params.id!;
@@ -114,10 +108,7 @@ router.patch('/:id/read',
 // Mark alert as clicked
 router.patch('/:id/clicked',
   authenticate,
-  [
-    param('id').isUUID().withMessage('Alert ID must be a valid UUID')
-  ],
-  validateRequest,
+  validate(alertSchemas.getById),
   async (req: Request, res: Response) => {
     try {
       const alertId = req.params.id!;
@@ -142,11 +133,7 @@ router.patch('/:id/clicked',
 // Bulk mark alerts as read
 router.patch('/bulk/read',
   authenticate,
-  [
-    body('alertIds').isArray({ min: 1 }).withMessage('alertIds must be a non-empty array'),
-    body('alertIds.*').isUUID().withMessage('Each alert ID must be a valid UUID')
-  ],
-  validateRequest,
+  validate(alertSchemas.bulkMarkAsRead),
   async (req: Request, res: Response) => {
     try {
       const userId = req.user!.id;
@@ -181,10 +168,8 @@ router.patch('/bulk/read',
 // Delete alert
 router.delete('/:id',
   authenticate,
-  [
-    param('id').isUUID().withMessage('Alert ID must be a valid UUID')
-  ],
-  validateRequest,
+  sanitizeParameters,
+  validate(alertSchemas.deleteAlert),
   async (req: Request, res: Response) => {
     try {
       const alertId = req.params.id!;
@@ -225,10 +210,7 @@ router.get('/stats/summary',
 // Get alert analytics (engagement metrics)
 router.get('/analytics/engagement',
   authenticate,
-  [
-    query('days').optional().isInt({ min: 1, max: 365 }).withMessage('Days must be between 1 and 365')
-  ],
-  validateRequest,
+  validate(alertSchemas.getAnalytics),
   async (req: Request, res: Response) => {
     try {
       const userId = req.user!.id;

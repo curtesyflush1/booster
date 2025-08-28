@@ -166,6 +166,168 @@ export function sanitizeString(value: string): string {
 }
 
 /**
+ * Comprehensive URL parameter sanitization to prevent SQL injection and other attacks
+ */
+export function sanitizeUrlParameter(value: string): string {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  
+  // Remove null bytes, control characters, and potentially dangerous characters
+  let sanitized = value
+    .replace(/\0/g, '') // Remove null bytes
+    .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+    .replace(/[<>]/g, '') // Remove HTML brackets (but keep quotes for search)
+    .replace(/[;\\]/g, '') // Remove SQL injection characters
+    .trim();
+  
+  // Limit length to prevent buffer overflow attacks
+  if (sanitized.length > 200) {
+    sanitized = sanitized.substring(0, 200);
+  }
+  
+  return sanitized;
+}
+
+/**
+ * Sanitizes a set name parameter with specific rules for Pokemon TCG sets
+ */
+export function sanitizeSetName(setName: string): string {
+  if (typeof setName !== 'string') {
+    return '';
+  }
+  
+  // Decode URI component safely
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(setName);
+  } catch (error) {
+    // If decoding fails, use the original string
+    decoded = setName;
+  }
+  
+  // Remove dangerous characters but keep Pokemon set name characters
+  let sanitized = decoded
+    .replace(/\0/g, '') // Remove null bytes
+    .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+    .replace(/[<>]/g, '') // Remove HTML brackets
+    .replace(/[;\\]/g, '') // Remove SQL injection characters
+    .trim();
+  
+  // Allow alphanumeric, spaces, hyphens, ampersands, apostrophes, colons, periods, and parentheses
+  // This covers most Pokemon set names like "Scarlet & Violet", "Sun & Moon: Team Up", etc.
+  sanitized = sanitized.replace(/[^a-zA-Z0-9\s\-&':.()éèàùâêîôûç]/g, '');
+  
+  // Normalize whitespace
+  sanitized = sanitized.replace(/\s+/g, ' ').trim();
+  
+  // Limit length
+  if (sanitized.length > 100) {
+    sanitized = sanitized.substring(0, 100);
+  }
+  
+  return sanitized;
+}
+
+/**
+ * Sanitizes a slug parameter (lowercase, alphanumeric, hyphens only)
+ */
+export function sanitizeSlug(slug: string): string {
+  if (typeof slug !== 'string') {
+    return '';
+  }
+  
+  // Apply general sanitization first
+  let sanitized = sanitizeUrlParameter(slug);
+  
+  // Convert to lowercase and keep only valid slug characters
+  sanitized = sanitized.toLowerCase().replace(/[^a-z0-9\-]/g, '');
+  
+  // Remove multiple consecutive hyphens
+  sanitized = sanitized.replace(/-+/g, '-');
+  
+  // Remove leading/trailing hyphens
+  sanitized = sanitized.replace(/^-+|-+$/g, '');
+  
+  return sanitized;
+}
+
+/**
+ * Sanitizes a UUID parameter
+ */
+export function sanitizeUUID(uuid: string): string {
+  if (typeof uuid !== 'string') {
+    return '';
+  }
+  
+  // Apply general sanitization
+  let sanitized = sanitizeUrlParameter(uuid);
+  
+  // Keep only valid UUID characters (alphanumeric and hyphens)
+  sanitized = sanitized.replace(/[^a-fA-F0-9\-]/g, '');
+  
+  // Validate UUID format
+  if (!validateUUID(sanitized)) {
+    return '';
+  }
+  
+  return sanitized.toLowerCase();
+}
+
+/**
+ * Sanitizes a UPC/barcode parameter
+ */
+export function sanitizeUPC(upc: string): string {
+  if (typeof upc !== 'string') {
+    return '';
+  }
+  
+  // Apply general sanitization
+  let sanitized = sanitizeUrlParameter(upc);
+  
+  // Keep only digits
+  sanitized = sanitized.replace(/[^0-9]/g, '');
+  
+  // Validate length (UPC should be 8-14 digits)
+  if (sanitized.length < 8 || sanitized.length > 14) {
+    return '';
+  }
+  
+  return sanitized;
+}
+
+/**
+ * Sanitizes search query parameters
+ */
+export function sanitizeSearchQuery(query: string): string {
+  if (typeof query !== 'string') {
+    return '';
+  }
+  
+  // Remove dangerous characters but keep search-friendly ones
+  let sanitized = query
+    .replace(/\0/g, '') // Remove null bytes
+    .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+    .replace(/[<>]/g, '') // Remove HTML brackets
+    .replace(/[;\\]/g, '') // Remove SQL injection characters
+    .trim();
+  
+  // Allow alphanumeric, spaces, and common punctuation for search
+  // Include quotes, colons, periods, commas, exclamation marks, question marks, hyphens, ampersands, apostrophes
+  sanitized = sanitized.replace(/[^a-zA-Z0-9\s\-&'":.,!?()]/g, '');
+  
+  // Normalize whitespace
+  sanitized = sanitized.replace(/\s+/g, ' ').trim();
+  
+  // Limit search query length
+  if (sanitized.length > 200) {
+    sanitized = sanitized.substring(0, 200);
+  }
+  
+  return sanitized;
+}
+
+/**
  * Validates and sanitizes an object for JSON storage
  */
 export function validateAndSanitizeJSON(value: any): any {

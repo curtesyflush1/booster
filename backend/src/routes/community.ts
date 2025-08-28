@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { CommunityController } from '../controllers/communityController';
 import { authenticate } from '../middleware/auth';
 import { generalRateLimit } from '../middleware/rateLimiter';
+import { validateJoiBody, validateJoiQuery, validateJoiParams, validateJoi, communitySchemas } from '../validators';
 
 const router = Router();
 
@@ -17,28 +18,40 @@ router.use(generalRateLimit);
  * @desc Create a new testimonial
  * @access Private
  */
-router.post('/testimonials', CommunityController.validateTestimonial, CommunityController.createTestimonial);
+router.post('/testimonials', 
+  validateJoiBody(communitySchemas.createTestimonial), 
+  CommunityController.createTestimonial
+);
 
 /**
  * @route GET /api/community/testimonials
  * @desc Get testimonials with filters
  * @access Private
  */
-router.get('/testimonials', CommunityController.getTestimonials);
+router.get('/testimonials', 
+  validateJoiQuery(communitySchemas.getTestimonials.query), 
+  CommunityController.getTestimonials
+);
 
 /**
  * @route PUT /api/community/testimonials/:id
  * @desc Update testimonial
  * @access Private
  */
-router.put('/testimonials/:id', CommunityController.validateId, CommunityController.updateTestimonial);
+router.put('/testimonials/:id', 
+  validateJoi(communitySchemas.updateTestimonial), 
+  CommunityController.updateTestimonial
+);
 
 /**
  * @route DELETE /api/community/testimonials/:id
  * @desc Delete testimonial
  * @access Private
  */
-router.delete('/testimonials/:id', CommunityController.validateId, CommunityController.deleteTestimonial);
+router.delete('/testimonials/:id', 
+  validateJoi(communitySchemas.deleteTestimonial), 
+  CommunityController.deleteTestimonial
+);
 
 // Community post routes
 /**
@@ -46,35 +59,50 @@ router.delete('/testimonials/:id', CommunityController.validateId, CommunityCont
  * @desc Create a new community post
  * @access Private
  */
-router.post('/posts', CommunityController.validatePost, CommunityController.createPost);
+router.post('/posts', 
+  validateJoiBody(communitySchemas.createPost), 
+  CommunityController.createPost
+);
 
 /**
  * @route GET /api/community/posts
  * @desc Get community posts with filters
  * @access Private
  */
-router.get('/posts', CommunityController.getPosts);
+router.get('/posts', 
+  validateJoiQuery(communitySchemas.getPosts.query), 
+  CommunityController.getPosts
+);
 
 /**
  * @route POST /api/community/posts/:id/like
  * @desc Like/unlike a post
  * @access Private
  */
-router.post('/posts/:id/like', CommunityController.validateId, CommunityController.togglePostLike);
+router.post('/posts/:id/like', 
+  validateJoi(communitySchemas.togglePostLike), 
+  CommunityController.togglePostLike
+);
 
 /**
  * @route POST /api/community/posts/:id/comments
  * @desc Add comment to post
  * @access Private
  */
-router.post('/posts/:id/comments', CommunityController.validateId, CommunityController.validateComment, CommunityController.addComment);
+router.post('/posts/:id/comments', 
+  validateJoi(communitySchemas.addComment), 
+  CommunityController.addComment
+);
 
 /**
  * @route GET /api/community/posts/:id/comments
  * @desc Get post comments
  * @access Private
  */
-router.get('/posts/:id/comments', CommunityController.validateId, CommunityController.getPostComments);
+router.get('/posts/:id/comments', 
+  validateJoi(communitySchemas.getPostComments), 
+  CommunityController.getPostComments
+);
 
 // Community statistics and featured content
 /**
@@ -97,6 +125,9 @@ router.get('/featured', CommunityController.getFeaturedContent);
  * @desc Moderate community content
  * @access Admin
  */
-router.post('/moderate', CommunityController.moderateContent);
+router.post('/moderate', 
+  validateJoiBody(communitySchemas.moderateContent), 
+  CommunityController.moderateContent
+);
 
 export default router;

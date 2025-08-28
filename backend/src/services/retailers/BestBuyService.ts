@@ -1,5 +1,6 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { BaseRetailerService, RetailerConfig, ProductAvailabilityRequest, ProductAvailabilityResponse, RetailerHealthStatus, StoreLocation, RetailerError } from '../../types/retailer';
+import { AxiosResponse } from 'axios';
+import { RetailerConfig, ProductAvailabilityRequest, ProductAvailabilityResponse, StoreLocation, RetailerError } from '../../types/retailer';
+import { BaseRetailerService } from './BaseRetailerService';
 import { logger } from '../../utils/logger';
 
 interface BestBuyProduct {
@@ -35,70 +36,12 @@ interface BestBuyStoreAvailability {
 }
 
 export class BestBuyService extends BaseRetailerService {
-  private httpClient: AxiosInstance;
-  private apiKey: string;
-
   constructor(config: RetailerConfig) {
     super(config);
     
     if (!config.apiKey) {
       throw new Error('Best Buy API key is required');
     }
-    
-    this.apiKey = config.apiKey;
-    this.httpClient = axios.create({
-      baseURL: config.baseUrl,
-      timeout: config.timeout,
-      headers: {
-        'User-Agent': 'BoosterBeacon/1.0',
-        ...config.headers
-      }
-    });
-
-    // Add request interceptor for rate limiting
-    this.httpClient.interceptors.request.use((config) => {
-      if (!this.checkRateLimit()) {
-        throw this.createRetailerError(
-          'Rate limit exceeded',
-          'RATE_LIMIT',
-          429,
-          true
-        );
-      }
-      return config;
-    });
-
-    // Add response interceptor for error handling
-    this.httpClient.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response?.status === 429) {
-          throw this.createRetailerError(
-            'Rate limit exceeded',
-            'RATE_LIMIT',
-            429,
-            true
-          );
-        }
-        if (error.response?.status === 401 || error.response?.status === 403) {
-          throw this.createRetailerError(
-            'Authentication failed',
-            'AUTH',
-            error.response.status,
-            false
-          );
-        }
-        if (error.code === 'ECONNABORTED' || error.code === 'ENOTFOUND') {
-          throw this.createRetailerError(
-            'Network error',
-            'NETWORK',
-            undefined,
-            true
-          );
-        }
-        throw error;
-      }
-    );
   }
 
   async checkAvailability(request: ProductAvailabilityRequest): Promise<ProductAvailabilityResponse> {
@@ -192,7 +135,6 @@ export class BestBuyService extends BaseRetailerService {
       
       const response = await this.makeRequest('/products', {
         params: {
-          apikey: this.apiKey,
           q: query,
           format: 'json',
           show: 'sku,name,regularPrice,salePrice,onSale,url,addToCartUrl,inStoreAvailability,onlineAvailability,image,categoryPath',
@@ -207,7 +149,7 @@ export class BestBuyService extends BaseRetailerService {
 
       for (const product of products) {
         // Filter for Pokemon TCG products
-        if (this.isPokemonTcgProduct(product)) {
+        if (this.isPokemonTcgProduct(product.name, product.categoryPath?.map(cat => cat.name).join(' ') || '')) {
           results.push(this.parseResponse(product, { productId: product.sku.toString() }));
         }
       }
@@ -224,66 +166,16 @@ export class BestBuyService extends BaseRetailerService {
     }
   }
 
-  async getHealthStatus(): Promise<RetailerHealthStatus> {
-    const startTime = Date.now();
-    const errors: string[] = [];
-    let isHealthy = true;
-
-    try {
-      // Test API connectivity with a simple request
-      await this.makeRequest('/products', {
-        params: {
-          apikey: this.apiKey,
-          format: 'json',
-          pageSize: 1
-        }
-      });
-      
-      const responseTime = Date.now() - startTime;
-      const successRate = this.metrics.totalRequests > 0 
-        ? (this.metrics.successfulRequests / this.metrics.totalRequests) * 100 
-        : 100;
-
-      // Consider unhealthy if success rate is below 90% or response time is above 5 seconds
-      if (successRate < 90) {
-        isHealthy = false;
-        errors.push(`Low success rate: ${successRate.toFixed(1)}%`);
+  /**
+   * Best Buy specific health check
+   */
+  protected override async performHealthCheck(): Promise<void> {
+    await this.makeRequest('/products', {
+      params: {
+        format: 'json',
+        pageSize: 1
       }
-      
-      if (responseTime > 5000) {
-        isHealthy = false;
-        errors.push(`High response time: ${responseTime}ms`);
-      }
-
-      return {
-        retailerId: this.config.id,
-        isHealthy,
-        responseTime,
-        successRate,
-        lastChecked: new Date(),
-        errors,
-        circuitBreakerState: 'CLOSED' // Will be updated by circuit breaker
-      };
-      
-    } catch (error) {
-      errors.push(`Health check failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      
-      return {
-        retailerId: this.config.id,
-        isHealthy: false,
-        responseTime: Date.now() - startTime,
-        successRate: this.metrics.totalRequests > 0 
-          ? (this.metrics.successfulRequests / this.metrics.totalRequests) * 100 
-          : 0,
-        lastChecked: new Date(),
-        errors,
-        circuitBreakerState: 'OPEN'
-      };
-    }
-  }
-
-  protected async makeRequest(url: string, options: any = {}): Promise<AxiosResponse> {
-    return await this.httpClient.get(url, options);
+    });
   }
 
   protected parseResponse(
@@ -293,13 +185,9 @@ export class BestBuyService extends BaseRetailerService {
   ): ProductAvailabilityResponse {
     const inStock = product.onlineAvailability || product.inStoreAvailability;
     const price = product.salePrice || product.regularPrice;
+    const availabilityText = inStock ? 'Available' : 'Out of Stock';
     
-    let availabilityStatus: ProductAvailabilityResponse['availabilityStatus'] = 'out_of_stock';
-    if (product.onlineAvailability) {
-      availabilityStatus = 'in_stock';
-    } else if (product.inStoreAvailability) {
-      availabilityStatus = 'in_stock';
-    }
+    const availabilityStatus = this.determineAvailabilityStatus(inStock, availabilityText);
 
     return {
       productId: request.productId,
@@ -326,7 +214,6 @@ export class BestBuyService extends BaseRetailerService {
     try {
       const response = await this.makeRequest(`/products/${sku}`, {
         params: {
-          apikey: this.apiKey,
           format: 'json',
           show: 'sku,name,regularPrice,salePrice,onSale,url,addToCartUrl,inStoreAvailability,onlineAvailability,image,categoryPath'
         }
@@ -345,7 +232,6 @@ export class BestBuyService extends BaseRetailerService {
     try {
       const response = await this.makeRequest('/products', {
         params: {
-          apikey: this.apiKey,
           format: 'json',
           upc: upc,
           show: 'sku,name,regularPrice,salePrice,onSale,url,addToCartUrl,inStoreAvailability,onlineAvailability,image,categoryPath',
@@ -374,7 +260,6 @@ export class BestBuyService extends BaseRetailerService {
     try {
       const response = await this.makeRequest(`/products/${sku}/stores`, {
         params: {
-          apikey: this.apiKey,
           format: 'json',
           area: `${zipCode},${radiusMiles}`,
           show: 'storeId,storeName,address,city,region,postalCode,phone,distance,lowStock,inStoreAvailability'
@@ -402,24 +287,5 @@ export class BestBuyService extends BaseRetailerService {
     }
   }
 
-  private isPokemonTcgProduct(product: BestBuyProduct): boolean {
-    const name = product.name.toLowerCase();
-    const categoryNames = product.categoryPath?.map(cat => cat.name.toLowerCase()).join(' ') || '';
-    
-    const pokemonKeywords = ['pokemon', 'pokémon', 'tcg', 'trading card', 'booster', 'elite trainer', 'battle deck'];
-    const excludeKeywords = ['video game', 'plush', 'figure', 'toy', 'clothing', 'accessory'];
-    
-    const searchText = `${name} ${categoryNames}`;
-    
-    const hasPokemonKeyword = pokemonKeywords.some(keyword => 
-      searchText.includes(keyword)
-    );
-    
-    const hasExcludeKeyword = excludeKeywords.some(keyword => 
-      searchText.includes(keyword)
-    );
-    
 
-    return hasPokemonKeyword && !hasExcludeKeyword;
-  }
 }

@@ -8,9 +8,18 @@ import { SubscriptionTier } from '../../src/types/subscription';
 jest.mock('../../src/models/User');
 jest.mock('jsonwebtoken');
 jest.mock('../../src/utils/logger');
+jest.mock('../../src/services/redisService');
+jest.mock('../../src/services/tokenBlacklistService');
 
 const MockedUser = User as jest.Mocked<typeof User>;
 const mockedJwt = jwt as jest.Mocked<typeof jwt>;
+
+// Mock Redis and token blacklist services
+import { redisService } from '../../src/services/redisService';
+import { tokenBlacklistService } from '../../src/services/tokenBlacklistService';
+
+const mockRedisService = redisService as jest.Mocked<typeof redisService>;
+const mockTokenBlacklistService = tokenBlacklistService as jest.Mocked<typeof tokenBlacklistService>;
 
 describe('AuthService', () => {
   let authService: AuthService;
@@ -24,6 +33,12 @@ describe('AuthService', () => {
   beforeEach(() => {
     authService = new AuthService(mockConfig);
     jest.clearAllMocks();
+    
+    // Setup Redis and token blacklist service mocks
+    mockTokenBlacklistService.isTokenBlacklisted.mockResolvedValue(false);
+    mockTokenBlacklistService.blacklistToken.mockResolvedValue();
+    mockTokenBlacklistService.blacklistAllUserTokens.mockResolvedValue();
+    mockTokenBlacklistService.trackUserToken.mockResolvedValue();
   });
 
   const createMockUser = (overrides: Partial<IUser> = {}): IUser => ({

@@ -5,6 +5,7 @@ import { WebPushService } from '../services/notifications/webPushService';
 import { logger } from '../utils/logger';
 import { authenticate } from '../middleware/auth';
 import { createRateLimit } from '../middleware/rateLimiter';
+import { validateBody, notificationSchemas } from '../validators';
 
 const router = Router();
 
@@ -76,7 +77,7 @@ router.get('/vapid-public-key', notificationRateLimit, async (req: Request, res:
  * @desc    Subscribe to push notifications
  * @access  Private
  */
-router.post('/subscribe', authenticate, notificationRateLimit, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.post('/subscribe', authenticate, notificationRateLimit, validateBody(notificationSchemas.subscribe), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     if (!req.user) {
       res.status(401).json({
@@ -89,18 +90,7 @@ router.post('/subscribe', authenticate, notificationRateLimit, async (req: Reque
       return;
     }
 
-    // Validate request body
-    const { error, value } = subscribeSchema.validate(req.body);
-    if (error) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: error.details?.[0]?.message || 'Validation error',
-          timestamp: new Date().toISOString()
-        }
-      });
-      return;
-    }
+    const value = req.body;
 
     // Subscribe user to push notifications
     const result = await WebPushService.subscribe(req.user.id, value);
@@ -138,7 +128,7 @@ router.post('/subscribe', authenticate, notificationRateLimit, async (req: Reque
  * @desc    Unsubscribe from push notifications
  * @access  Private
  */
-router.post('/unsubscribe', authenticate, notificationRateLimit, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.post('/unsubscribe', authenticate, notificationRateLimit, validateBody(notificationSchemas.unsubscribe), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     if (!req.user) {
       res.status(401).json({
@@ -151,18 +141,7 @@ router.post('/unsubscribe', authenticate, notificationRateLimit, async (req: Req
       return;
     }
 
-    // Validate request body
-    const { error, value } = unsubscribeSchema.validate(req.body);
-    if (error) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: error.details?.[0]?.message || 'Validation error',
-          timestamp: new Date().toISOString()
-        }
-      });
-      return;
-    }
+    const value = req.body;
 
     // Unsubscribe user from push notifications
     const result = await WebPushService.unsubscribe(req.user.id, value.endpoint);

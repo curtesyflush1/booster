@@ -179,7 +179,7 @@ export const loggerWithContext = {
         name: error.name,
         message: error.message,
         stack: error.stack,
-        cause: error.cause
+        cause: (error as any).cause
       } : error ? { error: String(error) } : undefined;
 
       logger.error(message, {
@@ -288,14 +288,77 @@ initializeLogsDirectory();
 export const createRequestLogger = () => {
   return (req: any, res: any, next: any) => {
     const correlationId = CorrelationIdManager.generateId();
+    req.startTime = Date.now(); // Add start time for duration calculation
+    
     CorrelationIdManager.run(correlationId, () => {
       loggerWithContext.info('Request started', {
         method: req.method,
         url: req.url,
         userAgent: req.get('User-Agent'),
-        ip: req.ip
+        ip: req.ip,
+        correlationId
       });
       next();
     });
   };
 };
+
+// Utility function to create contextual errors with enhanced debugging info
+export const createContextualError = (
+  message: string,
+  options: {
+    statusCode?: number;
+    code?: string;
+    operation?: string;
+    context?: Record<string, any>;
+    userId?: string;
+    cause?: Error;
+    isOperational?: boolean;
+  } = {}
+): AppError => {
+  const error = new Error(message) as AppError;
+  
+  error.statusCode = options.statusCode || 500;
+  error.code = options.code || 'INTERNAL_ERROR';
+  error.operation = options.operation;
+  error.context = options.context;
+  error.userId = options.userId;
+  error.isOperational = options.isOperational ?? true;
+  
+  if (options.cause) {
+    (error as any).cause = options.cause;
+  }
+  
+  // Capture stack trace excluding this function
+  Error.captureStackTrace(error, createContextualError);
+  
+  return error;
+};
+
+// Enhanced error logging function with automatic context extraction
+export const logError = (
+  error: Error | AppError,
+  operation?: string,
+  additionalContext?: Record<string, any>
+): void => {
+  const correlationId = CorrelationIdManager.getId();
+  const appError = error as AppError;
+  
+  loggerWithContext.error(`Error in ${operation || appError.operation || 'unknown operation'}`, error, {
+    operation: operation || appError.operation,
+    userId: appError.userId,
+    context: appError.context,
+    correlationId,
+    ...additionalContext
+  });
+};
+
+// Interface for AppError (moved here to avoid circular imports)
+interface AppError extends Error {
+  statusCode?: number;
+  code?: string;
+  isOperational?: boolean;
+  context?: Record<string, any>;
+  userId?: string;
+  operation?: string;
+}

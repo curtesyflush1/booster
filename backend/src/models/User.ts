@@ -156,7 +156,29 @@ export class User extends BaseModel<IUser> {
 
   // Find user by email
   static async findByEmail(email: string): Promise<IUser | null> {
-    return this.findOneBy<IUser>({ email: email.trim().toLowerCase() });
+    const user = await this.findOneBy<IUser>({ email: email.trim().toLowerCase() });
+    return user ? this.parseUserPermissions(user) : null;
+  }
+
+  // Find user by ID with parsed permissions
+  static async findByIdWithPermissions(id: string): Promise<IUser | null> {
+    const user = await this.findById<IUser>(id) as IUser | null;
+    return user ? this.parseUserPermissions(user) : null;
+  }
+
+  // Parse JSON fields from database
+  private static parseUserPermissions(user: IUser): IUser {
+    if (user.admin_permissions && typeof user.admin_permissions === 'string') {
+      try {
+        user.admin_permissions = JSON.parse(user.admin_permissions as string);
+      } catch (error) {
+        user.admin_permissions = [];
+      }
+    }
+    if (!Array.isArray(user.admin_permissions)) {
+      user.admin_permissions = [];
+    }
+    return user;
   }
 
   // Update user password

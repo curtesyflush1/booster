@@ -2,6 +2,8 @@ import { Router } from 'express';
 import * as userController from '../controllers/userController';
 import { authenticate, requireEmailVerification } from '../middleware/auth';
 import { generalRateLimit } from '../middleware/rateLimiter';
+import { sanitizeParameters } from '../middleware/parameterSanitization';
+import { validateBody, validateJoi, userSchemas } from '../validators';
 
 const router = Router();
 
@@ -20,42 +22,42 @@ router.get('/profile', userController.getProfile);
  * @desc    Update user profile information
  * @access  Private
  */
-router.put('/profile', generalRateLimit, userController.updateProfile);
+router.put('/profile', generalRateLimit, validateBody(userSchemas.updateProfile), userController.updateProfile);
 
 /**
  * @route   PUT /api/users/preferences
  * @desc    Update user preferences
  * @access  Private
  */
-router.put('/preferences', generalRateLimit, userController.updatePreferences);
+router.put('/preferences', generalRateLimit, validateBody(userSchemas.updatePreferences), userController.updatePreferences);
 
 /**
  * @route   PUT /api/users/notification-settings
  * @desc    Update notification settings
  * @access  Private
  */
-router.put('/notification-settings', generalRateLimit, userController.updateNotificationSettings);
+router.put('/notification-settings', generalRateLimit, validateBody(userSchemas.updateNotificationSettings), userController.updateNotificationSettings);
 
 /**
  * @route   PUT /api/users/quiet-hours
  * @desc    Update quiet hours settings
  * @access  Private
  */
-router.put('/quiet-hours', generalRateLimit, userController.updateQuietHours);
+router.put('/quiet-hours', generalRateLimit, validateBody(userSchemas.updateQuietHours), userController.updateQuietHours);
 
 /**
  * @route   POST /api/users/addresses
  * @desc    Add shipping address
  * @access  Private
  */
-router.post('/addresses', generalRateLimit, userController.addShippingAddress);
+router.post('/addresses', generalRateLimit, validateBody(userSchemas.addShippingAddress), userController.addShippingAddress);
 
 /**
  * @route   DELETE /api/users/addresses/:addressId
  * @desc    Remove shipping address
  * @access  Private
  */
-router.delete('/addresses/:addressId', generalRateLimit, userController.removeShippingAddress);
+router.delete('/addresses/:addressId', sanitizeParameters, generalRateLimit, userController.removeShippingAddress);
 
 /**
  * @route   GET /api/users/stats
@@ -69,7 +71,7 @@ router.get('/stats', userController.getUserStats);
  * @desc    Add retailer login credentials
  * @access  Private
  */
-router.post('/retailer-credentials', generalRateLimit, userController.addRetailerCredentials);
+router.post('/retailer-credentials', generalRateLimit, validateBody(userSchemas.addRetailerCredential), userController.addRetailerCredentials);
 
 /**
  * @route   GET /api/users/retailer-credentials
@@ -83,35 +85,38 @@ router.get('/retailer-credentials', userController.getRetailerCredentials);
  * @desc    Update retailer credentials
  * @access  Private
  */
-router.put('/retailer-credentials/:retailer', generalRateLimit, userController.updateRetailerCredentials);
+router.put('/retailer-credentials/:retailer', sanitizeParameters, generalRateLimit, validateJoi({
+  params: userSchemas.updateRetailerCredential.params,
+  body: userSchemas.updateRetailerCredential.body
+}), userController.updateRetailerCredentials);
 
 /**
  * @route   DELETE /api/users/retailer-credentials/:retailer
  * @desc    Delete retailer credentials
  * @access  Private
  */
-router.delete('/retailer-credentials/:retailer', generalRateLimit, userController.deleteRetailerCredentials);
+router.delete('/retailer-credentials/:retailer', sanitizeParameters, generalRateLimit, userController.deleteRetailerCredentials);
 
 /**
  * @route   POST /api/users/retailer-credentials/:retailer/verify
  * @desc    Verify retailer credentials
  * @access  Private
  */
-router.post('/retailer-credentials/:retailer/verify', generalRateLimit, userController.verifyRetailerCredentials);
+router.post('/retailer-credentials/:retailer/verify', sanitizeParameters, generalRateLimit, userController.verifyRetailerCredentials);
 
 /**
  * @route   POST /api/users/payment-methods
  * @desc    Add payment method
  * @access  Private
  */
-router.post('/payment-methods', generalRateLimit, userController.addPaymentMethod);
+router.post('/payment-methods', generalRateLimit, validateBody(userSchemas.addPaymentMethod), userController.addPaymentMethod);
 
 /**
  * @route   DELETE /api/users/payment-methods/:paymentMethodId
  * @desc    Remove payment method
  * @access  Private
  */
-router.delete('/payment-methods/:paymentMethodId', generalRateLimit, userController.removePaymentMethod);
+router.delete('/payment-methods/:paymentMethodId', sanitizeParameters, generalRateLimit, userController.removePaymentMethod);
 
 /**
  * @route   GET /api/users/quiet-hours/check

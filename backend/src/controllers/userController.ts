@@ -1,201 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
-import Joi from 'joi';
 import { User } from '../models/User';
 import { logger } from '../utils/logger';
 import { IUser } from '../types/database';
 import { CredentialService, RetailerCredentialInput } from '../services/credentialService';
 import { QuietHoursService } from '../services/quietHoursService';
-
-// Validation schemas
-const updateProfileSchema = Joi.object({
-  first_name: Joi.string().min(1).max(50).optional().allow(null).messages({
-    'string.min': 'First name cannot be empty',
-    'string.max': 'First name must not exceed 50 characters'
-  }),
-  last_name: Joi.string().min(1).max(50).optional().allow(null).messages({
-    'string.min': 'Last name cannot be empty',
-    'string.max': 'Last name must not exceed 50 characters'
-  }),
-  timezone: Joi.string().min(1).max(50).optional().messages({
-    'string.min': 'Timezone cannot be empty',
-    'string.max': 'Timezone must not exceed 50 characters'
-  }),
-  zip_code: Joi.string().pattern(/^\d{5}(-\d{4})?$/).optional().allow(null).messages({
-    'string.pattern.base': 'ZIP code must be in format 12345 or 12345-6789'
-  })
-});
-
-const updatePreferencesSchema = Joi.object({
-  preferences: Joi.object().optional().messages({
-    'object.base': 'Preferences must be an object'
-  })
-});
-
-const updateNotificationSettingsSchema = Joi.object({
-  web_push: Joi.boolean().optional(),
-  email: Joi.boolean().optional(),
-  sms: Joi.boolean().optional(),
-  discord: Joi.boolean().optional(),
-  webhook_url: Joi.string().uri().optional().allow(null).messages({
-    'string.uri': 'Webhook URL must be a valid URL'
-  }),
-  discord_webhook: Joi.string().uri().optional().allow(null).messages({
-    'string.uri': 'Discord webhook must be a valid URL'
-  })
-});
-
-const updateQuietHoursSchema = Joi.object({
-  enabled: Joi.boolean().required(),
-  start_time: Joi.string().pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/).when('enabled', {
-    is: true,
-    then: Joi.required(),
-    otherwise: Joi.optional()
-  }).messages({
-    'string.pattern.base': 'Time must be in HH:MM format (24-hour)',
-    'any.required': 'Start time is required when quiet hours are enabled'
-  }),
-  end_time: Joi.string().pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/).when('enabled', {
-    is: true,
-    then: Joi.required(),
-    otherwise: Joi.optional()
-  }).messages({
-    'string.pattern.base': 'Time must be in HH:MM format (24-hour)',
-    'any.required': 'End time is required when quiet hours are enabled'
-  }),
-  timezone: Joi.string().min(1).max(50).when('enabled', {
-    is: true,
-    then: Joi.required(),
-    otherwise: Joi.optional()
-  }).messages({
-    'string.min': 'Timezone cannot be empty',
-    'string.max': 'Timezone must not exceed 50 characters',
-    'any.required': 'Timezone is required when quiet hours are enabled'
-  }),
-  days: Joi.array().items(Joi.number().integer().min(0).max(6)).when('enabled', {
-    is: true,
-    then: Joi.required(),
-    otherwise: Joi.optional()
-  }).messages({
-    'array.base': 'Days must be an array',
-    'number.base': 'Day must be a number',
-    'number.integer': 'Day must be an integer',
-    'number.min': 'Day must be between 0 and 6 (Sunday = 0)',
-    'number.max': 'Day must be between 0 and 6 (Sunday = 0)',
-    'any.required': 'Days are required when quiet hours are enabled'
-  })
-});
-
-const addShippingAddressSchema = Joi.object({
-  type: Joi.string().valid('shipping', 'billing').required().messages({
-    'any.only': 'Address type must be either "shipping" or "billing"',
-    'any.required': 'Address type is required'
-  }),
-  first_name: Joi.string().min(1).max(50).required().messages({
-    'string.min': 'First name cannot be empty',
-    'string.max': 'First name must not exceed 50 characters',
-    'any.required': 'First name is required'
-  }),
-  last_name: Joi.string().min(1).max(50).required().messages({
-    'string.min': 'Last name cannot be empty',
-    'string.max': 'Last name must not exceed 50 characters',
-    'any.required': 'Last name is required'
-  }),
-  address_line_1: Joi.string().min(1).max(100).required().messages({
-    'string.min': 'Address line 1 cannot be empty',
-    'string.max': 'Address line 1 must not exceed 100 characters',
-    'any.required': 'Address line 1 is required'
-  }),
-  address_line_2: Joi.string().max(100).optional().allow(null, '').messages({
-    'string.max': 'Address line 2 must not exceed 100 characters'
-  }),
-  city: Joi.string().min(1).max(50).required().messages({
-    'string.min': 'City cannot be empty',
-    'string.max': 'City must not exceed 50 characters',
-    'any.required': 'City is required'
-  }),
-  state: Joi.string().min(2).max(50).required().messages({
-    'string.min': 'State must be at least 2 characters',
-    'string.max': 'State must not exceed 50 characters',
-    'any.required': 'State is required'
-  }),
-  zip_code: Joi.string().pattern(/^\d{5}(-\d{4})?$/).required().messages({
-    'string.pattern.base': 'ZIP code must be in format 12345 or 12345-6789',
-    'any.required': 'ZIP code is required'
-  }),
-  country: Joi.string().min(2).max(50).default('US').messages({
-    'string.min': 'Country must be at least 2 characters',
-    'string.max': 'Country must not exceed 50 characters'
-  }),
-  phone: Joi.string().pattern(/^\+?[\d\s\-\(\)]+$/).optional().allow(null, '').messages({
-    'string.pattern.base': 'Phone number format is invalid'
-  }),
-  is_default: Joi.boolean().default(false)
-});
-
-const addRetailerCredentialSchema = Joi.object({
-  retailer: Joi.string().min(1).max(50).required().messages({
-    'string.min': 'Retailer name cannot be empty',
-    'string.max': 'Retailer name must not exceed 50 characters',
-    'any.required': 'Retailer name is required'
-  }),
-  username: Joi.string().min(1).max(100).required().messages({
-    'string.min': 'Username cannot be empty',
-    'string.max': 'Username must not exceed 100 characters',
-    'any.required': 'Username is required'
-  }),
-  password: Joi.string().min(1).max(200).required().messages({
-    'string.min': 'Password cannot be empty',
-    'string.max': 'Password must not exceed 200 characters',
-    'any.required': 'Password is required'
-  }),
-  twoFactorEnabled: Joi.boolean().default(false)
-});
-
-const updateRetailerCredentialSchema = Joi.object({
-  username: Joi.string().min(1).max(100).optional().messages({
-    'string.min': 'Username cannot be empty',
-    'string.max': 'Username must not exceed 100 characters'
-  }),
-  password: Joi.string().min(1).max(200).optional().messages({
-    'string.min': 'Password cannot be empty',
-    'string.max': 'Password must not exceed 200 characters'
-  }),
-  twoFactorEnabled: Joi.boolean().optional()
-});
-
-const addPaymentMethodSchema = Joi.object({
-  type: Joi.string().valid('credit_card', 'debit_card', 'paypal').required().messages({
-    'any.only': 'Payment method type must be credit_card, debit_card, or paypal',
-    'any.required': 'Payment method type is required'
-  }),
-  last_four: Joi.string().pattern(/^\d{4}$/).required().messages({
-    'string.pattern.base': 'Last four digits must be exactly 4 digits',
-    'any.required': 'Last four digits are required'
-  }),
-  brand: Joi.string().min(1).max(50).required().messages({
-    'string.min': 'Brand cannot be empty',
-    'string.max': 'Brand must not exceed 50 characters',
-    'any.required': 'Brand is required'
-  }),
-  expires_month: Joi.number().integer().min(1).max(12).required().messages({
-    'number.base': 'Expiry month must be a number',
-    'number.integer': 'Expiry month must be an integer',
-    'number.min': 'Expiry month must be between 1 and 12',
-    'number.max': 'Expiry month must be between 1 and 12',
-    'any.required': 'Expiry month is required'
-  }),
-  expires_year: Joi.number().integer().min(new Date().getFullYear()).required().messages({
-    'number.base': 'Expiry year must be a number',
-    'number.integer': 'Expiry year must be an integer',
-    'number.min': 'Expiry year cannot be in the past',
-    'any.required': 'Expiry year is required'
-  }),
-  billing_address_id: Joi.string().uuid().required().messages({
-    'string.uuid': 'Billing address ID must be a valid UUID',
-    'any.required': 'Billing address ID is required'
-  }),
-  is_default: Joi.boolean().default(false)
-});
+import { userSchemas } from '../validators/schemas';
 
 /**
  * Get current user profile with enhanced security and error handling
@@ -274,18 +83,7 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
       return;
     }
 
-    // Validate request body
-    const { error, value } = updateProfileSchema.validate(req.body);
-    if (error) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: error.details?.[0]?.message || 'Validation error',
-          timestamp: new Date().toISOString()
-        }
-      });
-      return;
-    }
+    const value = req.body;
 
     // Update user profile
     const updatedUser = await User.updateById<IUser>(req.user.id, value);
@@ -331,7 +129,7 @@ export const updatePreferences = async (req: Request, res: Response, next: NextF
     }
 
     // Validate request body
-    const { error, value } = updatePreferencesSchema.validate(req.body);
+    const { error, value } = userSchemas.updatePreferences.validate(req.body);
     if (error) {
       res.status(400).json({
         error: {
@@ -385,7 +183,7 @@ export const updateNotificationSettings = async (req: Request, res: Response, ne
     }
 
     // Validate request body
-    const { error, value } = updateNotificationSettingsSchema.validate(req.body);
+    const { error, value } = userSchemas.updateNotificationSettings.validate(req.body);
     if (error) {
       res.status(400).json({
         error: {
@@ -437,7 +235,7 @@ export const updateQuietHours = async (req: Request, res: Response, next: NextFu
     }
 
     // Validate request body
-    const { error, value } = updateQuietHoursSchema.validate(req.body);
+    const { error, value } = userSchemas.updateQuietHours.validate(req.body);
     if (error) {
       res.status(400).json({
         error: {
@@ -493,7 +291,7 @@ export const addShippingAddress = async (req: Request, res: Response, next: Next
     }
 
     // Validate request body
-    const { error, value } = addShippingAddressSchema.validate(req.body);
+    const { error, value } = userSchemas.addShippingAddress.validate(req.body);
     if (error) {
       res.status(400).json({
         error: {
@@ -641,7 +439,7 @@ export const addRetailerCredentials = async (req: Request, res: Response, next: 
     }
 
     // Validate request body
-    const { error, value } = addRetailerCredentialSchema.validate(req.body);
+    const { error, value } = userSchemas.addRetailerCredential.validate(req.body);
     if (error) {
       res.status(400).json({
         error: {
@@ -732,7 +530,7 @@ export const updateRetailerCredentials = async (req: Request, res: Response, nex
     }
 
     // Validate request body
-    const { error, value } = updateRetailerCredentialSchema.validate(req.body);
+    const { error, value } = userSchemas.updateRetailerCredential.body.validate(req.body);
     if (error) {
       res.status(400).json({
         error: {
@@ -875,7 +673,7 @@ export const addPaymentMethod = async (req: Request, res: Response, next: NextFu
     }
 
     // Validate request body
-    const { error, value } = addPaymentMethodSchema.validate(req.body);
+    const { error, value } = userSchemas.addPaymentMethod.validate(req.body);
     if (error) {
       res.status(400).json({
         error: {

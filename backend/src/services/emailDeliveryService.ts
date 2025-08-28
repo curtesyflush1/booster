@@ -1,5 +1,6 @@
 import { logger } from '../utils/logger';
 import { db } from '../config/database';
+import { IEmailDeliveryStats, IEmailDeliveryStatsQueryResult } from '../types/database';
 
 export interface EmailDeliveryLog {
   id: string;
@@ -41,6 +42,16 @@ export interface ComplaintEvent {
 }
 
 export class EmailDeliveryService {
+  /**
+   * Safely parse string or number to integer
+   * @private
+   */
+  private static parseIntSafely(value: string | number | null | undefined): number {
+    if (value === null || value === undefined) return 0;
+    if (typeof value === 'number') return Math.floor(value);
+    const parsed = parseInt(value.toString(), 10);
+    return isNaN(parsed) ? 0 : parsed;
+  }
   /**
    * Log email send attempt
    */
@@ -320,17 +331,27 @@ export class EmailDeliveryService {
   }
 
   /**
-   * Get delivery statistics for a user
+   * Get comprehensive email delivery statistics for a specific user
+   * 
+   * @param userId - The UUID of the user to get statistics for
+   * @returns Promise resolving to delivery statistics including counts, rates, and timestamps
+   * @throws Error if userId is invalid or database query fails
+   * 
+   * @example
+   * ```typescript
+   * const stats = await EmailDeliveryService.getUserDeliveryStats('user-uuid');
+   * console.log(`Delivery rate: ${stats.deliveryRate}%`);
+   * ```
    */
-  static async getUserDeliveryStats(userId: string): Promise<{
-    totalSent: number;
-    totalDelivered: number;
-    totalBounced: number;
-    totalComplained: number;
-    deliveryRate: number;
-    lastEmailSent?: Date;
-  }> {
+  static async getUserDeliveryStats(userId: string): Promise<IEmailDeliveryStats> {
+    // Input validation
+    if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
+      throw new Error('Invalid userId provided');
+    }
+
     try {
+      const startTime = Date.now();
+      
       const stats = await db('email_delivery_logs')
         .where({ user_id: userId })
         .select(
@@ -340,12 +361,20 @@ export class EmailDeliveryService {
           db.raw('SUM(CASE WHEN complained_at IS NOT NULL THEN 1 ELSE 0 END) as total_complained'),
           db.raw('MAX(sent_at) as last_email_sent')
         )
-        .first();
+        .first() as unknown as IEmailDeliveryStatsQueryResult | undefined;
 
-      const totalSent = parseInt(stats.total_sent) || 0;
-      const totalDelivered = parseInt(stats.total_delivered) || 0;
-      const totalBounced = parseInt(stats.total_bounced) || 0;
-      const totalComplained = parseInt(stats.total_complained) || 0;
+      const queryTime = Date.now() - startTime;
+      
+      logger.debug('Email delivery stats query completed', {
+        userId,
+        queryTimeMs: queryTime,
+        hasResults: !!stats
+      });
+
+      const totalSent = this.parseIntSafely(stats?.total_sent);
+      const totalDelivered = this.parseIntSafely(stats?.total_delivered);
+      const totalBounced = this.parseIntSafely(stats?.total_bounced);
+      const totalComplained = this.parseIntSafely(stats?.total_complained);
 
       return {
         totalSent,
@@ -353,12 +382,14 @@ export class EmailDeliveryService {
         totalBounced,
         totalComplained,
         deliveryRate: totalSent > 0 ? (totalDelivered / totalSent) * 100 : 0,
-        lastEmailSent: stats.last_email_sent
+        lastEmailSent: stats?.last_email_sent ? new Date(stats.last_email_sent) : undefined
       };
     } catch (error) {
       logger.error('Failed to get user delivery stats', {
         userId,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        operation: 'getUserDeliveryStats'
       });
       return {
         totalSent: 0,

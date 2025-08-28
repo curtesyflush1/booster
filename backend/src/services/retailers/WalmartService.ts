@@ -1,5 +1,6 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { BaseRetailerService, RetailerConfig, ProductAvailabilityRequest, ProductAvailabilityResponse, RetailerHealthStatus, StoreLocation, RetailerError } from '../../types/retailer';
+import { AxiosResponse } from 'axios';
+import { RetailerConfig, ProductAvailabilityRequest, ProductAvailabilityResponse, StoreLocation, RetailerError } from '../../types/retailer';
+import { BaseRetailerService } from './BaseRetailerService';
 import { logger } from '../../utils/logger';
 
 interface WalmartProduct {
@@ -59,73 +60,12 @@ interface WalmartStoreLocator {
 }
 
 export class WalmartService extends BaseRetailerService {
-  private httpClient: AxiosInstance;
-  private apiKey: string;
-
   constructor(config: RetailerConfig) {
     super(config);
     
     if (!config.apiKey) {
       throw new Error('Walmart API key is required');
     }
-    
-    this.apiKey = config.apiKey;
-    this.httpClient = axios.create({
-      baseURL: config.baseUrl,
-      timeout: config.timeout,
-      headers: {
-        'WM_SVC.NAME': 'Walmart Open API',
-        'WM_CONSUMER.ID': this.apiKey,
-        'Accept': 'application/json',
-        'User-Agent': 'BoosterBeacon/1.0',
-        ...config.headers
-      }
-    });
-
-    // Add request interceptor for rate limiting
-    this.httpClient.interceptors.request.use((config) => {
-      if (!this.checkRateLimit()) {
-        throw this.createRetailerError(
-          'Rate limit exceeded',
-          'RATE_LIMIT',
-          429,
-          true
-        );
-      }
-      return config;
-    });
-
-    // Add response interceptor for error handling
-    this.httpClient.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response?.status === 429) {
-          throw this.createRetailerError(
-            'Rate limit exceeded',
-            'RATE_LIMIT',
-            429,
-            true
-          );
-        }
-        if (error.response?.status === 401 || error.response?.status === 403) {
-          throw this.createRetailerError(
-            'Authentication failed',
-            'AUTH',
-            error.response.status,
-            false
-          );
-        }
-        if (error.code === 'ECONNABORTED' || error.code === 'ENOTFOUND') {
-          throw this.createRetailerError(
-            'Network error',
-            'NETWORK',
-            undefined,
-            true
-          );
-        }
-        throw error;
-      }
-    );
   }
 
   async checkAvailability(request: ProductAvailabilityRequest): Promise<ProductAvailabilityResponse> {
@@ -205,7 +145,8 @@ export class WalmartService extends BaseRetailerService {
 
       for (const product of products) {
         // Filter for Pokemon TCG products
-        if (this.isPokemonTcgProduct(product)) {
+        const additionalText = `${product.categoryPath || ''} ${product.brandName || ''} ${product.shortDescription || ''}`;
+        if (this.isPokemonTcgProduct(product.name, additionalText)) {
           results.push(this.parseResponse(product, { productId: product.itemId.toString() }));
         }
       }
@@ -222,66 +163,17 @@ export class WalmartService extends BaseRetailerService {
     }
   }
 
-  async getHealthStatus(): Promise<RetailerHealthStatus> {
-    const startTime = Date.now();
-    const errors: string[] = [];
-    let isHealthy = true;
-
-    try {
-      // Test API connectivity with a simple search request
-      await this.makeRequest('/search', {
-        params: {
-          query: 'pokemon',
-          format: 'json',
-          numItems: 1
-        }
-      });
-      
-      const responseTime = Date.now() - startTime;
-      const successRate = this.metrics.totalRequests > 0 
-        ? (this.metrics.successfulRequests / this.metrics.totalRequests) * 100 
-        : 100;
-
-      // Consider unhealthy if success rate is below 90% or response time is above 5 seconds
-      if (successRate < 90) {
-        isHealthy = false;
-        errors.push(`Low success rate: ${successRate.toFixed(1)}%`);
+  /**
+   * Walmart specific health check
+   */
+  protected override async performHealthCheck(): Promise<void> {
+    await this.makeRequest('/search', {
+      params: {
+        query: 'pokemon',
+        format: 'json',
+        numItems: 1
       }
-      
-      if (responseTime > 5000) {
-        isHealthy = false;
-        errors.push(`High response time: ${responseTime}ms`);
-      }
-
-      return {
-        retailerId: this.config.id,
-        isHealthy,
-        responseTime,
-        successRate,
-        lastChecked: new Date(),
-        errors,
-        circuitBreakerState: 'CLOSED'
-      };
-      
-    } catch (error) {
-      errors.push(`Health check failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      
-      return {
-        retailerId: this.config.id,
-        isHealthy: false,
-        responseTime: Date.now() - startTime,
-        successRate: this.metrics.totalRequests > 0 
-          ? (this.metrics.successfulRequests / this.metrics.totalRequests) * 100 
-          : 0,
-        lastChecked: new Date(),
-        errors,
-        circuitBreakerState: 'OPEN'
-      };
-    }
-  }
-
-  protected async makeRequest(url: string, options: any = {}): Promise<AxiosResponse> {
-    return await this.httpClient.get(url, options);
+    });
   }
 
   protected parseResponse(
@@ -292,17 +184,10 @@ export class WalmartService extends BaseRetailerService {
     const inStock = product.availabilityStatus === 'Available' || product.stock === 'Available';
     const price = product.salePrice;
     
-    let availabilityStatus: ProductAvailabilityResponse['availabilityStatus'] = 'out_of_stock';
-    if (product.availabilityStatus === 'Available') {
-      availabilityStatus = 'in_stock';
-    } else if (product.availabilityStatus === 'Limited Stock') {
-      availabilityStatus = 'low_stock';
-    } else if (product.availabilityStatus === 'Pre-order') {
-      availabilityStatus = 'pre_order';
-    }
+    const availabilityStatus = this.determineAvailabilityStatus(inStock, product.availabilityStatus);
 
     // Generate cart URL from product URL
-    const cartUrl = product.productUrl ? `${product.productUrl}?athbdg=L1600` : undefined;
+    const cartUrl = this.buildCartUrl(product.productUrl, this.config.id);
 
     return {
       productId: request.productId,
@@ -401,25 +286,5 @@ export class WalmartService extends BaseRetailerService {
     }
   }
 
-  private isPokemonTcgProduct(product: WalmartProduct): boolean {
-    const name = product.name.toLowerCase();
-    const categoryPath = product.categoryPath?.toLowerCase() || '';
-    const brandName = product.brandName?.toLowerCase() || '';
-    const description = product.shortDescription?.toLowerCase() || '';
-    
-    const pokemonKeywords = ['pokemon', 'pokémon', 'tcg', 'trading card', 'booster', 'elite trainer', 'battle deck'];
-    const excludeKeywords = ['video game', 'plush', 'figure', 'toy', 'clothing', 'accessory'];
-    
-    const searchText = `${name} ${categoryPath} ${brandName} ${description}`;
-    
-    const hasPokemonKeyword = pokemonKeywords.some(keyword => 
-      searchText.includes(keyword)
-    );
-    
-    const hasExcludeKeyword = excludeKeywords.some(keyword => 
-      searchText.includes(keyword)
-    );
-    
-    return hasPokemonKeyword && !hasExcludeKeyword;
-  }
+
 }

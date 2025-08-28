@@ -292,7 +292,7 @@ export class UserWatchPack extends BaseModel<IUserWatchPack> {
       return {
         totalSubscriptions: Number(totalResult[0]?.count || 0),
         activeSubscriptions: Number(activeResult[0]?.count || 0),
-        totalProducts: Number(productsResult[0]?.total_products || 0),
+        totalProducts: Number((productsResult[0] as any)?.total_products || 0),
         recentSubscriptions: Number(recentResult[0]?.count || 0)
       };
     } catch (error) {

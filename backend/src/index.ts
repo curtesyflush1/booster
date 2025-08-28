@@ -13,6 +13,7 @@ import { DataCollectionService } from './services/dataCollectionService';
 import { AdminSystemService } from './services/adminSystemService';
 import { backupService } from './services/backupService';
 import { monitoringService } from './services/monitoringService';
+import { redisService } from './services/redisService';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -154,66 +155,86 @@ app.use('*', (_req: Request, res: Response) => {
 
 // Start server only if not in test environment
 if (process.env.NODE_ENV !== 'test') {
-  // Initialize WebSocket service
-  const websocketService = initializeWebSocketService(server);
-  
-  // Initialize ML data collection service
-  DataCollectionService.scheduleDataCollection();
-  
-  // Start system monitoring
-  AdminSystemService.startSystemMonitoring();
-  
-  // Schedule automatic backups
-  backupService.scheduleAutomaticBackups();
-  
-  // Initialize monitoring service
-  monitoringService.on('alert', (alert) => {
-    loggerWithContext.warn('System alert fired', {
-      alertId: alert.id,
-      ruleName: alert.ruleName,
-      severity: alert.severity,
-      value: alert.value,
-      threshold: alert.threshold
-    });
-  });
-  
-  monitoringService.on('alertResolved', (alert) => {
-    loggerWithContext.info('System alert resolved', {
-      alertId: alert.id,
-      ruleName: alert.ruleName,
-      duration: alert.endsAt ? alert.endsAt.getTime() - alert.startsAt.getTime() : 0
-    });
-  });
-  
-  server.listen(PORT, () => {
-    loggerWithContext.info(`BoosterBeacon API server running on port ${PORT}`, {
-      port: PORT,
-      environment: process.env.NODE_ENV || 'development',
-      version: process.env.APP_VERSION || '1.0.0'
-    });
-    loggerWithContext.info('WebSocket service initialized');
-    loggerWithContext.info('ML data collection service scheduled');
-    loggerWithContext.info('System monitoring started');
-    loggerWithContext.info('Automatic backup service scheduled');
-    loggerWithContext.info('Monitoring and alerting service initialized');
-  });
+  // Initialize services
+  const initializeServices = async () => {
+    try {
+      // Initialize Redis connection
+      await redisService.connect();
+      loggerWithContext.info('Redis connection established');
+      
+      // Initialize WebSocket service
+      const websocketService = initializeWebSocketService(server);
+      
+      // Initialize ML data collection service
+      DataCollectionService.scheduleDataCollection();
+      
+      // Start system monitoring
+      AdminSystemService.startSystemMonitoring();
+      
+      // Schedule automatic backups
+      backupService.scheduleAutomaticBackups();
+      
+      // Initialize monitoring service
+      monitoringService.on('alert', (alert) => {
+        loggerWithContext.warn('System alert fired', {
+          alertId: alert.id,
+          ruleName: alert.ruleName,
+          severity: alert.severity,
+          value: alert.value,
+          threshold: alert.threshold
+        });
+      });
+      
+      monitoringService.on('alertResolved', (alert) => {
+        loggerWithContext.info('System alert resolved', {
+          alertId: alert.id,
+          ruleName: alert.ruleName,
+          duration: alert.endsAt ? alert.endsAt.getTime() - alert.startsAt.getTime() : 0
+        });
+      });
+      
+      server.listen(PORT, () => {
+        loggerWithContext.info(`BoosterBeacon API server running on port ${PORT}`, {
+          port: PORT,
+          environment: process.env.NODE_ENV || 'development',
+          version: process.env.APP_VERSION || '1.0.0'
+        });
+        loggerWithContext.info('WebSocket service initialized');
+        loggerWithContext.info('ML data collection service scheduled');
+        loggerWithContext.info('System monitoring started');
+        loggerWithContext.info('Automatic backup service scheduled');
+        loggerWithContext.info('Monitoring and alerting service initialized');
+      });
 
-  // Graceful shutdown
-  const gracefulShutdown = async () => {
-    loggerWithContext.info('Shutting down gracefully');
-    
-    // Shutdown WebSocket service first
-    await websocketService.shutdown();
-    
-    // Close HTTP server
-    server.close(() => {
-      loggerWithContext.info('Process terminated');
-      process.exit(0);
-    });
+      // Graceful shutdown
+      const gracefulShutdown = async () => {
+        loggerWithContext.info('Shutting down gracefully');
+        
+        // Shutdown WebSocket service first
+        await websocketService.shutdown();
+        
+        // Disconnect Redis
+        await redisService.disconnect();
+        
+        // Close HTTP server
+        server.close(() => {
+          loggerWithContext.info('Process terminated');
+          process.exit(0);
+        });
+      };
+
+      process.on('SIGTERM', gracefulShutdown);
+      process.on('SIGINT', gracefulShutdown);
+      
+    } catch (error) {
+      loggerWithContext.error('Failed to initialize services', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      process.exit(1);
+    }
   };
-
-  process.on('SIGTERM', gracefulShutdown);
-  process.on('SIGINT', gracefulShutdown);
+  
+  initializeServices();
 }
 
 export default app;

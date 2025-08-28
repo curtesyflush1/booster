@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { MLController } from '../controllers/mlController';
 import { authenticate } from '../middleware/auth';
 import { createRateLimit } from '../middleware/rateLimiter';
+import { sanitizeParameters } from '../middleware/parameterSanitization';
+import { validate, mlSchemas } from '../validators';
 
 const router = Router();
 
@@ -18,15 +20,15 @@ const mlRateLimit = createRateLimit({
 router.use(mlRateLimit);
 
 // Individual product ML endpoints
-router.get('/products/:productId/price-prediction', MLController.getPricePrediction);
-router.get('/products/:productId/sellout-risk', MLController.getSelloutRisk);
-router.get('/products/:productId/roi-estimate', MLController.getROIEstimate);
-router.get('/products/:productId/hype-meter', MLController.getHypeMeter);
-router.get('/products/:productId/market-insights', MLController.getMarketInsights);
-router.get('/products/:productId/analysis', MLController.getComprehensiveAnalysis);
+router.get('/products/:productId/price-prediction', sanitizeParameters, validate(mlSchemas.getPricePrediction), MLController.getPricePrediction);
+router.get('/products/:productId/sellout-risk', sanitizeParameters, validate(mlSchemas.getSelloutRisk), MLController.getSelloutRisk);
+router.get('/products/:productId/roi-estimate', sanitizeParameters, validate(mlSchemas.getROIEstimate), MLController.getROIEstimate);
+router.get('/products/:productId/hype-meter', sanitizeParameters, validate(mlSchemas.getHypeMeter), MLController.getHypeMeter);
+router.get('/products/:productId/market-insights', sanitizeParameters, validate(mlSchemas.getMarketInsights), MLController.getMarketInsights);
+router.get('/products/:productId/analysis', sanitizeParameters, validate(mlSchemas.getComprehensiveAnalysis), MLController.getComprehensiveAnalysis);
 
 // Aggregate ML endpoints
-router.get('/trending-products', MLController.getTrendingProducts);
-router.get('/high-risk-products', MLController.getHighRiskProducts);
+router.get('/trending-products', validate(mlSchemas.getTrendingProducts), MLController.getTrendingProducts);
+router.get('/high-risk-products', validate(mlSchemas.getHighRiskProducts), MLController.getHighRiskProducts);
 
 export default router;
