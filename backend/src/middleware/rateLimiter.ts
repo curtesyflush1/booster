@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
+import { INTERVALS, RATE_LIMITS } from '../constants';
 
 interface RateLimitConfig {
   windowMs: number;
@@ -155,37 +156,37 @@ export const createRateLimit = (config: RateLimitConfig) => {
 
 // General API rate limiter - 100 requests per 15 minutes
 export const generalRateLimit = createRateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 100,
+  windowMs: INTERVALS.RATE_LIMIT_WINDOW_MEDIUM,
+  maxRequests: RATE_LIMITS.GENERAL_MAX_REQUESTS,
   message: 'Too many requests from this IP, please try again later'
 });
 
 // Authentication rate limiter - 5 attempts per 15 minutes
 export const authRateLimit = createRateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 5,
+  windowMs: INTERVALS.RATE_LIMIT_WINDOW_MEDIUM,
+  maxRequests: RATE_LIMITS.AUTH_MAX_ATTEMPTS,
   message: 'Too many authentication attempts, please try again later',
   skipSuccessfulRequests: true // Don't count successful logins against the limit
 });
 
 // Password reset rate limiter - 3 attempts per hour
 export const passwordResetRateLimit = createRateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  maxRequests: 3,
+  windowMs: INTERVALS.RATE_LIMIT_WINDOW_LONG,
+  maxRequests: RATE_LIMITS.PASSWORD_RESET_MAX_ATTEMPTS,
   message: 'Too many password reset attempts, please try again later'
 });
 
 // Registration rate limiter - 3 registrations per hour per IP
 export const registrationRateLimit = createRateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  maxRequests: 3,
+  windowMs: INTERVALS.RATE_LIMIT_WINDOW_LONG,
+  maxRequests: RATE_LIMITS.REGISTRATION_MAX_ATTEMPTS,
   message: 'Too many registration attempts, please try again later'
 });
 
 // Strict rate limiter for sensitive operations - 10 requests per hour
 export const strictRateLimit = createRateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  maxRequests: 10,
+  windowMs: INTERVALS.RATE_LIMIT_WINDOW_LONG,
+  maxRequests: 10, // This is a specific limit for strict operations
   message: 'Rate limit exceeded for this operation'
 });
 

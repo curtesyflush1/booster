@@ -2,6 +2,8 @@ import { BaseModel } from './BaseModel';
 import { IUserWatchPack, IValidationError, IPaginatedResult } from '../types/database';
 import { handleDatabaseError } from '../config/database';
 import { logger } from '../utils/logger';
+import { INTERVALS, DEFAULT_VALUES } from '../constants';
+import { ValidationUtils, WATCH_PACK_LIMITS } from '../constants/limits';
 
 export class UserWatchPack extends BaseModel<IUserWatchPack> {
   protected static override tableName = 'user_watch_packs';
@@ -22,7 +24,7 @@ export class UserWatchPack extends BaseModel<IUserWatchPack> {
       if (packIdError) errors.push(packIdError);
     }
 
-    // Customizations validation (should be an object)
+    // Customizations validation with enhanced checks
     if (data.customizations !== undefined) {
       if (typeof data.customizations !== 'object' || data.customizations === null) {
         errors.push({
@@ -30,6 +32,49 @@ export class UserWatchPack extends BaseModel<IUserWatchPack> {
           message: 'Customizations must be an object',
           value: data.customizations
         });
+      } else {
+        // Validate customization properties if they exist
+        const customizations = data.customizations as Record<string, any>;
+
+        // Validate custom name if provided
+        if (customizations.custom_name) {
+          const nameValidation = ValidationUtils.validateLength(
+            customizations.custom_name,
+            {
+              max: WATCH_PACK_LIMITS.MAX_NAME_LENGTH,
+              fieldName: 'custom_name'
+            }
+          );
+          if (!nameValidation.isValid) {
+            nameValidation.errors.forEach(error => {
+              errors.push({
+                field: 'customizations.custom_name',
+                message: error,
+                value: customizations.custom_name
+              });
+            });
+          }
+        }
+
+        // Validate custom description if provided
+        if (customizations.custom_description) {
+          const descValidation = ValidationUtils.validateLength(
+            customizations.custom_description,
+            {
+              max: WATCH_PACK_LIMITS.MAX_DESCRIPTION_LENGTH,
+              fieldName: 'custom_description'
+            }
+          );
+          if (!descValidation.isValid) {
+            descValidation.errors.forEach(error => {
+              errors.push({
+                field: 'customizations.custom_description',
+                message: error,
+                value: customizations.custom_description
+              });
+            });
+          }
+        }
       }
     }
 
@@ -88,7 +133,7 @@ export class UserWatchPack extends BaseModel<IUserWatchPack> {
     } = {}
   ): Promise<IPaginatedResult<IUserWatchPack>> {
     try {
-      const { is_active = true, page = 1, limit = 20 } = options;
+      const { is_active = true, page = DEFAULT_VALUES.DEFAULT_PAGE, limit = DEFAULT_VALUES.DEFAULT_LIMIT } = options;
 
       let query = this.db(this.getTableName())
         .where('user_id', userId);
@@ -114,7 +159,7 @@ export class UserWatchPack extends BaseModel<IUserWatchPack> {
     } = {}
   ): Promise<IPaginatedResult<IUserWatchPack>> {
     try {
-      const { is_active = true, page = 1, limit = 20 } = options;
+      const { is_active = true, page = DEFAULT_VALUES.DEFAULT_PAGE, limit = DEFAULT_VALUES.DEFAULT_LIMIT } = options;
 
       let query = this.db(this.getTableName())
         .where('watch_pack_id', watchPackId);
@@ -283,7 +328,7 @@ export class UserWatchPack extends BaseModel<IUserWatchPack> {
         .where('watch_packs.is_active', true);
 
       // Get recent subscriptions (last 7 days)
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const sevenDaysAgo = new Date(Date.now() - INTERVALS.RECENT_ALERTS_PERIOD);
       const recentResult = await this.db(this.getTableName())
         .where('user_id', userId)
         .where('created_at', '>=', sevenDaysAgo)

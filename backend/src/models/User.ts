@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import { BaseModel } from './BaseModel';
 import { IUser, IValidationError, IUserRegistration } from '../types/database';
+import { INTERVALS, VALIDATION_LIMITS, TIME_UNITS, DEFAULT_VALUES } from '../constants';
 
 export class User extends BaseModel<IUser> {
   protected static override tableName = 'users';
@@ -19,7 +20,7 @@ export class User extends BaseModel<IUser> {
     // Password validation (for registration)
     if (data.password_hash !== undefined) {
       const passwordError = User.validateRequired(data.password_hash, 'password') ||
-                           User.validateLength(data.password_hash, 'password', 8, 128);
+                           User.validateLength(data.password_hash, 'password', VALIDATION_LIMITS.MIN_PASSWORD_LENGTH, VALIDATION_LIMITS.MAX_PASSWORD_LENGTH);
       if (passwordError) errors.push(passwordError);
     }
 
@@ -45,19 +46,19 @@ export class User extends BaseModel<IUser> {
 
     // Name validation
     if (data.first_name !== undefined && data.first_name !== null) {
-      const firstNameError = User.validateLength(data.first_name, 'first_name', 1, 50);
+      const firstNameError = User.validateLength(data.first_name, 'first_name', 1, VALIDATION_LIMITS.MAX_FIRST_NAME_LENGTH);
       if (firstNameError) errors.push(firstNameError);
     }
 
     if (data.last_name !== undefined && data.last_name !== null) {
-      const lastNameError = User.validateLength(data.last_name, 'last_name', 1, 50);
+      const lastNameError = User.validateLength(data.last_name, 'last_name', 1, VALIDATION_LIMITS.MAX_LAST_NAME_LENGTH);
       if (lastNameError) errors.push(lastNameError);
     }
 
     // Timezone validation
     if (data.timezone !== undefined) {
       // Basic timezone validation - could be enhanced with a proper timezone library
-      const timezoneError = User.validateLength(data.timezone, 'timezone', 1, 50);
+      const timezoneError = User.validateLength(data.timezone, 'timezone', 1, VALIDATION_LIMITS.MAX_TIMEZONE_LENGTH);
       if (timezoneError) errors.push(timezoneError);
     }
 
@@ -102,8 +103,8 @@ export class User extends BaseModel<IUser> {
     if (!sanitized.quiet_hours) {
       sanitized.quiet_hours = {
         enabled: false,
-        start_time: '22:00',
-        end_time: '08:00',
+        start_time: DEFAULT_VALUES.DEFAULT_QUIET_START_TIME,
+        end_time: DEFAULT_VALUES.DEFAULT_QUIET_END_TIME,
         timezone: 'UTC',
         days: []
       };
@@ -123,7 +124,7 @@ export class User extends BaseModel<IUser> {
 
   // Hash password before storing
   static async hashPassword(password: string): Promise<string> {
-    const saltRounds = 12;
+    const saltRounds = VALIDATION_LIMITS.BCRYPT_SALT_ROUNDS;
     return bcrypt.hash(password, saltRounds);
   }
 
@@ -220,9 +221,9 @@ export class User extends BaseModel<IUser> {
       failed_login_attempts: failedAttempts
     };
 
-    // Lock account after 5 failed attempts for 30 minutes
-    if (failedAttempts >= 5) {
-      updateData.locked_until = new Date(Date.now() + 30 * 60 * 1000);
+    // Lock account after max failed attempts for configured duration
+    if (failedAttempts >= VALIDATION_LIMITS.MAX_FAILED_LOGIN_ATTEMPTS) {
+      updateData.locked_until = new Date(Date.now() + INTERVALS.ACCOUNT_LOCKOUT_DURATION);
     }
 
     await this.updateById<IUser>(userId, updateData);
@@ -309,7 +310,7 @@ export class User extends BaseModel<IUser> {
     // These would typically be calculated with joins or separate queries
     // For now, returning basic stats
     const accountAge = Math.floor(
-      (Date.now() - user.created_at.getTime()) / (1000 * 60 * 60 * 24)
+      (Date.now() - user.created_at.getTime()) / TIME_UNITS.DAY
     );
 
     return {

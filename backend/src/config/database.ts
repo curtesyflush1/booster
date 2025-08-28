@@ -1,5 +1,6 @@
 import knex, { Knex } from 'knex';
 import { logger } from '../utils/logger';
+import { HTTP_TIMEOUTS, RETRY_CONFIG, DEFAULT_VALUES } from '../constants';
 
 // Database configuration interface
 interface IDatabaseConfig {
@@ -47,14 +48,14 @@ function getDatabaseConfig(): IDatabaseConfig {
       password: process.env.DB_PASSWORD || 'password'
     },
     pool: {
-      min: 2,
-      max: 10,
-      acquireTimeoutMillis: 30000,
-      createTimeoutMillis: 30000,
-      destroyTimeoutMillis: 5000,
-      idleTimeoutMillis: 30000,
-      reapIntervalMillis: 1000,
-      createRetryIntervalMillis: 200
+      min: DEFAULT_VALUES.DB_POOL_MIN_CONNECTIONS,
+      max: DEFAULT_VALUES.DB_POOL_MAX_CONNECTIONS,
+      acquireTimeoutMillis: HTTP_TIMEOUTS.DB_ACQUIRE_TIMEOUT,
+      createTimeoutMillis: HTTP_TIMEOUTS.DB_CREATE_TIMEOUT,
+      destroyTimeoutMillis: HTTP_TIMEOUTS.DB_DESTROY_TIMEOUT,
+      idleTimeoutMillis: HTTP_TIMEOUTS.DB_IDLE_TIMEOUT,
+      reapIntervalMillis: HTTP_TIMEOUTS.DB_REAP_INTERVAL,
+      createRetryIntervalMillis: HTTP_TIMEOUTS.DB_CREATE_RETRY_INTERVAL
     },
     migrations: {
       directory: './migrations',
@@ -71,11 +72,11 @@ function getDatabaseConfig(): IDatabaseConfig {
     if (!databaseUrl && typeof baseConfig.connection === 'object') {
       baseConfig.connection.database = process.env.DB_NAME_TEST || 'boosterbeacon_test';
     }
-    baseConfig.pool.min = 1;
-    baseConfig.pool.max = 5;
+    baseConfig.pool.min = DEFAULT_VALUES.DB_POOL_MIN_CONNECTIONS_TEST;
+    baseConfig.pool.max = DEFAULT_VALUES.DB_POOL_MAX_CONNECTIONS_TEST;
   } else if (env === 'production') {
-    baseConfig.pool.min = 5;
-    baseConfig.pool.max = 20;
+    baseConfig.pool.min = DEFAULT_VALUES.DB_POOL_MIN_CONNECTIONS_PROD;
+    baseConfig.pool.max = DEFAULT_VALUES.DB_POOL_MAX_CONNECTIONS_PROD;
   }
 
   return baseConfig;
@@ -97,7 +98,7 @@ export async function checkDatabaseHealth(): Promise<boolean> {
 }
 
 // Initialize database connection with retry logic
-export async function initializeDatabase(maxRetries: number = 5): Promise<void> {
+export async function initializeDatabase(maxRetries: number = DEFAULT_VALUES.DEFAULT_MAX_RETRIES): Promise<void> {
   let retries = 0;
   
   while (retries < maxRetries) {
@@ -122,7 +123,7 @@ export async function initializeDatabase(maxRetries: number = 5): Promise<void> 
       }
       
       // Wait before retrying (exponential backoff)
-      await new Promise(resolve => setTimeout(resolve, Math.pow(2, retries) * 1000));
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, retries) * RETRY_CONFIG.DB_CONNECTION_RETRY_DELAY_BASE));
     }
   }
 }
@@ -160,7 +161,7 @@ export const queryBuilder = {
   paginate: <T>(
     query: Knex.QueryBuilder,
     page: number = 1,
-    limit: number = 20
+    limit: number = DEFAULT_VALUES.DEFAULT_LIMIT
   ) => {
     const offset = (page - 1) * limit;
     return query.offset(offset).limit(limit);

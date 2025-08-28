@@ -1,5 +1,6 @@
 import { createClient, RedisClientType } from 'redis';
 import { logger } from '../utils/logger';
+import { HTTP_TIMEOUTS } from '../constants';
 
 // Redis error types for better error handling
 export enum RedisErrorType {
@@ -52,8 +53,8 @@ export class RedisService {
           }
           return Math.min(retries * 50, 1000);
         },
-        connectTimeout: 10000, // 10 seconds
-        keepAlive: 30000      // 30 seconds
+        connectTimeout: HTTP_TIMEOUTS.REDIS_CONNECT_TIMEOUT,
+        keepAlive: HTTP_TIMEOUTS.REDIS_KEEPALIVE
       },
       // Connection pool configuration for better performance
       isolationPoolOptions: {

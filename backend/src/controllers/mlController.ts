@@ -3,6 +3,7 @@ import { MLPredictionService } from '../services/mlPredictionService';
 import { DatabaseHelper } from '../utils/dbHelper';
 import { logger } from '../utils/logger';
 import { successResponse, errorResponse } from '../utils/responseHelpers';
+import { TIME_PERIODS } from '../constants';
 
 export class MLController {
   
@@ -67,8 +68,8 @@ export class MLController {
         return;
       }
 
-      if (isNaN(timeframeDays) || timeframeDays < 1 || timeframeDays > 1825) { // Max 5 years
-        errorResponse(res, 400, 'Invalid timeframe. Must be between 1 and 1825 days.');
+      if (isNaN(timeframeDays) || timeframeDays < TIME_PERIODS.MIN_TIMEFRAME_DAYS || timeframeDays > TIME_PERIODS.MAX_TIMEFRAME_DAYS) {
+        errorResponse(res, 400, `Invalid timeframe. Must be between ${TIME_PERIODS.MIN_TIMEFRAME_DAYS} and ${TIME_PERIODS.MAX_TIMEFRAME_DAYS} days.`);
         return;
       }
 

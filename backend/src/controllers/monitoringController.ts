@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { monitoringService } from '../services/monitoringService';
 import { loggerWithContext } from '../utils/logger';
 import { successResponse, errorResponse } from '../utils/responseHelpers';
+import { DASHBOARD_TIME_WINDOWS, TIME_UNITS } from '../constants';
 
 /**
  * Get system metrics
@@ -34,7 +35,7 @@ export const getMetrics = async (req: Request, res: Response): Promise<void> => 
     } else {
       // Get all available metrics (last hour by default)
       const end = new Date();
-      const start = new Date(end.getTime() - 60 * 60 * 1000); // 1 hour ago
+      const start = new Date(end.getTime() - DASHBOARD_TIME_WINDOWS.DEFAULT_MONITORING_WINDOW);
       
       const availableMetrics = [
         'memory_usage_percent',
@@ -208,7 +209,7 @@ export const getDashboardData = async (req: Request, res: Response): Promise<voi
     const hours = timeRange ? parseInt(timeRange as string) : 24;
     
     const end = new Date();
-    const start = new Date(end.getTime() - hours * 60 * 60 * 1000);
+    const start = new Date(end.getTime() - hours * TIME_UNITS.HOUR);
     
     // Get key metrics
     const metrics = {

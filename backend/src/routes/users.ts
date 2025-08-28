@@ -3,6 +3,7 @@ import * as userController from '../controllers/userController';
 import { authenticate, requireEmailVerification } from '../middleware/auth';
 import { generalRateLimit } from '../middleware/rateLimiter';
 import { sanitizeParameters } from '../middleware/parameterSanitization';
+import { contentSanitizationMiddleware } from '../utils/contentSanitization';
 import { validateBody, validateJoi, userSchemas } from '../validators';
 
 const router = Router();
@@ -22,14 +23,14 @@ router.get('/profile', userController.getProfile);
  * @desc    Update user profile information
  * @access  Private
  */
-router.put('/profile', generalRateLimit, validateBody(userSchemas.updateProfile), userController.updateProfile);
+router.put('/profile', generalRateLimit, contentSanitizationMiddleware.users, validateBody(userSchemas.updateProfile), userController.updateProfile);
 
 /**
  * @route   PUT /api/users/preferences
  * @desc    Update user preferences
  * @access  Private
  */
-router.put('/preferences', generalRateLimit, validateBody(userSchemas.updatePreferences), userController.updatePreferences);
+router.put('/preferences', generalRateLimit, contentSanitizationMiddleware.users, validateBody(userSchemas.updatePreferences), userController.updatePreferences);
 
 /**
  * @route   PUT /api/users/notification-settings

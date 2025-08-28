@@ -2,6 +2,7 @@ import { logger } from '../utils/logger';
 import { BaseModel } from '../models/BaseModel';
 import { Product } from '../models/Product';
 import { handleDatabaseError } from '../config/database';
+import { INTERVALS, DEFAULT_VALUES, TIME_PERIODS } from '../constants';
 
 export interface DataCollectionConfig {
   priceHistoryRetentionDays: number;
@@ -21,10 +22,10 @@ export class DataCollectionService extends BaseModel<any> {
     return data;
   }
   private static config: DataCollectionConfig = {
-    priceHistoryRetentionDays: 365,
-    availabilitySnapshotIntervalMinutes: 30,
-    engagementMetricsIntervalHours: 6,
-    batchSize: 100
+    priceHistoryRetentionDays: TIME_PERIODS.PRICE_HISTORY_RETENTION_DAYS,
+    availabilitySnapshotIntervalMinutes: INTERVALS.AVAILABILITY_SNAPSHOT_INTERVAL,
+    engagementMetricsIntervalHours: INTERVALS.ENGAGEMENT_METRICS_INTERVAL,
+    batchSize: DEFAULT_VALUES.DEFAULT_MONITORING_LIMIT
   };
 
   /**
@@ -170,7 +171,7 @@ export class DataCollectionService extends BaseModel<any> {
 
       // Clean up old alert deliveries (keep for 90 days)
       const alertCutoffDate = new Date();
-      alertCutoffDate.setDate(alertCutoffDate.getDate() - 90);
+      alertCutoffDate.setDate(alertCutoffDate.getDate() - TIME_PERIODS.ALERT_DELIVERY_RETENTION_DAYS);
 
       const deletedAlertDeliveries = await this.db('alert_deliveries')
         .where('created_at', '<', alertCutoffDate)
@@ -181,7 +182,7 @@ export class DataCollectionService extends BaseModel<any> {
 
       // Clean up old system health records (keep for 30 days)
       const healthCutoffDate = new Date();
-      healthCutoffDate.setDate(healthCutoffDate.getDate() - 30);
+      healthCutoffDate.setDate(healthCutoffDate.getDate() - TIME_PERIODS.SYSTEM_HEALTH_RETENTION_DAYS);
 
       const deletedHealthRecords = await this.db('system_health')
         .where('checked_at', '<', healthCutoffDate)

@@ -1,4 +1,5 @@
 // Retailer integration types and interfaces
+import { INTERVALS } from '../constants';
 
 export interface RetailerConfig {
   id: string;
@@ -162,7 +163,7 @@ export abstract class BaseRetailerService {
 
   protected checkRateLimit(): boolean {
     const now = new Date();
-    const windowDuration = 60 * 1000; // 1 minute
+    const windowDuration = INTERVALS.RATE_LIMIT_WINDOW_DURATION; // 1 minute
 
     // Reset window if needed
     if (now.getTime() - this.rateLimitState.windowStart.getTime() >= windowDuration) {

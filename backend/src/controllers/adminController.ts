@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import { AdminUserService } from '../services/adminUserService';
 import { AdminMLService } from '../services/adminMLService';
-import { AdminSystemService } from '../services/adminSystemService';
+import { createAdminSystemService } from '../services/adminSystemService';
 import { AdminAuditService } from '../services/adminAuditService';
 import { logger } from '../utils/logger';
 import { IUser } from '../types/database';
@@ -46,7 +46,8 @@ const reviewTrainingDataSchema = Joi.object({
  */
 export const getDashboardStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const stats = await AdminSystemService.getDashboardStats();
+    const adminSystemService = createAdminSystemService();
+    const stats = await adminSystemService.getDashboardStats();
 
     res.status(200).json({
       success: true,
@@ -487,7 +488,8 @@ export const reviewTrainingData = async (req: Request, res: Response, next: Next
  */
 export const getSystemHealth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const health = await AdminSystemService.getSystemHealth();
+    const adminSystemService = createAdminSystemService();
+    const health = await adminSystemService.getSystemHealth();
 
     res.status(200).json({
       success: true,

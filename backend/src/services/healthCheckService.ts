@@ -1,5 +1,6 @@
 import { logger, loggerWithContext } from '../utils/logger';
 import { db } from '../config/database';
+import { RETRY_CONFIG, MONITORING_THRESHOLDS, DEFAULT_VALUES, TIME_PERIODS } from '../constants';
 // import Redis from 'ioredis';
 
 export interface HealthCheckResult {
@@ -64,7 +65,7 @@ class HealthCheckService {
       try {
         const Redis = require('ioredis');
         this.redis = new Redis(process.env.REDIS_URL, {
-          retryDelayOnFailover: 100,
+          retryDelayOnFailover: RETRY_CONFIG.WEBHOOK_RETRY_DELAY_MIN,
           maxRetriesPerRequest: 3,
           lazyConnect: true
         });
@@ -167,7 +168,7 @@ class HealthCheckService {
       const result = await db('users').count('* as count').first();
       const responseTime = Date.now() - startTime;
       
-      if (responseTime > 1000) {
+      if (responseTime > MONITORING_THRESHOLDS.VERY_SLOW_OPERATION_THRESHOLD) {
         return {
           status: 'warn',
           responseTime,
@@ -238,7 +239,7 @@ class HealthCheckService {
       let status: 'pass' | 'warn' | 'fail' = 'pass';
       let message: string | undefined;
       
-      if (memoryPercentage > 90) {
+      if (memoryPercentage > MONITORING_THRESHOLDS.HIGH_DISK_THRESHOLD) {
         status = 'fail';
         message = 'Critical memory usage';
       } else if (memoryPercentage > 75) {

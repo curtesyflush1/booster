@@ -3,6 +3,7 @@ import { IWatch, IValidationError, IPaginatedResult } from '../types/database';
 import { safeCount, safeSum } from '../utils/database';
 import { handleDatabaseError } from '../config/database';
 import { logger } from '../utils/logger';
+import { VALIDATION_LIMITS, INTERVALS, DEFAULT_VALUES } from '../constants';
 
 export class Watch extends BaseModel<IWatch> {
   protected static override tableName = 'watches';
@@ -25,7 +26,7 @@ export class Watch extends BaseModel<IWatch> {
 
     // Max price validation
     if (data.max_price !== undefined && data.max_price !== null) {
-      const priceError = Watch.validateNumeric(data.max_price, 'max_price', 0, 999999.99);
+      const priceError = Watch.validateNumeric(data.max_price, 'max_price', VALIDATION_LIMITS.MIN_PRICE, VALIDATION_LIMITS.MAX_PRICE);
       if (priceError) errors.push(priceError);
     }
 
@@ -41,7 +42,7 @@ export class Watch extends BaseModel<IWatch> {
 
     // ZIP code validation
     if (data.zip_code !== undefined && data.zip_code !== null) {
-      const zipError = Watch.validateLength(data.zip_code, 'zip_code', 5, 10);
+      const zipError = Watch.validateLength(data.zip_code, 'zip_code', VALIDATION_LIMITS.MIN_ZIP_CODE_LENGTH, VALIDATION_LIMITS.MAX_ZIP_CODE_LENGTH);
       if (zipError) errors.push(zipError);
 
       // Basic ZIP code format validation (US format)
@@ -56,7 +57,7 @@ export class Watch extends BaseModel<IWatch> {
 
     // Radius validation
     if (data.radius_miles !== undefined && data.radius_miles !== null) {
-      const radiusError = Watch.validateNumeric(data.radius_miles, 'radius_miles', 1, 500);
+      const radiusError = Watch.validateNumeric(data.radius_miles, 'radius_miles', VALIDATION_LIMITS.MIN_RADIUS_MILES, VALIDATION_LIMITS.MAX_RADIUS_MILES);
       if (radiusError) errors.push(radiusError);
     }
 
@@ -126,7 +127,7 @@ export class Watch extends BaseModel<IWatch> {
     } = {}
   ): Promise<IPaginatedResult<IWatch>> {
     try {
-      const { is_active = true, page = 1, limit = 20 } = options;
+      const { is_active = true, page = DEFAULT_VALUES.DEFAULT_PAGE, limit = DEFAULT_VALUES.DEFAULT_LIMIT } = options;
 
       let query = this.db(this.getTableName())
         .where('user_id', userId);
@@ -161,7 +162,7 @@ export class Watch extends BaseModel<IWatch> {
   // Get watches that need to be checked
   static async getWatchesForMonitoring(
     retailerId?: string,
-    limit: number = 100
+    limit: number = DEFAULT_VALUES.DEFAULT_MONITORING_LIMIT
   ): Promise<IWatch[]> {
     let query = this.db(this.getTableName())
       .where('is_active', true);
@@ -249,7 +250,7 @@ export class Watch extends BaseModel<IWatch> {
         .sum('alert_count as total_alerts');
 
       // Get recent alerts (last 7 days)
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const sevenDaysAgo = new Date(Date.now() - INTERVALS.RECENT_ALERTS_PERIOD);
       const recentAlertsResult = await this.db(this.getTableName())
         .where('user_id', userId)
         .where('last_alerted', '>=', sevenDaysAgo)
@@ -261,7 +262,7 @@ export class Watch extends BaseModel<IWatch> {
         .where('user_id', userId)
         .where('alert_count', '>', 0)
         .orderBy('alert_count', 'desc')
-        .limit(5);
+        .limit(DEFAULT_VALUES.DEFAULT_TOP_WATCHES_LIMIT);
 
       return {
         total: safeCount(totalResult),
@@ -302,7 +303,7 @@ export class Watch extends BaseModel<IWatch> {
       .where('is_active', true)
       .groupBy('product_id')
       .orderBy('watch_count', 'desc')
-      .limit(10);
+      .limit(DEFAULT_VALUES.DEFAULT_TOP_PRODUCTS_LIMIT);
 
     const totalWatches = safeCount(totalResult);
     const totalUsers = safeCount(usersResult);
@@ -311,7 +312,7 @@ export class Watch extends BaseModel<IWatch> {
       totalWatches,
       activeWatches: safeCount(activeResult),
       totalUsers,
-      avgWatchesPerUser: totalUsers > 0 ? Math.round(totalWatches / totalUsers * 100) / 100 : 0,
+      avgWatchesPerUser: totalUsers > 0 ? Math.round(totalWatches / totalUsers * DEFAULT_VALUES.PERCENTAGE_PRECISION) / DEFAULT_VALUES.PERCENTAGE_PRECISION : 0,
       topProducts: topProducts.map(p => ({
         product_id: String(p.product_id),
         watch_count: Number(p.watch_count)

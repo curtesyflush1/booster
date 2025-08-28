@@ -46,6 +46,13 @@ npm run test:watch
 - Controllers: 95%+ (API endpoints)
 - Utilities: 90%+ (helper functions)
 
+**Dependency Injection Benefits:**
+- **Enhanced Testability**: All services now support constructor injection for easy mocking
+- **Isolated Testing**: Business logic can be tested independently from database/external services
+- **Type-Safe Mocks**: Full TypeScript support for mock dependencies
+- **Predictable Tests**: No hidden dependencies or side effects
+- **Example**: See `backend/tests/services/authService.di.test.ts` for DI testing patterns
+
 #### Integration Tests
 ```bash
 # Run integration tests

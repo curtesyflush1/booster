@@ -1,0 +1,163 @@
+/**
+ * Validation constants for input validation and data constraints
+ */
+
+// String length limits
+export const STRING_LIMITS = {
+  // Product fields
+  PRODUCT_SKU_MIN: 1,
+  PRODUCT_SKU_MAX: 100,
+  PRODUCT_NAME_MIN: 1,
+  PRODUCT_NAME_MAX: 200,
+  PRODUCT_DESCRIPTION_MAX: 1000,
+  PRODUCT_SET_NAME_MAX: 100,
+  PRODUCT_SERIES_MAX: 100,
+  
+  // User fields
+  USER_FIRST_NAME_MIN: 1,
+  USER_FIRST_NAME_MAX: 50,
+  USER_LAST_NAME_MIN: 1,
+  USER_LAST_NAME_MAX: 50,
+  USER_TIMEZONE_MIN: 1,
+  USER_TIMEZONE_MAX: 50,
+  
+  // Watch Pack fields
+  WATCH_PACK_NAME_MIN: 1,
+  WATCH_PACK_NAME_MAX: 100,
+  WATCH_PACK_SLUG_MIN: 1,
+  WATCH_PACK_SLUG_MAX: 100,
+  WATCH_PACK_DESCRIPTION_MIN: 0,
+  WATCH_PACK_DESCRIPTION_MAX: 1000,
+  
+  // Subscription Plan fields
+  SUBSCRIPTION_PLAN_NAME_MIN: 1,
+  SUBSCRIPTION_PLAN_NAME_MAX: 100,
+  SUBSCRIPTION_PLAN_SLUG_MIN: 1,
+  SUBSCRIPTION_PLAN_SLUG_MAX: 50,
+  
+  // Search and query limits
+  SEARCH_QUERY_MIN: 1,
+  SEARCH_QUERY_MAX: 100,
+  SEARCH_TERM_MAX: 200,
+  GENERAL_SEARCH_MAX: 255,
+  
+  // Community content
+  TESTIMONIAL_CONTENT_MIN: 10,
+  TESTIMONIAL_CONTENT_MAX: 1000,
+  COMMUNITY_POST_TITLE_MIN: 5,
+  COMMUNITY_POST_TITLE_MAX: 200,
+  COMMUNITY_POST_CONTENT_MIN: 10,
+  COMMUNITY_POST_CONTENT_MAX: 5000,
+  COMMUNITY_TAG_MAX: 50,
+  ADMIN_NOTES_MAX: 1000,
+  DISCORD_MESSAGE_MIN: 1,
+  DISCORD_MESSAGE_MAX: 2000,
+  
+  // Webhook fields
+  WEBHOOK_SECRET_MIN: 8,
+  
+  // ZIP code validation
+  ZIP_CODE_MIN: 5,
+  ZIP_CODE_MAX: 10,
+} as const;
+
+// Numeric validation limits
+export const NUMERIC_LIMITS = {
+  // Price limits
+  PRICE_MIN: 0,
+  PRICE_MAX: 999999.99,
+  
+  // Retry limits
+  ALERT_RETRY_MIN: 0,
+  ALERT_RETRY_MAX: 10,
+  WEBHOOK_RETRY_MIN: 0,
+  WEBHOOK_RETRY_MAX: 10,
+  
+  // Timeframe limits
+  TIMEFRAME_MIN_DAYS: 1,
+  TIMEFRAME_MAX_DAYS: 1095, // 3 years
+  PRICE_HISTORY_DEFAULT_DAYS: 30,
+  PRICE_HISTORY_MAX_DAYS: 365,
+  ROI_TIMEFRAME_DEFAULT_DAYS: 365,
+  ROI_TIMEFRAME_MAX_DAYS: 1095,
+  ANALYTICS_MAX_DAYS: 365,
+  
+  // Geographic limits
+  RADIUS_MIN_MILES: 1,
+  RADIUS_MAX_MILES: 500,
+  
+  // Rating limits
+  RATING_MIN: 1,
+  RATING_MAX: 5,
+  
+  // Array limits
+  ALERT_BULK_MIN: 1,
+  ALERT_BULK_MAX: 50,
+  COMMUNITY_IMAGES_MAX: 10,
+  COMMUNITY_TAGS_MAX: 10,
+  ACTIVITY_LOG_LIMIT: 50,
+  
+  // ML prediction limits
+  ML_MIN_RISK_SCORE: 50,
+  ML_SAVINGS_PERCENTAGE_MIN: 5,
+} as const;
+
+// UPC/Barcode validation
+export const BARCODE_LIMITS = {
+  UPC_MIN_DIGITS: 8,
+  UPC_MAX_DIGITS: 14,
+} as const;
+
+// Regex patterns
+export const VALIDATION_PATTERNS = {
+  ZIP_CODE: /^\d{5}(-\d{4})?$/,
+  UPC_CODE: /^\d{8,14}$/,
+} as const;
+
+// Default values for optional parameters
+export const DEFAULT_VALUES = {
+  // Pagination
+  PAGE: 1,
+  LIMIT: 20,
+  
+  // Product queries
+  POPULAR_PRODUCTS_LIMIT: 10,
+  RECENT_PRODUCTS_LIMIT: 10,
+  UPCOMING_PRODUCTS_LIMIT: 10,
+  TRENDING_PRODUCTS_LIMIT: 10,
+  HIGH_RISK_PRODUCTS_LIMIT: 10,
+  
+  // Watch queries
+  WATCHES_FOR_MONITORING_LIMIT: 100,
+  TOP_WATCHED_PRODUCTS_LIMIT: 10,
+  TOP_ALERTS_LIMIT: 5,
+  
+  // Alert queries
+  PENDING_ALERTS_LIMIT: 100,
+  FAILED_ALERTS_LIMIT: 50,
+  ALERT_HISTORY_DAYS: 30,
+  ALERT_HISTORY_LIMIT: 100,
+  RECENT_ALERTS_LIMIT: 5,
+  
+  // Watch Pack queries
+  POPULAR_WATCH_PACKS_LIMIT: 10,
+  
+  // Community queries
+  COMMUNITY_CONTENT_LIMIT: 20,
+  COMMUNITY_CONTENT_OFFSET: 0,
+  
+  // Dashboard queries
+  DASHBOARD_RECENT_WATCH_UPDATES_LIMIT: 5,
+  
+  // Price comparison
+  PRICE_COMPARISON_LIMIT: 50,
+  DEAL_ALERTS_LIMIT: 20,
+  
+  // Monitoring
+  MONITORING_WATCH_LIMIT: 1000,
+} as const;
+
+// Percentage calculations
+export const PERCENTAGE_PRECISION = {
+  DECIMAL_PLACES: 100, // For rounding to 2 decimal places (multiply by 100, round, divide by 100)
+} as const;

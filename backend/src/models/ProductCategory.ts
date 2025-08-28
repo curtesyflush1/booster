@@ -3,6 +3,7 @@ import { IProductCategory, IValidationError, IPaginatedResult } from '../types/d
 import { safeCount } from '../utils/database';
 import { handleDatabaseError } from '../config/database';
 import { logger } from '../utils/logger';
+import { VALIDATION_LIMITS } from '../constants';
 
 export class ProductCategory extends BaseModel<IProductCategory> {
   protected static override tableName = 'product_categories';
@@ -14,14 +15,14 @@ export class ProductCategory extends BaseModel<IProductCategory> {
     // Name validation
     if (data.name !== undefined) {
       const nameError = ProductCategory.validateRequired(data.name, 'name') ||
-        ProductCategory.validateLength(data.name, 'name', 1, 255);
+        ProductCategory.validateLength(data.name, 'name', 1, VALIDATION_LIMITS.MAX_NAME_LENGTH);
       if (nameError) errors.push(nameError);
     }
 
     // Slug validation
     if (data.slug !== undefined) {
       const slugError = ProductCategory.validateRequired(data.slug, 'slug') ||
-        ProductCategory.validateLength(data.slug, 'slug', 1, 255);
+        ProductCategory.validateLength(data.slug, 'slug', 1, VALIDATION_LIMITS.MAX_SLUG_LENGTH);
       if (slugError) errors.push(slugError);
 
       // Slug format validation (lowercase, hyphens, alphanumeric)
@@ -36,13 +37,13 @@ export class ProductCategory extends BaseModel<IProductCategory> {
 
     // Description validation
     if (data.description !== undefined && data.description !== null) {
-      const descError = ProductCategory.validateLength(data.description, 'description', 0, 1000);
+      const descError = ProductCategory.validateLength(data.description, 'description', 0, VALIDATION_LIMITS.MAX_DESCRIPTION_LENGTH);
       if (descError) errors.push(descError);
     }
 
     // Sort order validation
     if (data.sort_order !== undefined) {
-      const sortError = ProductCategory.validateNumeric(data.sort_order, 'sort_order', 0, 9999);
+      const sortError = ProductCategory.validateNumeric(data.sort_order, 'sort_order', VALIDATION_LIMITS.MIN_SORT_ORDER, VALIDATION_LIMITS.MAX_SORT_ORDER);
       if (sortError) errors.push(sortError);
     }
 
@@ -192,7 +193,7 @@ export class ProductCategory extends BaseModel<IProductCategory> {
   // Update category sort order
   static async updateSortOrder(categoryId: string, sortOrder: number): Promise<boolean> {
     const updated = await this.updateById<IProductCategory>(categoryId, {
-      sort_order: Math.max(0, Math.min(9999, sortOrder))
+      sort_order: Math.max(VALIDATION_LIMITS.MIN_SORT_ORDER, Math.min(VALIDATION_LIMITS.MAX_SORT_ORDER, sortOrder))
     });
     return updated !== null;
   }

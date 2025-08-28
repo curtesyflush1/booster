@@ -16,8 +16,8 @@ router.use(authenticate);
 
 // Apply rate limiting to dashboard routes
 const dashboardLimiter = createRateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  maxRequests: 30, // 30 requests per minute
+  windowMs: INTERVALS.RATE_LIMIT_WINDOW_SHORT,
+  maxRequests: RATE_LIMITS.DASHBOARD_MAX_REQUESTS,
   message: 'Too many dashboard requests, please try again later'
 });
 

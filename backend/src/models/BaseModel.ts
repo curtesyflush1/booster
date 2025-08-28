@@ -3,6 +3,7 @@ import { db, handleDatabaseError } from '../config/database';
 import { logger } from '../utils/logger';
 import { IDatabaseError, IValidationError, IPaginatedResult } from '../types/database';
 import { safeCount } from '../utils/database';
+import { DEFAULT_VALUES } from '../constants';
 
 export abstract class BaseModel<T = any> {
   protected static tableName: string;
@@ -164,8 +165,8 @@ export abstract class BaseModel<T = any> {
   } = {}): Promise<IPaginatedResult<T>> {
     try {
       const {
-        page = 1,
-        limit = 20,
+        page = DEFAULT_VALUES.DEFAULT_PAGE,
+        limit = DEFAULT_VALUES.DEFAULT_LIMIT,
         orderBy = 'created_at',
         orderDirection = 'desc'
       } = options;
@@ -254,8 +255,8 @@ export abstract class BaseModel<T = any> {
   // Helper method for paginated queries - reduces duplication across models
   protected static async getPaginatedResults<T>(
     query: Knex.QueryBuilder,
-    page: number = 1,
-    limit: number = 20,
+    page: number = DEFAULT_VALUES.DEFAULT_PAGE,
+    limit: number = DEFAULT_VALUES.DEFAULT_LIMIT,
     orderBy: string = 'created_at',
     orderDirection: 'asc' | 'desc' = 'desc'
   ): Promise<IPaginatedResult<T>> {

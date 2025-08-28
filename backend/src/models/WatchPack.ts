@@ -2,6 +2,7 @@ import { BaseModel } from './BaseModel';
 import { IWatchPack, IValidationError, IPaginatedResult } from '../types/database';
 import { handleDatabaseError } from '../config/database';
 import { logger } from '../utils/logger';
+import { VALIDATION_LIMITS } from '../constants';
 
 export class WatchPack extends BaseModel<IWatchPack> {
   protected static override tableName = 'watch_packs';
@@ -15,7 +16,7 @@ export class WatchPack extends BaseModel<IWatchPack> {
       const nameError = WatchPack.validateRequired(data.name, 'name');
       if (nameError) errors.push(nameError);
       else {
-        const lengthError = WatchPack.validateLength(data.name, 'name', 1, 100);
+        const lengthError = WatchPack.validateLength(data.name, 'name', 1, VALIDATION_LIMITS.MAX_WATCH_PACK_NAME_LENGTH);
         if (lengthError) errors.push(lengthError);
       }
     }
@@ -33,7 +34,7 @@ export class WatchPack extends BaseModel<IWatchPack> {
             value: data.slug
           });
         }
-        const lengthError = WatchPack.validateLength(data.slug, 'slug', 1, 100);
+        const lengthError = WatchPack.validateLength(data.slug, 'slug', 1, VALIDATION_LIMITS.MAX_WATCH_PACK_SLUG_LENGTH);
         if (lengthError) errors.push(lengthError);
       }
     }
@@ -68,7 +69,7 @@ export class WatchPack extends BaseModel<IWatchPack> {
 
     // Description validation
     if (data.description !== undefined && data.description !== null) {
-      const descError = WatchPack.validateLength(data.description, 'description', 0, 1000);
+      const descError = WatchPack.validateLength(data.description, 'description', 0, VALIDATION_LIMITS.MAX_WATCH_PACK_DESCRIPTION_LENGTH);
       if (descError) errors.push(descError);
     }
 
@@ -85,15 +86,18 @@ export class WatchPack extends BaseModel<IWatchPack> {
   sanitize(data: Partial<IWatchPack>): Partial<IWatchPack> {
     const sanitized: Partial<IWatchPack> = { ...data };
 
-    // Trim string fields
+    // Import sanitization utilities
+    const { sanitizeUserContent, sanitizeBasicText } = require('../utils/contentSanitization');
+
+    // Sanitize string fields with appropriate content types
     if (sanitized.name) {
-      sanitized.name = sanitized.name.trim();
+      sanitized.name = sanitizeUserContent(sanitized.name, 'plain_text');
     }
     if (sanitized.slug) {
-      sanitized.slug = sanitized.slug.trim().toLowerCase();
+      sanitized.slug = sanitizeBasicText(sanitized.slug, 100).toLowerCase();
     }
     if (sanitized.description) {
-      sanitized.description = sanitized.description.trim();
+      sanitized.description = sanitizeUserContent(sanitized.description, 'user_description');
     }
 
     // Ensure product_ids is an array

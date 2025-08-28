@@ -1,6 +1,7 @@
 import { IAlert, IUser } from '../../types/database';
 import { logger } from '../../utils/logger';
 import { ChannelDeliveryResult } from '../alertDeliveryService';
+import { INTERVALS, VALIDATION_LIMITS, DEFAULT_VALUES, TIME_PERIODS } from '../../constants';
 
 export interface SMSMessage {
   to: string;
@@ -13,7 +14,7 @@ export class SMSService {
   private static readonly TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
   private static readonly TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
   private static readonly TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER || '+1234567890';
-  private static readonly MAX_SMS_LENGTH = 160;
+  private static readonly MAX_SMS_LENGTH = VALIDATION_LIMITS.MAX_SMS_LENGTH;
 
   /**
    * Send SMS alert
@@ -178,7 +179,7 @@ export class SMSService {
   /**
    * Truncate product name for SMS
    */
-  private static truncateProductName(productName: string, maxLength: number = 40): string {
+  private static truncateProductName(productName: string, maxLength: number = VALIDATION_LIMITS.MAX_SMS_PRODUCT_NAME_LENGTH): string {
     if (productName.length <= maxLength) {
       return productName;
     }
@@ -218,7 +219,7 @@ export class SMSService {
       }
 
       // Simulate successful send
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, INTERVALS.SMS_SIMULATION_DELAY));
       const messageId = `twilio-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
       logger.debug('SMS sent successfully', {
@@ -323,7 +324,7 @@ export class SMSService {
       // Generate verification code
       const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-      const message = `Your BoosterBeacon verification code is: ${verificationCode}. This code expires in 10 minutes.`;
+      const message = `Your BoosterBeacon verification code is: ${verificationCode}. This code expires in ${TIME_PERIODS.VERIFICATION_CODE_EXPIRY_MINUTES} minutes.`;
 
       const result = await this.sendSMS({
         to: phoneNumber,
@@ -456,7 +457,7 @@ export class SMSService {
         smsDelivered: 0,
         smsFailed: 0,
         monthlyUsage: 0,
-        monthlyLimit: 100 // Pro tier limit
+        monthlyLimit: DEFAULT_VALUES.SMS_MONTHLY_LIMIT_PRO // Pro tier limit
       };
 
     } catch (error) {

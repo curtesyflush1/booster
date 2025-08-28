@@ -8,6 +8,7 @@ import { successResponse, errorResponse } from '../utils/responseHelpers';
 import { validateUUID } from '../utils/validation';
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
+import { PAGINATION } from '../constants';
 
 
 
@@ -476,7 +477,7 @@ export class WatchController {
       }
 
       const { is_active } = req.query;
-      const options: any = { page: 1, limit: 10000 }; // Large limit for export
+      const options: any = { page: PAGINATION.DEFAULT_PAGE, limit: PAGINATION.EXPORT_LIMIT }; // Large limit for export
 
       if (is_active !== undefined) {
         options.is_active = is_active === 'true';

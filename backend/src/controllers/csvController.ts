@@ -4,6 +4,7 @@ import { csvService } from '../services/csvService';
 import { logger } from '../utils/logger';
 import { validateRequest } from '../middleware/validation';
 import { body, query } from 'express-validator';
+import { FILE_LIMITS } from '../constants';
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -17,7 +18,7 @@ interface AuthenticatedRequest extends Request {
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: FILE_LIMITS.CSV_MAX_FILE_SIZE,
   },
   fileFilter: (req, file, cb) => {
     if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
@@ -243,7 +244,7 @@ export class CSVController {
           quoteChar: 'double quote (")',
           escapeChar: 'double quote ("")',
           maxFileSize: '5MB',
-          maxRows: 10000
+          maxRows: FILE_LIMITS.CSV_MAX_ROWS
         },
         requiredColumns: [
           {

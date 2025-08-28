@@ -1,12 +1,19 @@
 import Joi from 'joi';
 import { commonSchemas } from './schemas';
+import { 
+  STRING_LIMITS, 
+  NUMERIC_LIMITS, 
+  PAGINATION, 
+  BARCODE_LIMITS, 
+  VALIDATION_PATTERNS 
+} from '../constants';
 
 export const productValidationSchemas = {
   searchProducts: {
     query: Joi.object({
-      q: Joi.string().min(1).max(100).optional().messages({
+      q: Joi.string().min(STRING_LIMITS.SEARCH_QUERY_MIN).max(STRING_LIMITS.SEARCH_QUERY_MAX).optional().messages({
         'string.min': 'Search query cannot be empty',
-        'string.max': 'Search query must not exceed 100 characters'
+        'string.max': `Search query must not exceed ${STRING_LIMITS.SEARCH_QUERY_MAX} characters`
       }),
       category_id: commonSchemas.optionalUuid.messages({
         'string.uuid': 'Category ID must be a valid UUID'
@@ -22,29 +29,29 @@ export const productValidationSchemas = {
       retailer_id: commonSchemas.optionalUuid.messages({
         'string.uuid': 'Retailer ID must be a valid UUID'
       }),
-      min_price: Joi.number().min(0).max(999999.99).optional().messages({
+      min_price: Joi.number().min(NUMERIC_LIMITS.PRICE_MIN).max(NUMERIC_LIMITS.PRICE_MAX).optional().messages({
         'number.min': 'Minimum price cannot be negative',
-        'number.max': 'Minimum price must not exceed 999999.99'
+        'number.max': `Minimum price must not exceed ${NUMERIC_LIMITS.PRICE_MAX}`
       }),
-      max_price: Joi.number().min(0).max(999999.99).optional().messages({
+      max_price: Joi.number().min(NUMERIC_LIMITS.PRICE_MIN).max(NUMERIC_LIMITS.PRICE_MAX).optional().messages({
         'number.min': 'Maximum price cannot be negative',
-        'number.max': 'Maximum price must not exceed 999999.99'
+        'number.max': `Maximum price must not exceed ${NUMERIC_LIMITS.PRICE_MAX}`
       }),
       availability: Joi.string().valid('in_stock', 'low_stock', 'out_of_stock', 'pre_order').optional().messages({
         'any.only': 'Availability must be one of: in_stock, low_stock, out_of_stock, pre_order'
       }),
       is_active: Joi.boolean().optional(),
-      page: Joi.number().integer().min(1).max(1000).default(1).messages({
+      page: Joi.number().integer().min(PAGINATION.DEFAULT_PAGE).max(PAGINATION.MAX_PAGE).default(PAGINATION.DEFAULT_PAGE).messages({
         'number.base': 'Page must be a number',
         'number.integer': 'Page must be an integer',
-        'number.min': 'Page must be at least 1',
-        'number.max': 'Page must not exceed 1000'
+        'number.min': `Page must be at least ${PAGINATION.DEFAULT_PAGE}`,
+        'number.max': `Page must not exceed ${PAGINATION.MAX_PAGE}`
       }),
-      limit: Joi.number().integer().min(1).max(100).default(20).messages({
+      limit: Joi.number().integer().min(PAGINATION.DEFAULT_PAGE).max(PAGINATION.MAX_LIMIT).default(PAGINATION.DEFAULT_LIMIT).messages({
         'number.base': 'Limit must be a number',
         'number.integer': 'Limit must be an integer',
-        'number.min': 'Limit must be at least 1',
-        'number.max': 'Limit must not exceed 100'
+        'number.min': `Limit must be at least ${PAGINATION.DEFAULT_PAGE}`,
+        'number.max': `Limit must not exceed ${PAGINATION.MAX_LIMIT}`
       }),
       sort_by: Joi.string().valid('name', 'release_date', 'popularity_score', 'created_at').default('popularity_score').messages({
         'any.only': 'Sort by must be one of: name, release_date, popularity_score, created_at'

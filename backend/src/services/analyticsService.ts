@@ -1,6 +1,7 @@
 import { Product } from '../models/Product';
 import { logger } from '../utils/logger';
 import { PerformanceTracker } from '../utils/encryption/performanceTracker';
+import { ANALYTICS_LIMITS, INTERVALS, RETRY_CONFIG, MONITORING_THRESHOLDS } from '../constants';
 
 enum AnalyticsEventType {
   PRODUCT_VIEW = 'product_view',
@@ -51,16 +52,16 @@ class AnalyticsService {
   private failedEvents: AnalyticsEvent[] = [];
 
   constructor(config: AnalyticsConfig = {}) {
-    this.BATCH_SIZE = config.batchSize ?? 10;
-    this.PROCESS_INTERVAL = config.processInterval ?? 5000; // 5 seconds
-    this.MAX_QUEUE_SIZE = config.maxQueueSize ?? 1000;
-    this.RETRY_ATTEMPTS = config.retryAttempts ?? 3;
-    this.RETRY_DELAY = config.retryDelay ?? 1000;
+    this.BATCH_SIZE = config.batchSize ?? ANALYTICS_LIMITS.DEFAULT_BATCH_SIZE;
+    this.PROCESS_INTERVAL = config.processInterval ?? INTERVALS.ANALYTICS_PROCESS_INTERVAL;
+    this.MAX_QUEUE_SIZE = config.maxQueueSize ?? ANALYTICS_LIMITS.DEFAULT_MAX_QUEUE_SIZE;
+    this.RETRY_ATTEMPTS = config.retryAttempts ?? RETRY_CONFIG.ANALYTICS_RETRY_ATTEMPTS;
+    this.RETRY_DELAY = config.retryDelay ?? RETRY_CONFIG.ANALYTICS_RETRY_DELAY;
     
     if (config.enablePerformanceTracking) {
       this.performanceTracker = new PerformanceTracker({
         enableWarnings: true,
-        slowOperationThreshold: 500 // 500ms threshold for analytics operations
+        slowOperationThreshold: MONITORING_THRESHOLDS.SLOW_OPERATION_THRESHOLD
       });
     }
     
@@ -317,7 +318,7 @@ class AnalyticsService {
     while (this.eventQueue.length > 0) {
       await this.processEvents();
       // Small delay to prevent tight loop
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, INTERVALS.ANALYTICS_PROCESSING_DELAY));
     }
   }
 

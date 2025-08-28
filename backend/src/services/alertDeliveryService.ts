@@ -4,6 +4,7 @@ import { WebPushService } from './notifications/webPushService';
 import { EmailService } from './notifications/emailService';
 import { SMSService } from './notifications/smsService';
 import { DiscordService } from './notifications/discordService';
+import { HTTP_TIMEOUTS, INTERVALS, PERFORMANCE_CONFIG } from '../constants';
 
 export interface DeliveryResult {
   success: boolean;
@@ -23,8 +24,8 @@ export interface ChannelDeliveryResult {
 }
 
 export class AlertDeliveryService {
-  private static readonly DELIVERY_TIMEOUT_MS = 30000; // 30 seconds
-  private static readonly MAX_CONCURRENT_DELIVERIES = 10;
+  private static readonly DELIVERY_TIMEOUT_MS = HTTP_TIMEOUTS.ALERT_DELIVERY;
+  private static readonly MAX_CONCURRENT_DELIVERIES = PERFORMANCE_CONFIG.MAX_CONCURRENT_DELIVERIES;
 
   /**
    * Deliver alert through multiple channels
@@ -322,7 +323,7 @@ export class AlertDeliveryService {
 
         // Small delay between batches to be respectful to external services
         if (i + batchSize < alerts.length) {
-          await this.delay(1000); // 1 second delay
+          await this.delay(INTERVALS.ALERT_DELIVERY_BATCH_DELAY);
         }
       }
 

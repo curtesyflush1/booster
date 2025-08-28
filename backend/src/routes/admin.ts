@@ -10,6 +10,7 @@ import { Permission, SystemRoles } from '../types/permissions';
 import * as adminController from '../controllers/adminController';
 import * as rbacController from '../controllers/rbacController';
 import { sanitizeParameters } from '../middleware/parameterSanitization';
+import { contentSanitizationMiddleware } from '../utils/contentSanitization';
 import { validateJoi, validateJoiBody, validateJoiQuery, validateJoiParams, adminSchemas } from '../validators';
 
 const router = Router();
@@ -106,7 +107,7 @@ router.post('/ml/models/:modelName/retrain', sanitizeParameters, requirePermissi
 router.get('/ml/training-data', requirePermission(Permission.ML_DATA_VIEW), adminController.getTrainingData);
 
 // Review training data for quality
-router.put('/ml/training-data/:dataId/review', sanitizeParameters, requirePermission(Permission.ML_DATA_REVIEW), validateJoiBody(adminSchemas.reviewTrainingData.body), adminController.reviewTrainingData);
+router.put('/ml/training-data/:dataId/review', sanitizeParameters, contentSanitizationMiddleware.admin, requirePermission(Permission.ML_DATA_REVIEW), validateJoiBody(adminSchemas.reviewTrainingData.body), adminController.reviewTrainingData);
 
 /**
  * Security and Audit Routes

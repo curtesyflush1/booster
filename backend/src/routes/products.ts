@@ -3,6 +3,7 @@ import * as productController from '../controllers/productController';
 import * as categoryController from '../controllers/categoryController';
 import { generalRateLimit } from '../middleware/rateLimiter';
 import { sanitizeParameters, sanitizeProductParameters } from '../middleware/parameterSanitization';
+import { contentSanitizationMiddleware } from '../utils/contentSanitization';
 import { validate, validateQuery, validateParams, productSchemas, categorySchemas } from '../validators';
 
 const router = Router();
@@ -13,7 +14,7 @@ const router = Router();
  * @desc    Search products with advanced filtering
  * @access  Public
  */
-router.get('/search', generalRateLimit, sanitizeParameters, validateQuery(productSchemas.search.query), productController.searchProducts);
+router.get('/search', generalRateLimit, sanitizeParameters, contentSanitizationMiddleware.search, validateQuery(productSchemas.search.query), productController.searchProducts);
 
 /**
  * @route   GET /api/products/barcode

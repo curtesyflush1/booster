@@ -4,6 +4,7 @@ import { logger } from '../utils/logger';
 import { ResponseHelper } from '../utils/responseHelpers';
 import { analyticsService } from '../services/analyticsService';
 import { IProduct } from '../types/database';
+import { STRING_LIMITS, HTTP_STATUS, BARCODE_LIMITS, VALIDATION_PATTERNS } from '../constants';
 
 /**
  * Search products with advanced filtering
@@ -28,18 +29,18 @@ export const searchProducts = async (req: Request, res: Response, next: NextFunc
     } = req.query as any;
 
     // Additional validation for sanitized parameters
-    if (searchTerm && typeof searchTerm === 'string' && searchTerm.length > 200) {
-      ResponseHelper.error(res, 'INVALID_SEARCH_TERM', 'Search term is too long', 400);
+    if (searchTerm && typeof searchTerm === 'string' && searchTerm.length > STRING_LIMITS.SEARCH_TERM_MAX) {
+      ResponseHelper.error(res, 'INVALID_SEARCH_TERM', 'Search term is too long', HTTP_STATUS.BAD_REQUEST);
       return;
     }
 
-    if (set_name && typeof set_name === 'string' && set_name.length > 100) {
-      ResponseHelper.error(res, 'INVALID_SET_NAME', 'Set name is too long', 400);
+    if (set_name && typeof set_name === 'string' && set_name.length > STRING_LIMITS.PRODUCT_SET_NAME_MAX) {
+      ResponseHelper.error(res, 'INVALID_SET_NAME', 'Set name is too long', HTTP_STATUS.BAD_REQUEST);
       return;
     }
 
-    if (series && typeof series === 'string' && series.length > 100) {
-      ResponseHelper.error(res, 'INVALID_SERIES', 'Series name is too long', 400);
+    if (series && typeof series === 'string' && series.length > STRING_LIMITS.PRODUCT_SERIES_MAX) {
+      ResponseHelper.error(res, 'INVALID_SERIES', 'Series name is too long', HTTP_STATUS.BAD_REQUEST);
       return;
     }
 
@@ -96,7 +97,7 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
 
     // Additional validation for sanitized UUID
     if (!id || id.trim().length === 0) {
-      ResponseHelper.error(res, 'INVALID_PRODUCT_ID', 'Product ID cannot be empty', 400);
+      ResponseHelper.error(res, 'INVALID_PRODUCT_ID', 'Product ID cannot be empty', HTTP_STATUS.BAD_REQUEST);
       return;
     }
 

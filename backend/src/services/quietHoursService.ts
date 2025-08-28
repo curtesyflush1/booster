@@ -1,6 +1,5 @@
-import { User } from '../models/User';
-import { logger } from '../utils/logger';
 import { IUser, IQuietHours } from '../types/database';
+import { IUserRepository, ILogger } from '../types/dependencies';
 
 export interface QuietHoursCheck {
   isQuietTime: boolean;
@@ -9,20 +8,28 @@ export interface QuietHoursCheck {
 }
 
 export class QuietHoursService {
+  private userRepository: IUserRepository;
+  private logger: ILogger;
+
+  constructor(userRepository: IUserRepository, logger: ILogger) {
+    this.userRepository = userRepository;
+    this.logger = logger;
+  }
+
   /**
    * Check if current time is within user's quiet hours
    */
-  static async isQuietTime(userId: string): Promise<QuietHoursCheck> {
+  async isQuietTime(userId: string): Promise<QuietHoursCheck> {
     // Input validation
     if (!userId || typeof userId !== 'string') {
-      logger.warn('Invalid userId provided to isQuietTime', { userId });
+      this.logger.warn('Invalid userId provided to isQuietTime', { userId });
       return { isQuietTime: false, reason: 'Invalid user ID' };
     }
 
     try {
-      const user = await User.findById<IUser>(userId);
+      const user = await this.userRepository.findById<IUser>(userId);
       if (!user) {
-        logger.warn('User not found for quiet hours check', { userId });
+        this.logger.warn('User not found for quiet hours check', { userId });
         return { isQuietTime: false, reason: 'User not found' };
       }
 
@@ -38,13 +45,13 @@ export class QuietHoursService {
       try {
         new Date().toLocaleString('en-US', { timeZone: userTimezone });
       } catch (timezoneError) {
-        logger.warn('Invalid timezone for user', { userId, timezone: userTimezone });
+        this.logger.warn('Invalid timezone for user', { userId, timezone: userTimezone });
         return { isQuietTime: false, reason: 'Invalid timezone configuration' };
       }
 
       return this.checkQuietHours(quietHours, now, userTimezone);
     } catch (error) {
-      logger.error('Failed to check quiet hours', {
+      this.logger.error('Failed to check quiet hours', {
         userId,
         error: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
@@ -57,7 +64,7 @@ export class QuietHoursService {
   /**
    * Check if a specific time is within quiet hours
    */
-  static checkQuietHours(
+  checkQuietHours(
     quietHours: IQuietHours,
     checkTime: Date,
     timezone: string = 'UTC'
@@ -108,7 +115,7 @@ export class QuietHoursService {
 
       return { isQuietTime: false };
     } catch (error) {
-      logger.error('Error checking quiet hours', {
+      this.logger.error('Error checking quiet hours', {
         error: error instanceof Error ? error.message : 'Unknown error',
         quietHours,
         checkTime,
@@ -121,7 +128,7 @@ export class QuietHoursService {
   /**
    * Calculate when quiet hours will end
    */
-  private static calculateNextActiveTime(
+  private calculateNextActiveTime(
     currentTime: Date,
     quietHours: IQuietHours,
     timezone: string
@@ -161,7 +168,7 @@ export class QuietHoursService {
       const utcOffset = nextActiveTime.getTimezoneOffset() * 60000;
       return new Date(nextActiveTime.getTime() + utcOffset);
     } catch (error) {
-      logger.error('Error calculating next active time', {
+      this.logger.error('Error calculating next active time', {
         error: error instanceof Error ? error.message : 'Unknown error'
       });
       // Default to 1 hour from now
@@ -172,11 +179,11 @@ export class QuietHoursService {
   /**
    * Get all users currently in quiet hours
    */
-  static async getUsersInQuietHours(): Promise<string[]> {
+  async getUsersInQuietHours(): Promise<string[]> {
     try {
       // This would typically be done with a database query for efficiency
       // For now, we'll implement a basic version
-      const result = await User.findAll<IUser>();
+      const result = await this.userRepository.findAll<IUser>();
       const users = Array.isArray(result) ? result : result.data;
       const usersInQuietHours: string[] = [];
 
@@ -191,7 +198,7 @@ export class QuietHoursService {
 
       return usersInQuietHours;
     } catch (error) {
-      logger.error('Failed to get users in quiet hours', {
+      this.logger.error('Failed to get users in quiet hours', {
         error: error instanceof Error ? error.message : 'Unknown error'
       });
       return [];
@@ -201,7 +208,7 @@ export class QuietHoursService {
   /**
    * Validate quiet hours configuration with comprehensive checks
    */
-  static validateQuietHours(quietHours: Partial<IQuietHours>): { isValid: boolean; errors: string[] } {
+  validateQuietHours(quietHours: Partial<IQuietHours>): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
 
     // Type validation
@@ -273,7 +280,7 @@ export class QuietHoursService {
   /**
    * Helper method to validate time format
    */
-  private static isValidTimeFormat(time: any): boolean {
+  private isValidTimeFormat(time: any): boolean {
     if (typeof time !== 'string') return false;
     return /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time);
   }
@@ -281,7 +288,7 @@ export class QuietHoursService {
   /**
    * Get suggested quiet hours based on user's timezone
    */
-  static getSuggestedQuietHours(timezone: string = 'UTC'): IQuietHours {
+  getSuggestedQuietHours(timezone: string = 'UTC'): IQuietHours {
     return {
       enabled: false,
       start_time: '22:00',
@@ -294,7 +301,7 @@ export class QuietHoursService {
   /**
    * Calculate optimal notification time outside quiet hours
    */
-  static async getOptimalNotificationTime(userId: string, preferredDelay: number = 0): Promise<Date> {
+  async getOptimalNotificationTime(userId: string, preferredDelay: number = 0): Promise<Date> {
     try {
       const targetTime = new Date(Date.now() + preferredDelay);
       const quietCheck = await this.isQuietTime(userId);
@@ -306,7 +313,7 @@ export class QuietHoursService {
       // If we're in quiet hours, return the next active time
       return quietCheck.nextActiveTime || new Date(Date.now() + 60 * 60 * 1000);
     } catch (error) {
-      logger.error('Failed to calculate optimal notification time', {
+      this.logger.error('Failed to calculate optimal notification time', {
         userId,
         error: error instanceof Error ? error.message : 'Unknown error'
       });
@@ -315,3 +322,14 @@ export class QuietHoursService {
     }
   }
 }
+
+// Export factory function for creating QuietHoursService instances
+import { DependencyContainer } from '../container/DependencyContainer';
+
+export const createQuietHoursService = (dependencies?: Partial<{ userRepository: IUserRepository; logger: ILogger }>) => {
+  const container = DependencyContainer.getInstance();
+  return new QuietHoursService(
+    dependencies?.userRepository || container.getUserRepository(),
+    dependencies?.logger || container.getLogger()
+  );
+};

@@ -5,6 +5,13 @@ import { WalmartService } from './retailers/WalmartService';
 import { CostcoService } from './retailers/CostcoService';
 import { SamsClubService } from './retailers/SamsClubService';
 import { logger } from '../utils/logger';
+import { 
+  INTERVALS, 
+  HTTP_TIMEOUTS, 
+  RATE_LIMITING, 
+  RETRY_CONFIG, 
+  CIRCUIT_BREAKER 
+} from '../constants';
 
 interface RetailerServiceInstance {
   service: BaseRetailerService;
@@ -15,7 +22,6 @@ interface RetailerServiceInstance {
 export class RetailerIntegrationService {
   private retailers: Map<string, RetailerServiceInstance> = new Map();
   private healthCheckInterval: NodeJS.Timeout | null = null;
-  private readonly HEALTH_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
   constructor() {
     this.initializeRetailers();
@@ -29,10 +35,10 @@ export class RetailerIntegrationService {
       try {
         const service = this.createRetailerService(config);
         const circuitBreaker = new CircuitBreaker({
-          failureThreshold: 5,
-          recoveryTimeout: 60000, // 1 minute
-          monitoringPeriod: 300000, // 5 minutes
-          successThreshold: 3
+          failureThreshold: CIRCUIT_BREAKER.FAILURE_THRESHOLD,
+          recoveryTimeout: CIRCUIT_BREAKER.RECOVERY_TIMEOUT,
+          monitoringPeriod: CIRCUIT_BREAKER.MONITORING_PERIOD,
+          successThreshold: CIRCUIT_BREAKER.SUCCESS_THRESHOLD
         });
 
         this.retailers.set(config.id, {
@@ -73,13 +79,13 @@ export class RetailerIntegrationService {
         baseUrl: 'https://api.bestbuy.com/v1',
         apiKey: process.env.BEST_BUY_API_KEY,
         rateLimit: {
-          requestsPerMinute: 5,
-          requestsPerHour: 100
+          requestsPerMinute: RATE_LIMITING.BEST_BUY_RPM,
+          requestsPerHour: RATE_LIMITING.BEST_BUY_RPH
         },
-        timeout: 10000,
+        timeout: HTTP_TIMEOUTS.BEST_BUY_API,
         retryConfig: {
-          maxRetries: 3,
-          retryDelay: 1000
+          maxRetries: RETRY_CONFIG.API_MAX_RETRIES,
+          retryDelay: RETRY_CONFIG.API_RETRY_DELAY
         },
         isActive: !!process.env.BEST_BUY_API_KEY
       },
@@ -91,13 +97,13 @@ export class RetailerIntegrationService {
         baseUrl: 'https://api.walmartlabs.com/v1',
         apiKey: process.env.WALMART_API_KEY,
         rateLimit: {
-          requestsPerMinute: 5,
-          requestsPerHour: 100
+          requestsPerMinute: RATE_LIMITING.WALMART_RPM,
+          requestsPerHour: RATE_LIMITING.WALMART_RPH
         },
-        timeout: 10000,
+        timeout: HTTP_TIMEOUTS.WALMART_API,
         retryConfig: {
-          maxRetries: 3,
-          retryDelay: 1000
+          maxRetries: RETRY_CONFIG.API_MAX_RETRIES,
+          retryDelay: RETRY_CONFIG.API_RETRY_DELAY
         },
         isActive: !!process.env.WALMART_API_KEY
       },
@@ -108,13 +114,13 @@ export class RetailerIntegrationService {
         type: 'scraping',
         baseUrl: 'https://www.costco.com',
         rateLimit: {
-          requestsPerMinute: 2,
-          requestsPerHour: 50
+          requestsPerMinute: RATE_LIMITING.COSTCO_RPM,
+          requestsPerHour: RATE_LIMITING.COSTCO_RPH
         },
-        timeout: 15000,
+        timeout: HTTP_TIMEOUTS.COSTCO_SCRAPING,
         retryConfig: {
-          maxRetries: 2,
-          retryDelay: 2000
+          maxRetries: RETRY_CONFIG.SCRAPING_MAX_RETRIES,
+          retryDelay: RETRY_CONFIG.SCRAPING_RETRY_DELAY
         },
         isActive: true
       },
@@ -125,13 +131,13 @@ export class RetailerIntegrationService {
         type: 'scraping',
         baseUrl: 'https://www.samsclub.com',
         rateLimit: {
-          requestsPerMinute: 2,
-          requestsPerHour: 50
+          requestsPerMinute: RATE_LIMITING.SAMS_CLUB_RPM,
+          requestsPerHour: RATE_LIMITING.SAMS_CLUB_RPH
         },
-        timeout: 15000,
+        timeout: HTTP_TIMEOUTS.SAMS_CLUB_SCRAPING,
         retryConfig: {
-          maxRetries: 2,
-          retryDelay: 2000
+          maxRetries: RETRY_CONFIG.SCRAPING_MAX_RETRIES,
+          retryDelay: RETRY_CONFIG.SCRAPING_RETRY_DELAY
         },
         isActive: true
       }
@@ -410,7 +416,7 @@ export class RetailerIntegrationService {
       } catch (error) {
         logger.error('Error during periodic health check:', error);
       }
-    }, this.HEALTH_CHECK_INTERVAL);
+    }, INTERVALS.RETAILER_HEALTH_CHECK_INTERVAL);
   }
 
   /**

@@ -5,6 +5,7 @@ import { Product } from '../models/Product';
 import { logger } from '../utils/logger';
 import { validateRequest } from '../middleware/validation';
 import { body, param, query } from 'express-validator';
+import { SOCIAL_MEDIA_LIMITS } from '../constants';
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -294,7 +295,7 @@ export class SocialController {
             id: 'instagram',
             name: 'Instagram',
             description: 'Visual content with hashtags',
-            characterLimit: 2200,
+            characterLimit: SOCIAL_MEDIA_LIMITS.INSTAGRAM_CHARACTER_LIMIT,
             supportsImages: true,
             supportsHashtags: true,
             recommendedHashtags: 10
@@ -303,7 +304,7 @@ export class SocialController {
             id: 'discord',
             name: 'Discord',
             description: 'Share with gaming communities',
-            characterLimit: 2000,
+            characterLimit: SOCIAL_MEDIA_LIMITS.DISCORD_CHARACTER_LIMIT,
             supportsImages: true,
             supportsHashtags: false,
             recommendedHashtags: 0
@@ -321,7 +322,7 @@ export class SocialController {
             id: 'telegram',
             name: 'Telegram',
             description: 'Instant messaging and channels',
-            characterLimit: 4096,
+            characterLimit: SOCIAL_MEDIA_LIMITS.TELEGRAM_CHARACTER_LIMIT,
             supportsImages: true,
             supportsHashtags: true,
             recommendedHashtags: 5
@@ -339,7 +340,7 @@ export class SocialController {
             id: 'linkedin',
             name: 'LinkedIn',
             description: 'Professional networking',
-            characterLimit: 3000,
+            characterLimit: SOCIAL_MEDIA_LIMITS.LINKEDIN_CHARACTER_LIMIT,
             supportsImages: true,
             supportsHashtags: true,
             recommendedHashtags: 3

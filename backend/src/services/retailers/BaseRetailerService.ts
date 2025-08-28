@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosRequestConfig } from 'axios';
 import { BaseRetailerService as IBaseRetailerService, RetailerConfig, ProductAvailabilityRequest, ProductAvailabilityResponse, RetailerHealthStatus, StoreLocation, RetailerError } from '../../types/retailer';
 import { logger } from '../../utils/logger';
+import { RETAILER_RATE_LIMITS } from '../../constants';
 
 /**
  * Enhanced BaseRetailerService implementation that provides common functionality
@@ -29,11 +30,11 @@ export abstract class BaseRetailerService extends IBaseRetailerService {
    * Calculate minimum request interval based on retailer type and rate limits
    */
   protected calculateMinRequestInterval(): number {
-    const baseInterval = 60000 / this.config.rateLimit.requestsPerMinute; // Convert to milliseconds
+    const baseInterval = RETAILER_RATE_LIMITS.BASE_REQUEST_INTERVAL / this.config.rateLimit.requestsPerMinute;
     
     // Add extra delay for scraping-based retailers to be more polite
     if (this.config.type === 'scraping') {
-      return Math.max(baseInterval, 2000); // Minimum 2 seconds for scraping
+      return Math.max(baseInterval, RETAILER_RATE_LIMITS.SCRAPING_MIN_INTERVAL);
     }
     
     return baseInterval;

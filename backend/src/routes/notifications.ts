@@ -6,13 +6,14 @@ import { logger } from '../utils/logger';
 import { authenticate } from '../middleware/auth';
 import { createRateLimit } from '../middleware/rateLimiter';
 import { validateBody, notificationSchemas } from '../validators';
+import { INTERVALS, RATE_LIMITS } from '../constants';
 
 const router = Router();
 
 // Rate limiting for notification endpoints
 const notificationRateLimit = createRateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 50, // 50 requests per window
+  windowMs: INTERVALS.RATE_LIMIT_WINDOW_MEDIUM,
+  maxRequests: RATE_LIMITS.NOTIFICATION_MAX_REQUESTS,
   message: 'Too many notification requests, please try again later'
 });
 

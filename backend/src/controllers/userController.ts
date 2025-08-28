@@ -2,8 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { User } from '../models/User';
 import { logger } from '../utils/logger';
 import { IUser } from '../types/database';
-import { CredentialService, RetailerCredentialInput } from '../services/credentialService';
-import { QuietHoursService } from '../services/quietHoursService';
+import { createCredentialService } from '../services/credentialService';
+import { createQuietHoursService } from '../services/quietHoursService';
 import { userSchemas } from '../validators/schemas';
 
 /**
@@ -452,7 +452,8 @@ export const addRetailerCredentials = async (req: Request, res: Response, next: 
     }
 
     // Store encrypted credentials
-    const success = await CredentialService.storeRetailerCredentials(req.user.id, value);
+    const credentialService = createCredentialService();
+    const success = await credentialService.storeRetailerCredentials(req.user.id, value);
     if (!success) {
       res.status(500).json({
         error: {
@@ -491,7 +492,8 @@ export const getRetailerCredentials = async (req: Request, res: Response, next: 
       return;
     }
 
-    const credentials = await CredentialService.listRetailerCredentials(req.user.id);
+    const credentialService = createCredentialService();
+    const credentials = await credentialService.listRetailerCredentials(req.user.id);
 
     res.status(200).json({
       credentials
@@ -543,7 +545,8 @@ export const updateRetailerCredentials = async (req: Request, res: Response, nex
     }
 
     // Update credentials
-    const success = await CredentialService.updateRetailerCredentials(req.user.id, retailer, value);
+    const credentialService = createCredentialService();
+    const success = await credentialService.updateRetailerCredentials(req.user.id, retailer, value);
     if (!success) {
       res.status(404).json({
         error: {
@@ -594,7 +597,8 @@ export const deleteRetailerCredentials = async (req: Request, res: Response, nex
     }
 
     // Delete credentials
-    const success = await CredentialService.deleteRetailerCredentials(req.user.id, retailer);
+    const credentialService = createCredentialService();
+    const success = await credentialService.deleteRetailerCredentials(req.user.id, retailer);
     if (!success) {
       res.status(404).json({
         error: {
@@ -645,7 +649,8 @@ export const verifyRetailerCredentials = async (req: Request, res: Response, nex
     }
 
     // Verify credentials
-    const result = await CredentialService.verifyRetailerCredentials(req.user.id, retailer);
+    const credentialService = createCredentialService();
+    const result = await credentialService.verifyRetailerCredentials(req.user.id, retailer);
 
     res.status(200).json({
       message: result.message,
@@ -828,7 +833,8 @@ export const checkQuietHours = async (req: Request, res: Response, next: NextFun
       return;
     }
 
-    const quietCheck = await QuietHoursService.isQuietTime(req.user.id);
+    const quietHoursService = createQuietHoursService();
+    const quietCheck = await quietHoursService.isQuietTime(req.user.id);
 
     res.status(200).json({
       isQuietTime: quietCheck.isQuietTime,

@@ -3,6 +3,7 @@ import { IProduct, IValidationError, IPaginatedResult } from '../types/database'
 import { safeCount, safeStatsMap } from '../utils/database';
 import { handleDatabaseError } from '../config/database';
 import { logger } from '../utils/logger';
+import { VALIDATION_LIMITS, STRING_LIMITS, DEFAULT_VALUES, NUMERIC_LIMITS } from '../constants';
 
 export class Product extends BaseModel<IProduct> {
   protected static override tableName = 'products';
@@ -14,14 +15,14 @@ export class Product extends BaseModel<IProduct> {
     // Name validation
     if (data.name !== undefined) {
       const nameError = Product.validateRequired(data.name, 'name') ||
-        Product.validateLength(data.name, 'name', 1, 255);
+        Product.validateLength(data.name, 'name', 1, VALIDATION_LIMITS.MAX_NAME_LENGTH);
       if (nameError) errors.push(nameError);
     }
 
     // Slug validation
     if (data.slug !== undefined) {
       const slugError = Product.validateRequired(data.slug, 'slug') ||
-        Product.validateLength(data.slug, 'slug', 1, 255);
+        Product.validateLength(data.slug, 'slug', 1, VALIDATION_LIMITS.MAX_SLUG_LENGTH);
       if (slugError) errors.push(slugError);
 
       // Slug format validation (lowercase, hyphens, alphanumeric)
@@ -36,13 +37,13 @@ export class Product extends BaseModel<IProduct> {
 
     // SKU validation
     if (data.sku !== undefined && data.sku !== null) {
-      const skuError = Product.validateLength(data.sku, 'sku', 1, 100);
+      const skuError = Product.validateLength(data.sku, 'sku', STRING_LIMITS.PRODUCT_SKU_MIN, STRING_LIMITS.PRODUCT_SKU_MAX);
       if (skuError) errors.push(skuError);
     }
 
     // UPC validation
     if (data.upc !== undefined && data.upc !== null) {
-      const upcError = Product.validateLength(data.upc, 'upc', 8, 14);
+      const upcError = Product.validateLength(data.upc, 'upc', VALIDATION_LIMITS.MIN_UPC_LENGTH, VALIDATION_LIMITS.MAX_UPC_LENGTH);
       if (upcError) errors.push(upcError);
 
       // UPC format validation (numeric only)
@@ -57,25 +58,25 @@ export class Product extends BaseModel<IProduct> {
 
     // MSRP validation
     if (data.msrp !== undefined && data.msrp !== null) {
-      const msrpError = Product.validateNumeric(data.msrp, 'msrp', 0, 999999.99);
+      const msrpError = Product.validateNumeric(data.msrp, 'msrp', VALIDATION_LIMITS.MIN_PRICE, VALIDATION_LIMITS.MAX_PRICE);
       if (msrpError) errors.push(msrpError);
     }
 
     // Set name validation
     if (data.set_name !== undefined && data.set_name !== null) {
-      const setError = Product.validateLength(data.set_name, 'set_name', 1, 255);
+      const setError = Product.validateLength(data.set_name, 'set_name', 1, VALIDATION_LIMITS.MAX_SET_NAME_LENGTH);
       if (setError) errors.push(setError);
     }
 
     // Series validation
     if (data.series !== undefined && data.series !== null) {
-      const seriesError = Product.validateLength(data.series, 'series', 1, 255);
+      const seriesError = Product.validateLength(data.series, 'series', 1, VALIDATION_LIMITS.MAX_SERIES_LENGTH);
       if (seriesError) errors.push(seriesError);
     }
 
     // Image URL validation
     if (data.image_url !== undefined && data.image_url !== null) {
-      const urlError = Product.validateLength(data.image_url, 'image_url', 1, 500);
+      const urlError = Product.validateLength(data.image_url, 'image_url', 1, VALIDATION_LIMITS.MAX_IMAGE_URL_LENGTH);
       if (urlError) errors.push(urlError);
 
       // Basic URL format validation
@@ -90,7 +91,7 @@ export class Product extends BaseModel<IProduct> {
 
     // Popularity score validation
     if (data.popularity_score !== undefined) {
-      const popularityError = Product.validateNumeric(data.popularity_score, 'popularity_score', 0, 1000);
+      const popularityError = Product.validateNumeric(data.popularity_score, 'popularity_score', VALIDATION_LIMITS.MIN_POPULARITY_SCORE, VALIDATION_LIMITS.MAX_POPULARITY_SCORE);
       if (popularityError) errors.push(popularityError);
     }
 
@@ -101,30 +102,33 @@ export class Product extends BaseModel<IProduct> {
   sanitize(data: Partial<IProduct>): Partial<IProduct> {
     const sanitized: Partial<IProduct> = { ...data };
 
-    // Trim string fields
+    // Import sanitization utilities
+    const { sanitizeUserContent, sanitizeBasicText } = require('../utils/contentSanitization');
+
+    // Sanitize string fields with appropriate content types
     if (sanitized.name) {
-      sanitized.name = sanitized.name.trim();
+      sanitized.name = sanitizeUserContent(sanitized.name, 'plain_text');
     }
     if (sanitized.slug) {
-      sanitized.slug = sanitized.slug.trim().toLowerCase();
+      sanitized.slug = sanitizeBasicText(sanitized.slug, 100).toLowerCase();
     }
     if (sanitized.sku) {
-      sanitized.sku = sanitized.sku.trim().toUpperCase();
+      sanitized.sku = sanitizeBasicText(sanitized.sku, 50).toUpperCase();
     }
     if (sanitized.upc) {
-      sanitized.upc = sanitized.upc.trim();
+      sanitized.upc = sanitizeBasicText(sanitized.upc, 20);
     }
     if (sanitized.set_name) {
-      sanitized.set_name = sanitized.set_name.trim();
+      sanitized.set_name = sanitizeUserContent(sanitized.set_name, 'plain_text');
     }
     if (sanitized.series) {
-      sanitized.series = sanitized.series.trim();
+      sanitized.series = sanitizeUserContent(sanitized.series, 'plain_text');
     }
     if (sanitized.image_url) {
       sanitized.image_url = sanitized.image_url.trim();
     }
     if (sanitized.description) {
-      sanitized.description = sanitized.description.trim();
+      sanitized.description = sanitizeUserContent(sanitized.description, 'product_description');
     }
 
     // Ensure metadata is an object
@@ -193,8 +197,8 @@ export class Product extends BaseModel<IProduct> {
         set_name,
         series,
         is_active = true,
-        page = 1,
-        limit = 20
+        page = DEFAULT_VALUES.DEFAULT_PAGE,
+        limit = DEFAULT_VALUES.DEFAULT_LIMIT
       } = options;
 
       let query = this.db(this.getTableName())
@@ -244,7 +248,7 @@ export class Product extends BaseModel<IProduct> {
     } = {}
   ): Promise<IPaginatedResult<IProduct>> {
     try {
-      const { is_active = true, page = 1, limit = 20 } = options;
+      const { is_active = true, page = DEFAULT_VALUES.DEFAULT_PAGE, limit = DEFAULT_VALUES.DEFAULT_LIMIT } = options;
 
       let query = this.db(this.getTableName())
         .where('category_id', categoryId)
@@ -274,7 +278,7 @@ export class Product extends BaseModel<IProduct> {
   // Update popularity score
   static async updatePopularityScore(productId: string, score: number): Promise<boolean> {
     const updated = await this.updateById<IProduct>(productId, {
-      popularity_score: Math.max(0, Math.min(1000, score))
+      popularity_score: Math.max(VALIDATION_LIMITS.MIN_POPULARITY_SCORE, Math.min(VALIDATION_LIMITS.MAX_POPULARITY_SCORE, score))
     });
     return updated !== null;
   }
@@ -284,13 +288,13 @@ export class Product extends BaseModel<IProduct> {
     const product = await this.findById<IProduct>(productId);
     if (!product) return false;
 
-    const newScore = Math.min(1000, product.popularity_score + increment);
+    const newScore = Math.min(VALIDATION_LIMITS.MAX_POPULARITY_SCORE, product.popularity_score + increment);
     return this.updatePopularityScore(productId, newScore);
   }
 
   // Get popular products
   static async getPopularProducts(
-    limit: number = 10,
+    limit: number = DEFAULT_VALUES.POPULAR_PRODUCTS_LIMIT,
     categoryId?: string
   ): Promise<IProduct[]> {
     let query = this.db(this.getTableName())
@@ -307,7 +311,7 @@ export class Product extends BaseModel<IProduct> {
 
   // Get recently released products
   static async getRecentProducts(
-    limit: number = 10,
+    limit: number = DEFAULT_VALUES.RECENT_PRODUCTS_LIMIT,
     categoryId?: string
   ): Promise<IProduct[]> {
     let query = this.db(this.getTableName())
@@ -325,7 +329,7 @@ export class Product extends BaseModel<IProduct> {
 
   // Get upcoming products
   static async getUpcomingProducts(
-    limit: number = 10,
+    limit: number = DEFAULT_VALUES.UPCOMING_PRODUCTS_LIMIT,
     categoryId?: string
   ): Promise<IProduct[]> {
     const now = new Date();
@@ -371,8 +375,8 @@ export class Product extends BaseModel<IProduct> {
         max_price,
         availability,
         is_active = true,
-        page = 1,
-        limit = 20,
+        page = DEFAULT_VALUES.DEFAULT_PAGE,
+        limit = DEFAULT_VALUES.DEFAULT_LIMIT,
         sort_by = 'popularity_score',
         sort_order = 'desc'
       } = options;
@@ -472,7 +476,7 @@ export class Product extends BaseModel<IProduct> {
   // Get price history for a product
   static async getPriceHistory(
     productId: string, 
-    days: number = 30, 
+    days: number = NUMERIC_LIMITS.PRICE_HISTORY_DEFAULT_DAYS, 
     retailerId?: string
   ): Promise<any[]> {
     try {

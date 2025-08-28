@@ -14,7 +14,5 @@ export const AUTH_ERROR_MESSAGES = {
   EMAIL_NOT_VERIFIED: 'Email verification is required to access this feature'
 } as const;
 
-export const HTTP_STATUS = {
-  UNAUTHORIZED: 401,
-  FORBIDDEN: 403
-} as const;
+// Note: HTTP_STATUS has been moved to constants/http.ts for better organization
+// Import HTTP_STATUS from constants/http.ts instead

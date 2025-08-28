@@ -10,10 +10,11 @@ import { requestLogger } from './middleware/requestLogger';
 import { generalRateLimit } from './middleware/rateLimiter';
 import { initializeWebSocketService } from './services/websocketService';
 import { DataCollectionService } from './services/dataCollectionService';
-import { AdminSystemService } from './services/adminSystemService';
+import { createAdminSystemService } from './services/adminSystemService';
 import { backupService } from './services/backupService';
 import { monitoringService } from './services/monitoringService';
 import { redisService } from './services/redisService';
+import { PORTS } from './constants';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -37,12 +38,13 @@ import priceComparisonRoutes from './routes/priceComparisonRoutes';
 import sitemapRoutes from './routes/sitemapRoutes';
 import healthRoutes from './routes/health';
 import monitoringRoutes from './routes/monitoring';
+import { EXPRESS_LIMITS } from './constants/http';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || PORTS.DEFAULT_API_PORT;
 
 // Create HTTP server for WebSocket support
 const server = createServer(app);
@@ -50,12 +52,12 @@ const server = createServer(app);
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || `http://localhost:${PORTS.DEFAULT_FRONTEND_PORT}`,
   credentials: true
 }));
 
 // Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: EXPRESS_LIMITS.JSON_BODY_LIMIT }));
 app.use(express.urlencoded({ extended: true }));
 
 // Correlation ID middleware (must be before request logging)
@@ -169,7 +171,8 @@ if (process.env.NODE_ENV !== 'test') {
       DataCollectionService.scheduleDataCollection();
       
       // Start system monitoring
-      AdminSystemService.startSystemMonitoring();
+      const adminSystemService = createAdminSystemService();
+      adminSystemService.startSystemMonitoring();
       
       // Schedule automatic backups
       backupService.scheduleAutomaticBackups();

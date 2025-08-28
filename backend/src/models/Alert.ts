@@ -4,6 +4,7 @@ import { safeCount, safeStatsMap } from '../utils/database';
 import { handleDatabaseError } from '../config/database';
 import { logger } from '../utils/logger';
 import { withCache } from '../utils/cache';
+import { INTERVALS, CACHE_LIMITS, VALIDATION_LIMITS, DEFAULT_VALUES, TIME_PERIODS } from '../constants';
 
 export class Alert extends BaseModel<IAlert> {
   protected static override tableName = 'alerts';
@@ -68,7 +69,7 @@ export class Alert extends BaseModel<IAlert> {
 
     // Retry count validation
     if (data.retry_count !== undefined) {
-      const retryError = Alert.validateNumeric(data.retry_count, 'retry_count', 0, 10);
+      const retryError = Alert.validateNumeric(data.retry_count, 'retry_count', VALIDATION_LIMITS.MIN_RETRY_COUNT, VALIDATION_LIMITS.MAX_RETRY_COUNT);
       if (retryError) errors.push(retryError);
     }
 
@@ -149,8 +150,8 @@ export class Alert extends BaseModel<IAlert> {
         search,
         start_date,
         end_date,
-        page = 1,
-        limit = 20
+        page = DEFAULT_VALUES.DEFAULT_PAGE,
+        limit = DEFAULT_VALUES.DEFAULT_LIMIT
       } = options;
 
       let query = this.db(this.getTableName())
@@ -187,7 +188,7 @@ export class Alert extends BaseModel<IAlert> {
   }
 
   // Get pending alerts for processing
-  static async getPendingAlerts(limit: number = 100): Promise<IAlert[]> {
+  static async getPendingAlerts(limit: number = DEFAULT_VALUES.DEFAULT_MONITORING_LIMIT): Promise<IAlert[]> {
     const now = new Date();
     
     return this.db(this.getTableName())
@@ -202,12 +203,12 @@ export class Alert extends BaseModel<IAlert> {
   }
 
   // Get failed alerts for retry
-  static async getFailedAlertsForRetry(maxRetries: number = 3): Promise<IAlert[]> {
+  static async getFailedAlertsForRetry(maxRetries: number = DEFAULT_VALUES.DEFAULT_MAX_FAILED_RETRIES): Promise<IAlert[]> {
     return this.db(this.getTableName())
       .where('status', 'failed')
       .where('retry_count', '<', maxRetries)
       .orderBy('created_at', 'asc')
-      .limit(50);
+      .limit(DEFAULT_VALUES.DEFAULT_FAILED_ALERTS_LIMIT);
   }
 
   // Mark alert as sent
@@ -315,7 +316,7 @@ export class Alert extends BaseModel<IAlert> {
       .count('* as count');
 
     // Get recent alerts (last 7 days)
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(Date.now() - INTERVALS.RECENT_ALERTS_PERIOD);
     const recentResult = await this.db(this.getTableName())
       .where('user_id', userId)
       .where('created_at', '>=', sevenDaysAgo)
@@ -323,14 +324,14 @@ export class Alert extends BaseModel<IAlert> {
 
     const sentCount = safeCount(sentResult);
     const clickedCount = safeCount(clickedResult);
-    const clickThroughRate = sentCount > 0 ? (clickedCount / sentCount) * 100 : 0;
+    const clickThroughRate = sentCount > 0 ? (clickedCount / sentCount) * DEFAULT_VALUES.PERCENTAGE_PRECISION : 0;
 
     return {
       total: safeCount(totalResult),
       unread: safeCount(unreadResult),
       byType: safeStatsMap(typeStats, 'type'),
       byStatus: safeStatsMap(statusStats, 'status'),
-      clickThroughRate: Math.round(clickThroughRate * 100) / 100,
+      clickThroughRate: Math.round(clickThroughRate * DEFAULT_VALUES.PERCENTAGE_PRECISION) / DEFAULT_VALUES.PERCENTAGE_PRECISION,
       recentAlerts: safeCount(recentResult)
     };
   }
@@ -379,16 +380,16 @@ export class Alert extends BaseModel<IAlert> {
         totalAlerts: safeCount(totalResult),
         pendingAlerts: safeCount(pendingResult),
         failedAlerts: safeCount(failedResult),
-        avgDeliveryTime: Math.round(avgDeliveryTime * 100) / 100,
+        avgDeliveryTime: Math.round(avgDeliveryTime * DEFAULT_VALUES.PERCENTAGE_PRECISION) / DEFAULT_VALUES.PERCENTAGE_PRECISION,
         alertsByType: safeStatsMap(typeStats, 'type'),
         alertsByPriority: safeStatsMap(priorityStats, 'priority')
       };
-    }, 5 * 60 * 1000); // Cache for 5 minutes
+    }, INTERVALS.CACHE_DEFAULT_TTL); // Cache for 5 minutes
   }
 
   // Clean up old alerts (older than specified days)
-  static async cleanupOldAlerts(daysOld: number = 90): Promise<number> {
-    const cutoffDate = new Date(Date.now() - daysOld * 24 * 60 * 60 * 1000);
+  static async cleanupOldAlerts(daysOld: number = TIME_PERIODS.ALERT_CLEANUP_DEFAULT_DAYS): Promise<number> {
+    const cutoffDate = new Date(Date.now() - daysOld * INTERVALS.DAY);
     
     const count = await this.db(this.getTableName())
       .where('created_at', '<', cutoffDate)
@@ -406,8 +407,8 @@ export class Alert extends BaseModel<IAlert> {
       limit?: number;
     } = {}
   ): Promise<IAlert[]> {
-    const { days = 30, limit = 100 } = options;
-    const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const { days = TIME_PERIODS.DEFAULT_HISTORY_DAYS, limit = DEFAULT_VALUES.DEFAULT_RECENT_ALERTS_LIMIT } = options;
+    const cutoffDate = new Date(Date.now() - days * INTERVALS.DAY);
 
     return this.db(this.getTableName())
       .where('product_id', productId)

@@ -1,6 +1,7 @@
 import { IAlert, IUser } from '../../types/database';
 import { logger } from '../../utils/logger';
 import { ChannelDeliveryResult } from '../alertDeliveryService';
+import { HTTP_TIMEOUTS, INTERVALS } from '../../constants';
 
 export interface DiscordEmbed {
   title: string;
@@ -35,7 +36,7 @@ export interface DiscordMessage {
 export class DiscordService {
   // Note: DISCORD_BOT_TOKEN reserved for future bot integration
   // private static readonly DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
-  private static readonly DISCORD_WEBHOOK_TIMEOUT = 10000; // 10 seconds
+  private static readonly DISCORD_WEBHOOK_TIMEOUT = HTTP_TIMEOUTS.DISCORD_WEBHOOK;
 
   /**
    * Send Discord alert
@@ -325,7 +326,7 @@ export class DiscordService {
       }
 
       // Simulate successful send
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, INTERVALS.DISCORD_SIMULATION_DELAY));
       const messageId = `discord-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
       logger.debug('Discord webhook message sent successfully', {
@@ -477,7 +478,7 @@ export class DiscordService {
           }
 
           // Rate limiting: wait between messages
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, INTERVALS.DISCORD_RATE_LIMIT_DELAY));
 
         } catch (error) {
           failedCount += group.length;

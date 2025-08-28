@@ -1,4 +1,12 @@
 import Joi from 'joi';
+import { 
+  STRING_LIMITS, 
+  NUMERIC_LIMITS, 
+  PAGINATION, 
+  BARCODE_LIMITS, 
+  VALIDATION_PATTERNS,
+  DEFAULT_VALUES
+} from '../constants';
 
 // Common reusable schemas
 export const commonSchemas = {
@@ -13,18 +21,18 @@ export const commonSchemas = {
   
   booleanFlag: Joi.boolean().default(false),
   
-  upc: Joi.string().pattern(/^\d{8,14}$/).messages({
-    'string.pattern.base': 'UPC must be 8-14 digits'
+  upc: Joi.string().pattern(VALIDATION_PATTERNS.UPC_CODE).messages({
+    'string.pattern.base': `UPC must be ${BARCODE_LIMITS.UPC_MIN_DIGITS}-${BARCODE_LIMITS.UPC_MAX_DIGITS} digits`
   }),
   
   pagination: {
-    page: Joi.number().integer().min(1).max(1000).default(1).messages({
+    page: Joi.number().integer().min(PAGINATION.DEFAULT_PAGE).max(PAGINATION.MAX_PAGE).default(PAGINATION.DEFAULT_PAGE).messages({
       'number.base': 'Page must be a number',
       'number.integer': 'Page must be an integer',
-      'number.min': 'Page must be at least 1',
-      'number.max': 'Page cannot exceed 1000'
+      'number.min': `Page must be at least ${PAGINATION.DEFAULT_PAGE}`,
+      'number.max': `Page cannot exceed ${PAGINATION.MAX_PAGE}`
     }),
-    limit: Joi.number().integer().min(1).max(100).default(20).messages({
+    limit: Joi.number().integer().min(PAGINATION.DEFAULT_PAGE).max(PAGINATION.MAX_LIMIT).default(PAGINATION.DEFAULT_LIMIT).messages({
       'number.base': 'Limit must be a number',
       'number.integer': 'Limit must be an integer',
       'number.min': 'Limit must be at least 1',
@@ -45,13 +53,13 @@ export const authSchemas = {
       'string.max': 'Password must not exceed 128 characters',
       'any.required': 'Password is required'
     }),
-    first_name: Joi.string().min(1).max(50).optional().messages({
+    first_name: Joi.string().min(STRING_LIMITS.USER_FIRST_NAME_MIN).max(STRING_LIMITS.USER_FIRST_NAME_MAX).optional().messages({
       'string.min': 'Name cannot be empty',
-      'string.max': 'Name must not exceed 50 characters'
+      'string.max': `Name must not exceed ${STRING_LIMITS.USER_FIRST_NAME_MAX} characters`
     }),
-    last_name: Joi.string().min(1).max(50).optional().messages({
+    last_name: Joi.string().min(STRING_LIMITS.USER_LAST_NAME_MIN).max(STRING_LIMITS.USER_LAST_NAME_MAX).optional().messages({
       'string.min': 'Name cannot be empty',
-      'string.max': 'Name must not exceed 50 characters'
+      'string.max': `Name must not exceed ${STRING_LIMITS.USER_LAST_NAME_MAX} characters`
     }),
     terms_accepted: Joi.boolean().valid(true).required().messages({
       'any.only': 'Terms and conditions must be accepted',
@@ -379,9 +387,9 @@ export const mlSchemas = {
         'number.min': 'Current price cannot be negative',
         'any.required': 'Current price is required'
       }),
-      timeframe: Joi.number().integer().min(1).max(1095).default(365).messages({
-        'number.min': 'Timeframe must be at least 1 day',
-        'number.max': 'Timeframe cannot exceed 3 years'
+      timeframe: Joi.number().integer().min(NUMERIC_LIMITS.TIMEFRAME_MIN_DAYS).max(NUMERIC_LIMITS.TIMEFRAME_MAX_DAYS).default(NUMERIC_LIMITS.ROI_TIMEFRAME_DEFAULT_DAYS).messages({
+        'number.min': `Timeframe must be at least ${NUMERIC_LIMITS.TIMEFRAME_MIN_DAYS} day`,
+        'number.max': `Timeframe cannot exceed ${NUMERIC_LIMITS.TIMEFRAME_MAX_DAYS / 365} years`
       })
     })
   },
@@ -530,7 +538,7 @@ export const watchSchemas = {
       'number.min': 'Max price cannot be negative'
     }),
     availability_type: Joi.string().valid('online', 'in_store', 'both').default('online'),
-    zip_code: Joi.string().pattern(/^\d{5}(-\d{4})?$/).optional().messages({
+    zip_code: Joi.string().pattern(VALIDATION_PATTERNS.ZIP_CODE).optional().messages({
       'string.pattern.base': 'ZIP code must be in format 12345 or 12345-6789'
     }),
     radius_miles: Joi.number().integer().min(1).max(500).optional().messages({

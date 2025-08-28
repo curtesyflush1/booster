@@ -3,6 +3,7 @@ import { logger } from '../utils/logger';
 import { AuthenticatedRequest } from '../types/express';
 import { DashboardService } from '../services/dashboardService';
 import { handleControllerError, sendSuccessResponse, sendErrorResponse } from '../utils/controllerHelpers';
+import { DASHBOARD_TIME_WINDOWS } from '../constants';
 
 /**
  * Get comprehensive dashboard data for the authenticated user
@@ -112,7 +113,7 @@ const parseSinceDate = (since: unknown): Date | undefined => {
   
   // Validate date is reasonable (not in future, not more than 30 days ago)
   const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const thirtyDaysAgo = new Date(now.getTime() - DASHBOARD_TIME_WINDOWS.UPDATES_MAX_AGE);
   
   if (date > now || date < thirtyDaysAgo) {
     return undefined;

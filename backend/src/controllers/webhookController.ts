@@ -3,6 +3,7 @@ import { webhookService } from '../services/webhookService';
 import { logger } from '../utils/logger';
 import { validateRequest } from '../middleware/validation';
 import { body, param } from 'express-validator';
+import { WEBHOOK_CONFIG, HTTP_STATUS } from '../constants';
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -48,7 +49,7 @@ export class WebhookController {
       const userId = req.user?.id;
 
       if (!userId) {
-        res.status(401).json({ error: 'User not authenticated' });
+        res.status(HTTP_STATUS.UNAUTHORIZED).json({ error: 'User not authenticated' });
         return;
       }
 
@@ -61,16 +62,16 @@ export class WebhookController {
         events,
         headers,
         retryConfig: retryConfig || {
-          maxRetries: 3,
-          retryDelay: 1000,
-          backoffMultiplier: 2
+          maxRetries: WEBHOOK_CONFIG.DEFAULT_MAX_RETRIES,
+          retryDelay: WEBHOOK_CONFIG.DEFAULT_RETRY_DELAY,
+          backoffMultiplier: WEBHOOK_CONFIG.DEFAULT_BACKOFF_MULTIPLIER
         },
         filters: filters || {}
       });
 
       logger.info(`User ${userId} created webhook ${webhook.id}`);
 
-      res.status(201).json({
+      res.status(HTTP_STATUS.CREATED).json({
         success: true,
         data: {
           id: webhook.id,
@@ -85,7 +86,7 @@ export class WebhookController {
       });
     } catch (error) {
       logger.error('Failed to create webhook:', error);
-      res.status(500).json({
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
         error: 'Failed to create webhook',
         message: error instanceof Error ? error.message : 'Unknown error'
       });

@@ -3,6 +3,7 @@ import { Server as HTTPServer } from 'http';
 import jwt from 'jsonwebtoken';
 import { logger } from '../utils/logger';
 import { User } from '../models/User';
+import { INTERVALS } from '../constants';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -289,7 +290,7 @@ export class WebSocketService {
     this.broadcastAnnouncement('Server is shutting down for maintenance', 'warning');
     
     // Wait a moment for the message to be sent
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, INTERVALS.WEBSOCKET_MESSAGE_DELAY));
     
     // Close all connections
     this.io.close();

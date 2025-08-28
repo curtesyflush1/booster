@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import { loggerWithContext } from '../utils/logger';
 import { healthCheckService } from './healthCheckService';
+import { MONITORING_CONFIG, INTERVALS } from '../constants';
 
 export interface AlertRule {
   id: string;
@@ -39,9 +40,9 @@ class MonitoringService extends EventEmitter {
   private metrics: Map<string, MetricData[]> = new Map();
   private alertRules: Map<string, AlertRule> = new Map();
   private activeAlerts: Map<string, Alert> = new Map();
-  private metricsRetentionHours = 24;
-  private alertCheckInterval = 30000; // 30 seconds
-  private metricsCleanupInterval = 3600000; // 1 hour
+  private metricsRetentionHours = MONITORING_CONFIG.METRICS_RETENTION_HOURS;
+  private alertCheckInterval = MONITORING_CONFIG.ALERT_CHECK_INTERVAL;
+  private metricsCleanupInterval = INTERVALS.METRICS_CLEANUP_INTERVAL;
 
   constructor() {
     super();

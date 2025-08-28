@@ -4,6 +4,7 @@ import { authenticate } from '../middleware/auth';
 import { createRateLimit } from '../middleware/rateLimiter';
 import { sanitizeParameters } from '../middleware/parameterSanitization';
 import { validate, mlSchemas } from '../validators';
+import { INTERVALS, RATE_LIMITS } from '../constants';
 
 const router = Router();
 
@@ -12,8 +13,8 @@ router.use(authenticate);
 
 // Apply rate limiting for ML endpoints (more restrictive due to computational cost)
 const mlRateLimit = createRateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 20, // Limit each IP to 20 requests per windowMs
+  windowMs: INTERVALS.RATE_LIMIT_WINDOW_MEDIUM,
+  maxRequests: RATE_LIMITS.ML_MAX_REQUESTS,
   message: 'Too many ML prediction requests, please try again later'
 });
 

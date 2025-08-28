@@ -6,6 +6,7 @@
 import { Request, Response } from 'express';
 import SitemapService from '../services/sitemapService';
 import { logger } from '../utils/logger';
+import { CACHE_CONTROL } from '../constants';
 
 class SitemapController {
   private sitemapService: SitemapService;
@@ -23,7 +24,7 @@ class SitemapController {
       
       res.set({
         'Content-Type': 'application/xml',
-        'Cache-Control': 'public, max-age=86400' // Cache for 24 hours
+        'Cache-Control': `public, max-age=${CACHE_CONTROL.SITEMAP_DEFAULT}` // Cache for 24 hours
       });
       
       res.send(sitemap);
@@ -44,7 +45,7 @@ class SitemapController {
       
       res.set({
         'Content-Type': 'application/xml',
-        'Cache-Control': 'public, max-age=86400'
+        'Cache-Control': `public, max-age=${CACHE_CONTROL.SITEMAP_MAIN}`
       });
       
       res.send(sitemap);
@@ -65,7 +66,7 @@ class SitemapController {
       
       res.set({
         'Content-Type': 'application/xml',
-        'Cache-Control': 'public, max-age=3600' // Cache for 1 hour (products change more frequently)
+        'Cache-Control': `public, max-age=${CACHE_CONTROL.SITEMAP_PRODUCTS}` // Cache for 1 hour (products change more frequently)
       });
       
       res.send(sitemap);
@@ -86,7 +87,7 @@ class SitemapController {
       
       res.set({
         'Content-Type': 'application/xml',
-        'Cache-Control': 'public, max-age=86400'
+        'Cache-Control': `public, max-age=${CACHE_CONTROL.SITEMAP_CATEGORIES}`
       });
       
       res.send(sitemap);
@@ -107,7 +108,7 @@ class SitemapController {
       
       res.set({
         'Content-Type': 'application/xml',
-        'Cache-Control': 'public, max-age=604800' // Cache for 1 week (locations change rarely)
+        'Cache-Control': `public, max-age=${CACHE_CONTROL.SITEMAP_LOCATIONS}` // Cache for 1 week (locations change rarely)
       });
       
       res.send(sitemap);
@@ -128,7 +129,7 @@ class SitemapController {
       
       res.set({
         'Content-Type': 'application/xml',
-        'Cache-Control': 'public, max-age=86400'
+        'Cache-Control': `public, max-age=${CACHE_CONTROL.SITEMAP_PAGES}`
       });
       
       res.send(sitemap);
@@ -149,7 +150,7 @@ class SitemapController {
       
       res.set({
         'Content-Type': 'text/plain',
-        'Cache-Control': 'public, max-age=86400'
+        'Cache-Control': `public, max-age=${CACHE_CONTROL.ROBOTS_TXT}`
       });
       
       res.send(robotsTxt);

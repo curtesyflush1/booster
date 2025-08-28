@@ -13,6 +13,7 @@ Welcome to the BoosterBeacon documentation. This guide covers all aspects of the
 - [API Reference](api-reference.md) - Complete API endpoint documentation
 - [Database Schema](../README.md#database-schema) - Database structure and relationships
 - [Technology Stack](../README.md#technology-stack) - Technical architecture overview
+- [Dependency Injection System](../backend/docs/DEPENDENCY_INJECTION.md) - **NEW** Complete DI architecture and implementation guide
 
 ### Core Systems
 
@@ -48,9 +49,12 @@ Welcome to the BoosterBeacon documentation. This guide covers all aspects of the
 
 ### Recent Updates
 
-#### August 28, 2025 - Validation System Standardization & Retailer Refactoring
+#### August 28, 2025 - Dependency Injection & System Architecture Improvements
+- **[Dependency Injection Documentation](../backend/docs/DEPENDENCY_INJECTION.md)** - NEW complete DI system implementation guide
 - **[Validation System Documentation](validation-system.md)** - UPDATED comprehensive guide
 - **[Parameter Sanitization Documentation](parameter-sanitization.md)** - NEW security protection guide
+- **Dependency Injection Complete** - Full DI system with enhanced testability and maintainability
+- **Service Refactoring** - Core services migrated to DI pattern with repository abstraction
 - **Joi Migration Complete** - All endpoints now use centralized validation with 90%+ cache hit rate
 - **Schema Caching** - Performance optimizations implemented across all routes
 - **Error Handling** - Standardized validation error responses with correlation IDs
@@ -69,6 +73,7 @@ Welcome to the BoosterBeacon documentation. This guide covers all aspects of the
 ## 🔍 Quick Navigation
 
 ### For Developers
+- [Dependency Injection System](../backend/docs/DEPENDENCY_INJECTION.md) - **NEW** Complete DI architecture and implementation guide
 - [Validation System](validation-system.md) - **UPDATED** Request validation patterns and Joi standardization
 - [Parameter Sanitization](parameter-sanitization.md) - **NEW** Input sanitization and security protection
 - [Error Logging System](error-logging.md) - **NEW** Enhanced error logging with correlation IDs and debugging context
@@ -95,8 +100,9 @@ Welcome to the BoosterBeacon documentation. This guide covers all aspects of the
 
 ## 📈 Project Status
 
-BoosterBeacon is in active development with **24 of 26 major systems completed**:
+BoosterBeacon is in active development with **25 of 26 major systems completed**:
 
+- ✅ **Dependency Injection System** - Complete DI architecture with enhanced testability (August 28, 2025)
 - ✅ **Validation System** - Joi standardization complete (August 28, 2025)
 - ✅ **Authentication & Security** - JWT token revocation system
 - ✅ **Watch Management** - Product monitoring and alerts

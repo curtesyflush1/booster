@@ -3,6 +3,7 @@ import { WatchController } from '../controllers/watchController';
 import { WatchPackController } from '../controllers/watchPackController';
 import { authenticate } from '../middleware/auth';
 import { requireAdmin } from '../middleware/adminAuth';
+import { contentSanitizationMiddleware } from '../utils/contentSanitization';
 import { validateJoi, validateJoiBody, validateJoiQuery, validateJoiParams, watchSchemas, watchPackSchemas } from '../validators';
 import multer from 'multer';
 
@@ -172,6 +173,7 @@ router.post(
   '/packs',
   authenticate,
   requireAdmin,
+  contentSanitizationMiddleware.watchPacks,
   validateJoiBody(watchPackSchemas.createWatchPack.body),
   WatchPackController.createWatchPack
 );
@@ -180,6 +182,7 @@ router.put(
   '/packs/:packId',
   authenticate,
   requireAdmin,
+  contentSanitizationMiddleware.watchPacks,
   validateJoi({
     params: watchPackSchemas.updateWatchPack.params,
     body: watchPackSchemas.updateWatchPack.body
@@ -198,6 +201,7 @@ router.delete(
 router.post(
   '/packs/:packId/subscribe',
   authenticate,
+  contentSanitizationMiddleware.watchPacks,
   validateJoi({
     params: watchPackSchemas.subscribeToWatchPack.params,
     body: watchPackSchemas.subscribeToWatchPack.body

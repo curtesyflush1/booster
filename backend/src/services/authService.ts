@@ -1,8 +1,7 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { User } from '../models/User';
 import { IUser, IUserRegistration, ILoginCredentials, IAuthToken } from '../types/database';
-import { logger } from '../utils/logger';
+import { IUserRepository, ILogger } from '../types/dependencies';
 import { TokenBlacklistService } from './tokenBlacklistService';
 import {
   ValidationError,
@@ -47,8 +46,16 @@ const AUTH_CONSTANTS = {
 
 export class AuthService {
   private config: AuthServiceConfig;
+  private userRepository: IUserRepository;
+  private logger: ILogger;
 
-  constructor(config?: Partial<AuthServiceConfig>) {
+  constructor(
+    userRepository: IUserRepository,
+    logger: ILogger,
+    config?: Partial<AuthServiceConfig>
+  ) {
+    this.userRepository = userRepository;
+    this.logger = logger;
     this.config = this.buildConfig(config);
     this.validateSecurityConfiguration();
   }
@@ -64,7 +71,7 @@ export class AuthService {
 
   private validateSecurityConfiguration(): void {
     if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
-      logger.warn('JWT secrets not set in environment variables, using defaults (not secure for production)');
+      this.logger.warn('JWT secrets not set in environment variables, using defaults (not secure for production)');
     }
 
     if (process.env.NODE_ENV === 'production' && 
@@ -83,11 +90,11 @@ export class AuthService {
       const tokens = await this.generateTokens(user.id);
       const userWithoutPassword = this.sanitizeUserResponse(user);
 
-      logger.info('User registered successfully', { userId: user.id, email: user.email });
+      this.logger.info('User registered successfully', { userId: user.id, email: user.email });
 
       return { user: userWithoutPassword, tokens };
     } catch (error) {
-      logger.error('Registration failed', { error: error instanceof Error ? error.message : String(error), email: userData.email });
+      this.logger.error('Registration failed', { error: error instanceof Error ? error.message : String(error), email: userData.email });
       throw error;
     }
   }
@@ -105,7 +112,7 @@ export class AuthService {
    * Validate that user doesn't already exist
    */
   private async validateUserDoesNotExist(email: string): Promise<void> {
-    const existingUser = await User.findByEmail(email);
+    const existingUser = await this.userRepository.findByEmail(email);
     if (existingUser) {
       throw new UserExistsError('User already exists with this email');
     }
@@ -115,9 +122,9 @@ export class AuthService {
    * Create user and set verification token
    */
   private async createUserWithVerification(userData: IUserRegistration): Promise<IUser> {
-    const user = await User.createUser(userData);
+    const user = await this.userRepository.createUser(userData);
     const verificationToken = this.generateVerificationToken();
-    await User.updateById<IUser>(user.id, {
+    await this.userRepository.updateById<IUser>(user.id, {
       verification_token: verificationToken
     });
     return user;
@@ -145,11 +152,11 @@ export class AuthService {
       const tokens = await this.generateTokens(user.id);
       const userWithoutPassword = this.sanitizeUserResponse(user);
 
-      logger.info('User logged in successfully', { userId: user.id, email: user.email });
+      this.logger.info('User logged in successfully', { userId: user.id, email: user.email });
 
       return { user: userWithoutPassword, tokens };
     } catch (error) {
-      logger.error('Login failed', { error: error instanceof Error ? error.message : String(error), email: credentials.email });
+      this.logger.error('Login failed', { error: error instanceof Error ? error.message : String(error), email: credentials.email });
       throw error;
     }
   }
@@ -158,7 +165,7 @@ export class AuthService {
    * Validate login credentials and return user
    */
   private async validateLoginCredentials(credentials: ILoginCredentials): Promise<IUser> {
-    const user = await User.findByEmail(credentials.email);
+    const user = await this.userRepository.findByEmail(credentials.email);
     if (!user) {
       throw new InvalidCredentialsError();
     }
@@ -169,7 +176,7 @@ export class AuthService {
    * Check if account is locked
    */
   private async validateAccountNotLocked(userId: string): Promise<void> {
-    const isLocked = await User.isAccountLocked(userId);
+    const isLocked = await this.userRepository.isAccountLocked(userId);
     if (isLocked) {
       throw new AccountLockedError();
     }
@@ -179,12 +186,12 @@ export class AuthService {
    * Verify password and handle login attempts
    */
   private async verifyPasswordAndHandleAttempts(password: string, user: IUser): Promise<void> {
-    const isValidPassword = await User.verifyPassword(password, user.password_hash);
+    const isValidPassword = await this.userRepository.verifyPassword(password, user.password_hash);
     if (!isValidPassword) {
-      await User.handleFailedLogin(user.id);
+      await this.userRepository.handleFailedLogin(user.id);
       throw new InvalidCredentialsError();
     }
-    await User.handleSuccessfulLogin(user.id);
+    await this.userRepository.handleSuccessfulLogin(user.id);
   }
 
   /**
@@ -204,7 +211,7 @@ export class AuthService {
       const decoded = jwt.verify(refreshToken, this.config.jwtRefreshSecret) as { userId: string };
       
       // Check if user still exists
-      const user = await User.findById<IUser>(decoded.userId);
+      const user = await this.userRepository.findById<IUser>(decoded.userId);
       if (!user) {
         throw new UserNotFoundError('User associated with token no longer exists');
       }
@@ -215,11 +222,11 @@ export class AuthService {
       // Generate new tokens
       const tokens = await this.generateTokens(user.id);
 
-      logger.info('Token refreshed successfully', { userId: user.id });
+      this.logger.info('Token refreshed successfully', { userId: user.id });
 
       return tokens;
     } catch (error) {
-      logger.error('Token refresh failed', { error: error instanceof Error ? error.message : String(error) });
+      this.logger.error('Token refresh failed', { error: error instanceof Error ? error.message : String(error) });
       if (error instanceof UserNotFoundError || error instanceof TokenExpiredError || error instanceof InvalidTokenError) {
         throw error;
       }
@@ -235,7 +242,7 @@ export class AuthService {
       const { user } = await this.validateAndDecodeToken(token, this.config.jwtSecret);
       return this.sanitizeUserResponse(user);
     } catch (error) {
-      logger.error('Token validation failed', { error: error instanceof Error ? error.message : String(error) });
+      this.logger.error('Token validation failed', { error: error instanceof Error ? error.message : String(error) });
       if (error instanceof UserNotFoundError || error instanceof InvalidTokenError || error instanceof TokenExpiredError) {
         throw error;
       }
@@ -259,7 +266,7 @@ export class AuthService {
     const decoded = jwt.verify(token, secret) as { userId: string };
     
     // Get user from database
-    const user = await User.findById<IUser>(decoded.userId);
+    const user = await this.userRepository.findById<IUser>(decoded.userId);
     if (!user) {
       throw new UserNotFoundError('User associated with token not found');
     }
@@ -274,10 +281,10 @@ export class AuthService {
     try {
       this.validateEmail(email);
       
-      const user = await User.findByEmail(email);
+      const user = await this.userRepository.findByEmail(email);
       if (!user) {
         // Don't reveal if email exists or not
-        logger.info('Password reset requested for non-existent email', { email });
+        this.logger.info('Password reset requested for non-existent email', { email });
         return 'If an account with this email exists, a password reset link has been sent.';
       }
 
@@ -285,13 +292,13 @@ export class AuthService {
       const resetToken = this.generateResetToken();
       const expiresAt = new Date(Date.now() + AUTH_CONSTANTS.RESET_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
 
-      await User.setResetToken(user.id, resetToken, expiresAt);
+      await this.userRepository.setResetToken(user.id, resetToken, expiresAt);
 
-      logger.info('Password reset initiated', { userId: user.id, email });
+      this.logger.info('Password reset initiated', { userId: user.id, email });
 
       return resetToken; // In real implementation, this would be sent via email
     } catch (error) {
-      logger.error('Password reset initiation failed', { error: error instanceof Error ? error.message : String(error), email });
+      this.logger.error('Password reset initiation failed', { error: error instanceof Error ? error.message : String(error), email });
       throw error;
     }
   }
@@ -305,7 +312,7 @@ export class AuthService {
       this.validatePassword(newPassword);
       
       // Find user by reset token
-      const user = await User.findOneBy<IUser>({ reset_token: token });
+      const user = await this.userRepository.findOneBy<IUser>({ reset_token: token });
       if (!user) {
         throw new Error('Invalid or expired reset token');
       }
@@ -316,7 +323,7 @@ export class AuthService {
       }
 
       // Update password
-      const success = await User.updatePassword(user.id, newPassword);
+      const success = await this.userRepository.updatePassword(user.id, newPassword);
       if (!success) {
         throw new Error('Failed to update password');
       }
@@ -324,9 +331,9 @@ export class AuthService {
       // Blacklist all existing tokens for this user
       await TokenBlacklistService.revokeAllUserTokens(user.id, 'password_reset');
 
-      logger.info('Password reset successfully', { userId: user.id });
+      this.logger.info('Password reset successfully', { userId: user.id });
     } catch (error) {
-      logger.error('Password reset failed', { error: error instanceof Error ? error.message : String(error) });
+      this.logger.error('Password reset failed', { error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }
@@ -338,19 +345,19 @@ export class AuthService {
     try {
       this.validateToken(token);
       
-      const user = await User.findOneBy<IUser>({ verification_token: token });
+      const user = await this.userRepository.findOneBy<IUser>({ verification_token: token });
       if (!user) {
         throw new Error('Invalid verification token');
       }
 
-      const success = await User.verifyEmail(user.id);
+      const success = await this.userRepository.verifyEmail(user.id);
       if (!success) {
         throw new Error('Failed to verify email');
       }
 
-      logger.info('Email verified successfully', { userId: user.id });
+      this.logger.info('Email verified successfully', { userId: user.id });
     } catch (error) {
-      logger.error('Email verification failed', { error: error instanceof Error ? error.message : String(error) });
+      this.logger.error('Email verification failed', { error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }
@@ -362,19 +369,19 @@ export class AuthService {
     try {
       this.validatePassword(newPassword);
       
-      const user = await User.findById<IUser>(userId);
+      const user = await this.userRepository.findById<IUser>(userId);
       if (!user) {
         throw new Error('User not found');
       }
 
       // Verify current password
-      const isValidPassword = await User.verifyPassword(currentPassword, user.password_hash);
+      const isValidPassword = await this.userRepository.verifyPassword(currentPassword, user.password_hash);
       if (!isValidPassword) {
         throw new Error('Current password is incorrect');
       }
 
       // Update password
-      const success = await User.updatePassword(userId, newPassword);
+      const success = await this.userRepository.updatePassword(userId, newPassword);
       if (!success) {
         throw new Error('Failed to update password');
       }
@@ -382,9 +389,9 @@ export class AuthService {
       // Blacklist all existing tokens for this user
       await TokenBlacklistService.revokeAllUserTokens(userId, 'password_change');
 
-      logger.info('Password changed successfully', { userId });
+      this.logger.info('Password changed successfully', { userId });
     } catch (error) {
-      logger.error('Password change failed', { error: error instanceof Error ? error.message : String(error), userId });
+      this.logger.error('Password change failed', { error: error instanceof Error ? error.message : String(error), userId });
       throw error;
     }
   }
@@ -406,13 +413,13 @@ export class AuthService {
       try {
         const decoded = jwt.decode(accessToken) as any;
         if (decoded?.userId) {
-          logger.info('User logged out successfully', { userId: decoded.userId });
+          this.logger.info('User logged out successfully', { userId: decoded.userId });
         }
       } catch (error) {
         // Ignore decode errors for logging
       }
     } catch (error) {
-      logger.error('Logout failed', { error: error instanceof Error ? error.message : String(error) });
+      this.logger.error('Logout failed', { error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }
@@ -423,9 +430,9 @@ export class AuthService {
   async logoutAllDevices(userId: string): Promise<void> {
     try {
       await TokenBlacklistService.revokeAllUserTokens(userId, 'user_logout_all');
-      logger.info('User logged out from all devices', { userId });
+      this.logger.info('User logged out from all devices', { userId });
     } catch (error) {
-      logger.error('Logout all devices failed', { 
+      this.logger.error('Logout all devices failed', { 
         userId,
         error: error instanceof Error ? error.message : String(error) 
       });
@@ -523,5 +530,17 @@ export class AuthService {
   }
 }
 
-// Export singleton instance
-export const authService = new AuthService();
+// Export factory function for creating AuthService instances
+import { DependencyContainer } from '../container/DependencyContainer';
+
+export const createAuthService = (dependencies?: Partial<{ userRepository: IUserRepository; logger: ILogger; config: Partial<AuthServiceConfig> }>) => {
+  const container = DependencyContainer.getInstance();
+  return new AuthService(
+    dependencies?.userRepository || container.getUserRepository(),
+    dependencies?.logger || container.getLogger(),
+    dependencies?.config
+  );
+};
+
+// Export singleton instance for backward compatibility
+export const authService = createAuthService();

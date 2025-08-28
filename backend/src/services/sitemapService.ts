@@ -3,6 +3,8 @@
  * Generates XML sitemaps for SEO optimization
  */
 
+import { CACHE_CONTROL, INTERVALS } from '../constants';
+
 // Note: Product and ProductCategory models will be used when database integration is complete
 
 export interface SitemapUrl {
@@ -211,7 +213,7 @@ Allow: /
 Sitemap: ${this.baseUrl}/sitemap.xml
 
 # Crawl-delay for polite crawling
-Crawl-delay: 1
+Crawl-delay: ${INTERVALS.SITEMAP_CRAWL_DELAY / 1000}
 
 # Disallow admin and API endpoints
 Disallow: /api/

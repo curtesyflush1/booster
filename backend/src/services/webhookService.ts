@@ -2,6 +2,7 @@ import axios, { AxiosResponse } from 'axios';
 import crypto from 'crypto';
 import { logger } from '../utils/logger';
 import { Alert } from '../models/Alert';
+import { HTTP_TIMEOUTS, RETRY_CONFIG, DEFAULT_VALUES } from '../constants';
 
 interface WebhookConfig {
   id: string;
@@ -68,9 +69,9 @@ export class WebhookService {
       successfulCalls: 0,
       failedCalls: 0,
       retryConfig: {
-        maxRetries: 3,
-        retryDelay: 1000,
-        backoffMultiplier: 2,
+        maxRetries: RETRY_CONFIG.WEBHOOK_DEFAULT_MAX_RETRIES,
+        retryDelay: RETRY_CONFIG.WEBHOOK_DEFAULT_RETRY_DELAY,
+        backoffMultiplier: RETRY_CONFIG.WEBHOOK_DEFAULT_BACKOFF_MULTIPLIER,
         ...config.retryConfig
       }
     };
@@ -244,7 +245,7 @@ export class WebhookService {
       if (!this.isProcessingQueue && this.deliveryQueue.length > 0) {
         this.processDeliveryQueue();
       }
-    }, 1000); // Check every second
+    }, INTERVALS.WEBSOCKET_MESSAGE_DELAY); // Check every second
   }
 
   private async processDeliveryQueue(): Promise<void> {
@@ -316,7 +317,7 @@ export class WebhookService {
 
       const response: AxiosResponse = await axios.post(webhook.url, payload, {
         headers,
-        timeout: 10000, // 10 second timeout
+        timeout: HTTP_TIMEOUTS.WEBHOOK_REQUEST,
         validateStatus: (status) => status >= 200 && status < 300
       });
 
