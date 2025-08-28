@@ -328,7 +328,11 @@ When running locally, services are available at:
 ### API Endpoints
 
 #### Core System
-- `GET /health` - Health check with uptime and environment info
+- `GET /health` - Basic health check with uptime and environment info
+- `GET /health/detailed` - Comprehensive health check with system status
+- `GET /health/ready` - Kubernetes/Docker readiness probe
+- `GET /health/live` - Kubernetes/Docker liveness probe
+- `GET /health/metrics` - System metrics endpoint
 - `GET /api/v1/status` - API status with version and timestamp
 
 #### Authentication & Users
@@ -456,6 +460,18 @@ When running locally, services are available at:
 - `GET /robots.txt` - Search engine crawling guidelines
 - `GET /admin/sitemap/stats` - Sitemap statistics (admin only)
 - `POST /admin/sitemap/ping` - Ping search engines about sitemap updates (admin only)
+
+#### Monitoring and Metrics (Authenticated Users)
+- `GET /api/monitoring/metrics` - Get system metrics with optional filtering
+- `POST /api/monitoring/metrics` - Record custom metric values
+- `GET /api/monitoring/dashboard` - Get monitoring dashboard data with charts and alerts
+- `GET /api/monitoring/alerts/active` - Get currently active system alerts
+- `GET /api/monitoring/alerts/history` - Get alert history with pagination
+
+#### Monitoring and Metrics (Admin Only)
+- `GET /api/monitoring/alerts/rules` - Get all alert rules configuration
+- `POST /api/monitoring/alerts/rules` - Create or update alert rules
+- `DELETE /api/monitoring/alerts/rules/:ruleId` - Delete specific alert rule
 
 #### Admin Dashboard (Admin/Super Admin Only)
 - `GET /api/admin/dashboard/stats` - Get comprehensive dashboard statistics
@@ -599,7 +615,7 @@ FROM_NAME=BoosterBeacon
 
 ## 📋 Project Status
 
-This project is in active development with **23 of 26 major systems completed**. **Major systems completed:**
+This project is in active development with **24 of 26 major systems completed**. **Major systems completed:**
 
 - [x] Project foundation and development environment
 - [x] Core database schema and models
@@ -623,13 +639,23 @@ This project is in active development with **23 of 26 major systems completed**.
 - [x] **Community and integration features** ✅ **COMPLETED**
 - [x] **Cross-retailer price comparison** ✅ **COMPLETED**
 - [x] **SEO optimization and marketing features** ✅ **COMPLETED**
+- [x] **Monitoring, logging, and deployment** ✅ **COMPLETED**
 
 ### Current Development Focus
 - [ ] **Enhanced testing coverage and performance validation** - Improving test coverage to 90%+ and implementing comprehensive E2E testing
-- [ ] **Monitoring, logging, and deployment** - Production-ready monitoring, structured logging, and automated deployment pipeline
 - [ ] **Final integration and production readiness** - Security audit, performance optimization, and complete user workflow testing
 
 ### Recent Updates
+
+**Monitoring, Logging, and Deployment** ✨ **MAJOR UPDATE** - Complete monitoring and deployment system implemented:
+- **Comprehensive Health Checks**: Multi-level health monitoring with basic, detailed, readiness, and liveness probes
+- **System Metrics Collection**: Automatic collection of memory, CPU, disk, response time, and error rate metrics
+- **Real-time Alerting**: Configurable alert rules with multi-channel notifications (email, Slack, PagerDuty)
+- **Monitoring Dashboard**: Real-time dashboard with charts, analytics, and alert management
+- **Structured Logging**: Winston-based logging with correlation IDs and performance tracking
+- **Kubernetes/Docker Ready**: Health probes designed for container orchestration platforms
+- **Automated Deployment**: One-command deployment pipeline with health verification and rollback
+- **Production Monitoring**: System health monitoring with automatic alert generation and resolution
 
 **SEO Optimization and Marketing Features** ✨ **MAJOR UPDATE** - Complete SEO system implemented:
 - **Comprehensive SEO Utilities**: Dynamic meta tags, Open Graph, Twitter Cards, and structured data
@@ -732,8 +758,9 @@ This project is in active development with **23 of 26 major systems completed**.
 ## 📚 Documentation
 
 ### System Guides
+- **[Monitoring System Guide](docs/monitoring-system.md)** - Complete monitoring, metrics, and alerting system documentation
 - **[SEO System Guide](docs/seo-system.md)** - Complete SEO optimization and marketing features documentation
-- **[Admin Dashboard Guide](docs/admin-dashboard.md)** - Complete admin dashboard and management system documentation
+- **[Admin Dashboard Guide](docs/admin-dashboard.md)** - Complete admin dashboard and management system documentationonon
 - **[Machine Learning System Guide](docs/ml-system.md)** - Complete ML prediction and analytics system documentation
 - **[Browser Extension Guide](docs/browser-extension.md)** - Complete browser extension development and usage guide
 - **[Automated Checkout System](docs/automated-checkout.md)** - Comprehensive guide to the automated checkout functionality

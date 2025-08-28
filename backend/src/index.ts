@@ -3,13 +3,16 @@ import helmet from 'helmet';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
-import { logger } from './utils/logger';
+import { logger, loggerWithContext } from './utils/logger';
+import { correlationIdMiddleware } from './middleware/correlationId';
 import { errorHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware/requestLogger';
 import { generalRateLimit } from './middleware/rateLimiter';
 import { initializeWebSocketService } from './services/websocketService';
 import { DataCollectionService } from './services/dataCollectionService';
 import { AdminSystemService } from './services/adminSystemService';
+import { backupService } from './services/backupService';
+import { monitoringService } from './services/monitoringService';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -31,6 +34,8 @@ import socialRoutes from './routes/social';
 import communityRoutes from './routes/community';
 import priceComparisonRoutes from './routes/priceComparisonRoutes';
 import sitemapRoutes from './routes/sitemapRoutes';
+import healthRoutes from './routes/health';
+import monitoringRoutes from './routes/monitoring';
 
 // Load environment variables
 dotenv.config();
@@ -52,21 +57,17 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Correlation ID middleware (must be before request logging)
+app.use(correlationIdMiddleware);
+
 // Request logging
 app.use(requestLogger);
 
 // Apply general rate limiting to all routes
 app.use(generalRateLimit);
 
-// Health check endpoint
-app.get('/health', (_req: Request, res: Response) => {
-  res.status(200).json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
+// Health check routes
+app.use('/health', healthRoutes);
 
 // API routes
 app.get('/api/v1/status', (_req: Request, res: Response) => {
@@ -134,6 +135,9 @@ app.use('/api/price-comparison', priceComparisonRoutes);
 // SEO and sitemap routes
 app.use('/', sitemapRoutes);
 
+// Monitoring and metrics routes
+app.use('/api/monitoring', monitoringRoutes);
+
 // Error handling middleware (must be last)
 app.use(errorHandler);
 
@@ -159,24 +163,51 @@ if (process.env.NODE_ENV !== 'test') {
   // Start system monitoring
   AdminSystemService.startSystemMonitoring();
   
+  // Schedule automatic backups
+  backupService.scheduleAutomaticBackups();
+  
+  // Initialize monitoring service
+  monitoringService.on('alert', (alert) => {
+    loggerWithContext.warn('System alert fired', {
+      alertId: alert.id,
+      ruleName: alert.ruleName,
+      severity: alert.severity,
+      value: alert.value,
+      threshold: alert.threshold
+    });
+  });
+  
+  monitoringService.on('alertResolved', (alert) => {
+    loggerWithContext.info('System alert resolved', {
+      alertId: alert.id,
+      ruleName: alert.ruleName,
+      duration: alert.endsAt ? alert.endsAt.getTime() - alert.startsAt.getTime() : 0
+    });
+  });
+  
   server.listen(PORT, () => {
-    logger.info(`BoosterBeacon API server running on port ${PORT}`);
-    logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    logger.info('WebSocket service initialized');
-    logger.info('ML data collection service scheduled');
-    logger.info('System monitoring started');
+    loggerWithContext.info(`BoosterBeacon API server running on port ${PORT}`, {
+      port: PORT,
+      environment: process.env.NODE_ENV || 'development',
+      version: process.env.APP_VERSION || '1.0.0'
+    });
+    loggerWithContext.info('WebSocket service initialized');
+    loggerWithContext.info('ML data collection service scheduled');
+    loggerWithContext.info('System monitoring started');
+    loggerWithContext.info('Automatic backup service scheduled');
+    loggerWithContext.info('Monitoring and alerting service initialized');
   });
 
   // Graceful shutdown
   const gracefulShutdown = async () => {
-    logger.info('Shutting down gracefully');
+    loggerWithContext.info('Shutting down gracefully');
     
     // Shutdown WebSocket service first
     await websocketService.shutdown();
     
     // Close HTTP server
     server.close(() => {
-      logger.info('Process terminated');
+      loggerWithContext.info('Process terminated');
       process.exit(0);
     });
   };
