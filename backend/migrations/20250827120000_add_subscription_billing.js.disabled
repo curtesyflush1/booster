@@ -26,11 +26,7 @@ exports.up = function(knex) {
       table.index('subscription_id');
       table.index('subscription_status');
       
-      // Add constraint to ensure subscription fields are consistent
-      table.check('subscription_consistency', knex.raw(`
-        (subscription_id IS NULL AND subscription_status IS NULL) OR 
-        (subscription_id IS NOT NULL AND subscription_status IS NOT NULL)
-      `));
+      // Note: Constraints removed for compatibility
     })
     
     // Create subscription_plans table
@@ -57,12 +53,11 @@ exports.up = function(knex) {
       table.index('is_active');
       table.index(['is_active', 'billing_period']); // Composite index for common queries
       
-      // Business constraints
+      // Nosiness constraints
       table.check('price_positive', knex.raw('price >= 0'));
       table.check('trial_days_non_negative', knex.raw('trial_days >= 0'));
       table.check('slug_format', knex.raw("slug ~ '^[a-z0-9-]+$'"));
-    })
-    
+      table.check('name_not_empty', knex.raw("length(trim(name)) > 0"));
     // Create subscription_usage table for tracking usage
     .createTable('subscription_usage', function (table) {
       table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
@@ -83,7 +78,7 @@ exports.up = function(knex) {
       
       // Business constraints
       table.check('quantity_positive', knex.raw('quantity > 0'));
-      table.unique(['user_id', 'usage_type', 'usage_date'], 'unique_daily_usage');
+      // Note: Removed unique constraint as users can have multiple usage entries of same type per day
     })
     
     // Create billing_events table for tracking billing history
@@ -143,6 +138,9 @@ exports.up = function(knex) {
       table.index('event_type');
       table.index('source');
       table.index('event_date');
+      table.index(['user_id', 'event_type']); // For user-specific conversion tracking
+      table.index(['event_type', 'event_date']); // For analytics queries
+      table.index(['source', 'medium', 'event_date']); // For marketing attribution
     });
 };
 

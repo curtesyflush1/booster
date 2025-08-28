@@ -237,7 +237,7 @@ export class MLController {
 
       // Get hype metrics for each product
       const trendingProducts = await Promise.all(
-        products.map(async (product) => {
+        products.map(async (product: any) => {
           const hypeMeter = await MLPredictionService.calculateHypeMeter(product.id);
           return {
             ...product,

@@ -7,7 +7,7 @@ import { logger } from '../utils/logger';
 
 // Initialize Stripe (in production, this would come from environment variables)
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy', {
-  apiVersion: '2025-07-30.basil'
+  apiVersion: '2025-08-27.basil'
 });
 
 export interface SubscriptionPlan {
