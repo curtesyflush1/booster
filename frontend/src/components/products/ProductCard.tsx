@@ -1,6 +1,8 @@
-import React from 'react';
-import { Eye, Plus, Heart, ExternalLink } from 'lucide-react';
+import React, { useState } from 'react';
+import { Eye, Plus, Check } from 'lucide-react';
 import { Product } from '../../types';
+import { apiClient } from '../../services/apiClient';
+import { toast } from 'react-hot-toast';
 
 interface ProductCardProps {
   product: Product;
@@ -13,10 +15,26 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
   onSelect,
   showWatchActions = true
 }) => {
-  const handleAddWatch = (e: React.MouseEvent) => {
+  const [isAddingToWatchlist, setIsAddingToWatchlist] = useState(false);
+  const [isWatchAdded, setIsWatchAdded] = useState(false);
+
+  const handleAddWatch = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    // TODO: Implement add to watch functionality
-    console.log('Add watch for product:', product.id);
+    setIsAddingToWatchlist(true);
+    
+    try {
+      // Simulate API call
+      await apiClient.post('/api/watches', { productId: product.id });
+      
+      toast.success(`${product.name} added to watchlist!`);
+      setIsWatchAdded(true);
+    } catch (error) {
+      console.error('Failed to add to watchlist:', error);
+      toast.error('Failed to add to watchlist. Please try again.');
+      setIsWatchAdded(false); // Revert on failure
+    } finally {
+      setIsAddingToWatchlist(false);
+    }
   };
 
   const handleViewDetails = () => {
@@ -72,10 +90,31 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
         <div className="px-4 pb-4 flex gap-2">
           <button
             onClick={handleAddWatch}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
+            disabled={isAddingToWatchlist || isWatchAdded}
+            className={`flex-1 text-white text-sm py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 ease-in-out transform hover:scale-105 ${
+              isWatchAdded
+                ? 'bg-green-600 cursor-not-allowed'
+                : isAddingToWatchlist
+                ? 'bg-yellow-600 cursor-wait'
+                : 'bg-blue-600 hover:bg-blue-700'
+            }`}
           >
-            <Plus className="w-4 h-4" />
-            Watch
+            {isWatchAdded ? (
+              <>
+                <Check className="w-4 h-4" />
+                Watching
+              </>
+            ) : isAddingToWatchlist ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Adding...
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4" />
+                Watch
+              </>
+            )}
           </button>
           <button
             onClick={handleViewDetails}

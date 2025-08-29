@@ -201,14 +201,18 @@ export class DashboardService {
     try {
       const sinceDate = since || new Date(Date.now() - DASHBOARD_CONFIG.UPDATES_DEFAULT_TIMEFRAME_MINUTES * 60 * 1000);
 
-      // Get recent updates in parallel
+      // Get recent updates in parallel with database-level filtering
       const [recentAlerts, recentWatchUpdates] = await Promise.all([
-        Alert.findByUserId(userId, { page: 1, limit: 5 }),
+        Alert.findByUserId(userId, {
+          page: 1,
+          limit: 5,
+          start_date: sinceDate  // Use database-level filtering instead of in-memory filtering
+        }),
         this.getRecentWatchUpdates(userId, sinceDate)
       ]);
 
       return {
-        newAlerts: recentAlerts.data.filter(alert => new Date(alert.created_at) > sinceDate),
+        newAlerts: recentAlerts.data, // No need to filter - already filtered at database level
         watchUpdates: recentWatchUpdates,
         timestamp: new Date().toISOString()
       };

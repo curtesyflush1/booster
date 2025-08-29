@@ -560,3 +560,57 @@ This checklist is based on a deep-dive analysis of the BoosterBeacon repository.
 
 * **Background Script**
     * [x] **Optimize Background Tasks:** Continue to use `chrome.alarms` for periodic tasks instead of `setInterval`. Ensure that any processing in the background script is lightweight and efficient to minimize impact on the user's browser performance.
+# BoosterBeacon Final Refinements Checklist
+
+This checklist contains the final set of improvements for the BoosterBeacon application, focusing on logic refinement, performance tuning, and hardening against edge cases.
+
+---
+
+### **Backend (`/backend`)**
+
+* [X] **1. Prevent Race Condition in Alert Generation**
+    * **File:** `backend/src/services/alertProcessingService.ts`
+    * **Task:** Refactor the `generateAlert` function to prevent a race condition where duplicate alerts could be created.
+    * **Instructions:**
+        1.  Locate the `generateAlert` method.
+        2.  Wrap the `checkForDuplicates` call and the `Alert.createAlert` call within a single database transaction using `BaseModel.getKnex().transaction()`.
+        3.  Use the transaction object (`trx`) for all database operations within the block.
+        4.  Ensure the transaction is committed upon success and rolled back upon failure.
+
+* [X] **2. Optimize Rate Limit Check Query**
+    * **File:** `backend/src/services/alertProcessingService.ts`
+    * **Task:** Improve the efficiency of the `checkRateLimits` function by performing the count in the database instead of in memory.
+    * **Instructions:**
+        1.  In the `checkRateLimits` function, remove the call that fetches all recent alerts (`Alert.findBy`).
+        2.  Replace it with a Knex query that directly counts the number of alerts for the given `userId` created in the last hour.
+        3.  The query should look like: `const result = await Alert.db('alerts').where('user_id', userId).where('created_at', '>=', oneHourAgo).count('* as count').first();`
+        4.  Use the count from the result to check against the rate limit.
+
+* [X] **3. Add Context to Retailer Integration Error Logs**
+    * **File:** `backend/src/services/RetailerIntegrationService.ts`
+    * **Task:** Enhance the error logging in `checkAllRetailersForProduct` to include the ID of the failing retailer.
+    * **Instructions:**
+        1.  In the `checkAllRetailersForProduct` method, find the `if (result.status === 'rejected')` block inside the loop.
+        2.  Modify the `logger.error` call within this block to include the `retailer.id` in the metadata object. Example: `logger.error('...', { retailerId: retailer.id, ... });`
+
+---
+
+### **Frontend (`/frontend`)**
+
+* [X] **4. Implement Granular Data Fetching on Dashboard**
+    * **File:** `frontend/src/pages/DashboardPage.tsx`
+    * **Task:** Refactor the data fetching logic to prevent redundant API calls when filters change.
+    * **Instructions:**
+        1.  Split the single `useEffect` hook that fetches all dashboard data into multiple `useEffect` hooks.
+        2.  Create one `useEffect` for each of the three main data types: `dashboardData`, `portfolioData`, and `predictiveInsights`.
+        3.  Ensure each `useEffect` has only the specific filter properties it depends on in its dependency array. For example, if `portfolioData` is not affected by filters, its `useEffect` should have an empty dependency array `[]` so it only runs once.
+
+* [X] **5. Add Optimistic UI to Product Card "Watch" Button**
+    * **File:** `frontend/src/components/products/ProductCard.tsx`
+    * **Task:** Improve the user experience by immediately updating the UI when a user clicks the "Watch" button.
+    * **Instructions:**
+        1.  Introduce a local state variable, e.g., `const [isWatching, setIsWatching] = useState(false);`.
+        2.  In the `handleAddWatch` function, immediately call `setIsWatching(true)`.
+        3.  After this, make the API call to add the product to the watch list.
+        4.  If the API call fails, call `setIsWatching(false)` in the `.catch()` block and show an error notification.
+        5.  Update the button's appearance based on the `isWatching` state (e.g., change text to "Watching", change color, show a checkmark icon).

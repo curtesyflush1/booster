@@ -2,7 +2,8 @@ import { Alert } from '../models/Alert';
 import { User } from '../models/User';
 import { Product } from '../models/Product';
 import { Watch } from '../models/Watch';
-import { QuietHoursService } from './quietHoursService';
+import { BaseModel } from '../models/BaseModel';
+import { createQuietHoursService } from './quietHoursService';
 import { AlertDeliveryService } from './alertDeliveryService';
 import { CachedUserService } from './cachedUserService';
 import { logger } from '../utils/logger';
@@ -79,22 +80,7 @@ export class AlertProcessingService {
         );
       }
 
-      // Check for duplicates
-      const deduplicationResult = await this.checkForDuplicates(alertData);
-      if (deduplicationResult.isDuplicate) {
-        logger.info('Alert deduplicated', {
-          userId: alertData.userId,
-          productId: alertData.productId,
-          reason: deduplicationResult.reason
-        });
-        return {
-          alertId: deduplicationResult.existingAlertId!,
-          status: 'deduplicated',
-          reason: deduplicationResult.reason || 'Alert deduplicated'
-        };
-      }
-
-      // Check rate limits
+      // Check rate limits (outside transaction as it doesn't modify data)
       const rateLimitResult = await this.checkRateLimits(alertData.userId);
       if (!rateLimitResult.allowed) {
         logger.warn('Alert rate limited', {
@@ -107,29 +93,61 @@ export class AlertProcessingService {
         );
       }
 
-      // Use strategy pattern to determine priority
-      const strategy = AlertProcessorFactory.getProcessor(alertData.type);
-      const priority = alertData.priority || await strategy.calculatePriority(alertData);
+      // Use transaction to prevent race condition between duplicate check and alert creation
+      const transactionResult = await BaseModel.transaction(async (trx) => {
+        // Check for duplicates within the transaction
+        const deduplicationResult = await this.checkForDuplicatesTransactional(alertData, trx);
+        if (deduplicationResult.isDuplicate) {
+          logger.info('Alert deduplicated', {
+            userId: alertData.userId,
+            productId: alertData.productId,
+            reason: deduplicationResult.reason
+          });
+          // Return deduplication result to handle outside transaction
+          return { type: 'deduplicated', alert: deduplicationResult.existingAlert! };
+        }
 
-      // Create the alert
-      const alertCreateData: Partial<IAlert> = {
-        user_id: alertData.userId,
-        product_id: alertData.productId,
-        retailer_id: alertData.retailerId,
-        type: alertData.type,
-        priority,
-        data: alertData.data,
-        status: 'pending'
-      };
+        // Use strategy pattern to determine priority
+        const strategy = AlertProcessorFactory.getProcessor(alertData.type);
+        const priority = alertData.priority || await strategy.calculatePriority(alertData);
 
-      if (alertData.watchId) {
-        alertCreateData.watch_id = alertData.watchId;
+        // Create the alert within the transaction
+        const alertCreateData: Partial<IAlert> = {
+          user_id: alertData.userId,
+          product_id: alertData.productId,
+          retailer_id: alertData.retailerId,
+          type: alertData.type,
+          priority,
+          data: {
+            ...alertData.data,
+            availability_status: alertData.data?.availability_status || 'unknown'
+          } as IAlertData,
+          status: 'pending'
+        };
+
+        if (alertData.watchId) {
+          alertCreateData.watch_id = alertData.watchId;
+        }
+
+        // Use transaction-aware alert creation
+        const alert = await this.createAlertTransactional(alertCreateData, trx);
+        return { type: 'created', alert };
+      });
+
+      // Handle transaction result
+      if (transactionResult.type === 'deduplicated') {
+        return {
+          alertId: transactionResult.alert.id,
+          status: 'deduplicated',
+          reason: `Similar alert exists within ${this.DEDUPLICATION_WINDOW_MINUTES} minutes`
+        };
       }
 
-      const alert = await Alert.createAlert(alertCreateData);
+      const alert = transactionResult.alert;
 
       // Check quiet hours and schedule accordingly
-      const quietHoursCheck = await QuietHoursService.isQuietTime(alertData.userId);
+      const quietHoursService = createQuietHoursService();
+      const quietHoursCheck = await quietHoursService.isQuietTime(alertData.userId);
       if (quietHoursCheck.isQuietTime) {
         const scheduledFor = quietHoursCheck.nextActiveTime || new Date(Date.now() + this.DEFAULT_SCHEDULE_DELAY_HOURS * 60 * 60 * 1000);
         await Alert.updateById<IAlert>(alert.id, {
@@ -239,7 +257,8 @@ export class AlertProcessingService {
       }
 
       // Check if user is in quiet hours
-      const quietHoursCheck = await QuietHoursService.isQuietTime(alert.user_id);
+      const quietHoursService = createQuietHoursService();
+      const quietHoursCheck = await quietHoursService.isQuietTime(alert.user_id);
       if (quietHoursCheck.isQuietTime) {
         const scheduledFor = quietHoursCheck.nextActiveTime || new Date(Date.now() + this.DEFAULT_SCHEDULE_DELAY_HOURS * 60 * 60 * 1000);
         await Alert.updateById<IAlert>(alertId, {
@@ -466,15 +485,15 @@ export class AlertProcessingService {
   }> {
     const deduplicationWindow = new Date(Date.now() - this.DEDUPLICATION_WINDOW_MINUTES * 60 * 1000);
 
-    // Look for similar alerts within the deduplication window
-    const existingAlerts = await Alert.findBy<IAlert>({
+        // Look for similar alerts within the deduplication window
+    const existingAlertsResult = await Alert.findBy<IAlert>({
       user_id: alertData.userId,
       product_id: alertData.productId,
       retailer_id: alertData.retailerId,
       type: alertData.type
-    });
+    }, { limit: 100 }); // Reasonable limit for deduplication check
 
-    const recentAlert = existingAlerts.find(alert => 
+    const recentAlert = existingAlertsResult.data.find(alert =>
       new Date(alert.created_at) > deduplicationWindow &&
       (alert.status === 'pending' || alert.status === 'sent')
     );
@@ -491,6 +510,66 @@ export class AlertProcessingService {
   }
 
   /**
+   * Transaction-aware duplicate check
+   */
+  private static async checkForDuplicatesTransactional(
+    alertData: AlertGenerationData,
+    trx: any
+  ): Promise<{
+    isDuplicate: boolean;
+    existingAlertId?: string;
+    existingAlert?: IAlert;
+    reason?: string;
+  }> {
+    const deduplicationWindow = new Date(Date.now() - this.DEDUPLICATION_WINDOW_MINUTES * 60 * 1000);
+
+    // Look for similar alerts within the deduplication window using transaction
+    const existingAlerts = await trx('alerts')
+      .where({
+        user_id: alertData.userId,
+        product_id: alertData.productId,
+        retailer_id: alertData.retailerId,
+        type: alertData.type
+      })
+      .andWhere('created_at', '>', deduplicationWindow)
+      .andWhere(function() {
+        this.where('status', 'pending').orWhere('status', 'sent');
+      });
+
+    if (existingAlerts.length > 0) {
+      const recentAlert = existingAlerts[0];
+      return {
+        isDuplicate: true,
+        existingAlertId: recentAlert.id,
+        existingAlert: recentAlert,
+        reason: `Similar alert exists within ${this.DEDUPLICATION_WINDOW_MINUTES} minutes`
+      };
+    }
+
+    return { isDuplicate: false };
+  }
+
+  /**
+   * Transaction-aware alert creation
+   */
+  private static async createAlertTransactional(
+    alertData: Partial<IAlert>,
+    trx: any
+  ): Promise<IAlert> {
+    try {
+      const [alert] = await trx('alerts')
+        .insert(alertData)
+        .returning('*');
+
+      logger.debug('Created alert record within transaction:', { id: alert.id });
+      return alert;
+    } catch (error) {
+      logger.error('Error creating alert within transaction:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Check rate limits for user
    */
   private static async checkRateLimits(userId: string): Promise<{
@@ -498,20 +577,20 @@ export class AlertProcessingService {
     reason?: string;
   }> {
     const oneHourAgo = new Date(Date.now() - this.DEFAULT_SCHEDULE_DELAY_HOURS * 60 * 60 * 1000);
-    
-    // Count alerts sent to user in the last hour
-    const recentAlerts = await Alert.findBy<IAlert>({
-      user_id: userId
-    });
 
-    const alertsInLastHour = recentAlerts.filter(alert => 
-      new Date(alert.created_at) > oneHourAgo
-    );
+    // Count alerts sent to user in the last hour using database aggregation
+    const alertCountResult = await Alert.getKnex()('alerts')
+      .where('user_id', userId)
+      .where('created_at', '>=', oneHourAgo)
+      .count('* as count')
+      .first();
 
-    if (alertsInLastHour.length >= this.MAX_ALERTS_PER_USER_PER_HOUR) {
+    const alertsInLastHour = parseInt(alertCountResult?.count as string || '0', 10);
+
+    if (alertsInLastHour >= this.MAX_ALERTS_PER_USER_PER_HOUR) {
       return {
         allowed: false,
-        reason: `User has received ${alertsInLastHour.length} alerts in the last hour (limit: ${this.MAX_ALERTS_PER_USER_PER_HOUR})`
+        reason: `User has received ${alertsInLastHour} alerts in the last hour (limit: ${this.MAX_ALERTS_PER_USER_PER_HOUR})`
       };
     }
 
@@ -585,8 +664,12 @@ export class AlertProcessingService {
   }> {
     // This should ideally be a single database query with aggregation
     // For now, we'll use the existing approach but with better structure
-    const todayAlerts = await Alert.findBy<IAlert>({});
-    const filteredAlerts = todayAlerts.filter(alert => 
+    const todayAlertsResult = await Alert.findBy<IAlert>({}, {
+      limit: 1000,
+      orderBy: 'created_at',
+      orderDirection: 'desc'
+    });
+    const filteredAlerts = todayAlertsResult.data.filter(alert =>
       new Date(alert.created_at) >= today
     );
 

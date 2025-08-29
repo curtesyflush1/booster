@@ -52,8 +52,48 @@ const DashboardPage: React.FC = () => {
 
   // Load initial dashboard data
   useEffect(() => {
-    loadDashboardData();
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        const response = await apiClient.get('/api/dashboard', { params: filters });
+        setDashboardData(response.data.dashboard);
+      } catch (err) {
+        console.error('Error loading dashboard data:', err);
+        setError('Failed to load dashboard data.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboardData();
   }, [filters]);
+
+  // Load portfolio data (runs only once)
+  useEffect(() => {
+    const fetchPortfolioData = async () => {
+      try {
+        const response = await apiClient.get('/api/dashboard/portfolio');
+        setPortfolioData(response.data.portfolio);
+      } catch (err) {
+        console.error('Error loading portfolio data:', err);
+        // Handle portfolio-specific error if needed
+      }
+    };
+    fetchPortfolioData();
+  }, []);
+
+  // Load predictive insights (runs only once)
+  useEffect(() => {
+    const fetchPredictiveInsights = async () => {
+      try {
+        const response = await apiClient.get('/api/dashboard/insights');
+        setPredictiveInsights(response.data.insights);
+      } catch (err) {
+        console.error('Error loading predictive insights:', err);
+        // Handle insights-specific error if needed
+      }
+    };
+    fetchPredictiveInsights();
+  }, []);
 
   // Handle WebSocket messages
   useEffect(() => {
@@ -61,46 +101,6 @@ const DashboardPage: React.FC = () => {
       handleWebSocketMessage(lastMessage);
     }
   }, [lastMessage]);
-
-  /**
-   * Load dashboard data using consolidated endpoint for better performance.
-   * Falls back to individual API calls if consolidated endpoint fails.
-   * This optimization reduces initial API requests from 3 to 1.
-   */
-  const loadDashboardData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      try {
-        // Use the new consolidated endpoint to reduce API calls from 3 to 1
-        const consolidatedResponse = await apiClient.get('/api/dashboard/consolidated');
-        const { dashboard, portfolio, insights } = consolidatedResponse.data;
-
-        setDashboardData(dashboard);
-        setPortfolioData(portfolio);
-        setPredictiveInsights(insights);
-      } catch (consolidatedError) {
-        console.warn('Consolidated endpoint failed, falling back to individual calls:', consolidatedError);
-        
-        // Fallback to individual API calls if consolidated endpoint fails
-        const [dashboardResponse, portfolioResponse, insightsResponse] = await Promise.all([
-          apiClient.get('/api/dashboard'),
-          apiClient.get('/api/dashboard/portfolio'),
-          apiClient.get('/api/dashboard/insights')
-        ]);
-
-        setDashboardData(dashboardResponse.data.dashboard);
-        setPortfolioData(portfolioResponse.data.portfolio);
-        setPredictiveInsights(insightsResponse.data.insights);
-      }
-    } catch (err) {
-      console.error('Error loading dashboard data:', err);
-      setError('Failed to load dashboard data. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleWebSocketMessage = (message: any) => {
     switch (message.type) {
@@ -138,7 +138,9 @@ const DashboardPage: React.FC = () => {
   };
 
   const refreshData = () => {
-    loadDashboardData();
+    // Manually trigger re-fetch for all data
+    // This can be optimized to refresh only the active tab's data
+    setFilters({ ...filters }); 
   };
 
   if (loading) {

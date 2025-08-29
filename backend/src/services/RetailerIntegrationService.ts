@@ -6,12 +6,12 @@ import { CostcoService } from './retailers/CostcoService';
 import { SamsClubService } from './retailers/SamsClubService';
 import { logger } from '../utils/logger';
 import { 
-  INTERVALS, 
   HTTP_TIMEOUTS, 
-  RATE_LIMITING, 
   RETRY_CONFIG, 
+  RATE_LIMITING, 
   CIRCUIT_BREAKER 
-} from '../constants';
+} from '../constants/http';
+import { INTERVALS } from '../constants/time';
 
 interface RetailerServiceInstance {
   service: BaseRetailerService;
@@ -214,7 +214,11 @@ export class RetailerIntegrationService {
         return result;
       } catch (error) {
         errors.push({ retailerId, error });
-        logger.error(`Error checking availability for ${retailerId}:`, error);
+        logger.error(`Error checking availability for ${retailerId}:`, {
+          retailerId,
+          productId: request.productId,
+          error: error instanceof Error ? error.message : String(error),
+        });
         return null;
       }
     });
