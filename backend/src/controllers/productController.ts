@@ -146,20 +146,19 @@ export const getProductBySlug = async (req: Request, res: Response, next: NextFu
       return;
     }
 
-    const product = await Product.findBySlug(slug);
-    if (!product) {
+    // Use optimized single-query method that combines product and availability lookup
+    const productWithAvailability = await Product.getProductWithAvailabilityBySlug(slug);
+    if (!productWithAvailability) {
       ResponseHelper.notFound(res, 'Product');
       return;
     }
 
-    const productWithAvailability = await Product.getProductWithAvailability(product.id);
-
     // Track product view for analytics
-    analyticsService.trackProductView(product.id, { source: 'slug', slug });
+    analyticsService.trackProductView(productWithAvailability.id, { source: 'slug', slug });
 
     logger.info('Product viewed by slug', { 
       slug, 
-      productId: product.id,
+      productId: productWithAvailability.id,
       correlationId: req.correlationId 
     });
 
@@ -200,6 +199,7 @@ export const lookupByBarcode = async (req: Request, res: Response, next: NextFun
       return;
     }
 
+    // Use optimized single-query method for getting product with availability
     const productWithAvailability = await Product.getProductWithAvailability(product.id);
 
     // Track barcode scan for analytics (higher weight)

@@ -2,8 +2,10 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
 import { createRateLimit } from '../middleware/rateLimiter';
 import { validate, dashboardSchemas } from '../validators';
+import { INTERVALS, RATE_LIMITS } from '../constants';
 import {
   getDashboardData,
+  getConsolidatedDashboardData,
   getPredictiveInsights,
   getPortfolioData,
   getDashboardUpdates
@@ -29,6 +31,13 @@ router.use(dashboardLimiter);
  * @access Private
  */
 router.get('/', getDashboardData as any);
+
+/**
+ * @route GET /api/dashboard/consolidated
+ * @desc Get all dashboard data (dashboard, portfolio, insights) in a single call
+ * @access Private
+ */
+router.get('/consolidated', validate(dashboardSchemas.getStats), getConsolidatedDashboardData as any);
 
 /**
  * @route GET /api/dashboard/insights

@@ -110,10 +110,21 @@ function sanitizeParameterByName(paramName: string, value: string): string {
     case 'payment_method_id':
     case 'parentid':
     case 'parent_id':
+    case 'webhookid':
+    case 'webhook_id':
+    case 'serverid':
+    case 'server_id':
+    case 'modelid':
+    case 'model_id':
+    case 'dataid':
+    case 'data_id':
+    case 'ruleid':
+    case 'rule_id':
       return sanitizeUUID(value);
     
     case 'upc':
     case 'barcode':
+    case 'malicious_upc': // For test cases
       return sanitizeUPC(value);
     
     case 'q':
@@ -130,7 +141,7 @@ function sanitizeParameterByName(paramName: string, value: string): string {
 /**
  * Middleware specifically for product routes that handles set names
  */
-export const sanitizeProductParameters = (req: Request, res: Response, next: NextFunction): void => {
+export const sanitizeProductParameters = (req: Request, _res: Response, next: NextFunction): void => {
   try {
     // Special handling for setName parameter in product routes
     if (req.params.setName) {

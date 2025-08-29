@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { RetailerController } from '../controllers/retailerController';
 import { authenticate } from '../middleware/auth';
 import { createRateLimit } from '../middleware/rateLimiter';
+import { sanitizeParameters } from '../middleware/parameterSanitization';
 
 const router = Router();
 const retailerController = new RetailerController();
@@ -34,7 +35,7 @@ router.get('/', retailerController.getAllRetailers);
  * @query radiusMiles - Search radius in miles (optional)
  * @query retailers - Comma-separated list of retailer IDs (optional)
  */
-router.get('/availability/:productId', retailerController.checkAvailability);
+router.get('/availability/:productId', sanitizeParameters, retailerController.checkAvailability);
 
 /**
  * @route GET /api/retailers/search
@@ -72,7 +73,7 @@ router.get('/config', retailerController.getConfigurations);
  * @access Private
  * @params retailerId - Retailer ID
  */
-router.get('/:retailerId/config', retailerController.getRetailerConfig);
+router.get('/:retailerId/config', sanitizeParameters, retailerController.getRetailerConfig);
 
 /**
  * @route PUT /api/retailers/:retailerId/status
@@ -81,7 +82,7 @@ router.get('/:retailerId/config', retailerController.getRetailerConfig);
  * @params retailerId - Retailer ID
  * @body isActive - Boolean to enable/disable retailer
  */
-router.put('/:retailerId/status', retailerController.setRetailerStatus);
+router.put('/:retailerId/status', sanitizeParameters, retailerController.setRetailerStatus);
 
 /**
  * @route POST /api/retailers/:retailerId/circuit-breaker/reset
@@ -89,6 +90,6 @@ router.put('/:retailerId/status', retailerController.setRetailerStatus);
  * @access Private (Admin only)
  * @params retailerId - Retailer ID
  */
-router.post('/:retailerId/circuit-breaker/reset', retailerController.resetCircuitBreaker);
+router.post('/:retailerId/circuit-breaker/reset', sanitizeParameters, retailerController.resetCircuitBreaker);
 
 export default router;

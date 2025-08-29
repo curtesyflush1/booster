@@ -662,6 +662,247 @@ export const verifyRetailerCredentials = async (req: Request, res: Response, nex
 };
 
 /**
+ * Store retailer credentials with user-specific encryption
+ */
+export const storeRetailerCredentialsSecure = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: {
+          code: 'AUTHENTICATION_REQUIRED',
+          message: 'Authentication is required',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    // Validate request body (includes password for encryption)
+    const { error, value } = userSchemas.addRetailerCredentialSecure.validate(req.body);
+    if (error) {
+      res.status(400).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: error.details?.[0]?.message || 'Validation error',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    const { createUserCredentialService } = await import('../services/userCredentialService');
+    const userCredentialService = createUserCredentialService();
+    
+    const success = await userCredentialService.storeRetailerCredentials(
+      req.user.id, 
+      {
+        retailer: value.retailer,
+        username: value.username,
+        password: value.retailerPassword,
+        twoFactorEnabled: value.twoFactorEnabled
+      },
+      value.userPassword
+    );
+
+    if (!success) {
+      res.status(500).json({
+        error: {
+          code: 'CREDENTIAL_STORAGE_FAILED',
+          message: 'Failed to store retailer credentials with user encryption',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    logger.info('Retailer credentials added with user-specific encryption', { 
+      userId: req.user.id, 
+      retailer: value.retailer,
+      encryptionType: 'user-specific'
+    });
+
+    res.status(201).json({
+      message: 'Retailer credentials added successfully with enhanced security',
+      retailer: value.retailer,
+      encryptionType: 'user-specific'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get retailer credentials with user-specific decryption
+ */
+export const getRetailerCredentialsSecure = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: {
+          code: 'AUTHENTICATION_REQUIRED',
+          message: 'Authentication is required',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    const { retailer } = req.params;
+    const { userPassword } = req.body;
+
+    if (!retailer) {
+      res.status(400).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Retailer parameter is required',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    if (!userPassword) {
+      res.status(400).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'User password is required for secure credential access',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    const { createUserCredentialService } = await import('../services/userCredentialService');
+    const userCredentialService = createUserCredentialService();
+    
+    const credentials = await userCredentialService.getRetailerCredentials(
+      req.user.id,
+      retailer,
+      userPassword
+    );
+
+    if (!credentials) {
+      res.status(404).json({
+        error: {
+          code: 'CREDENTIALS_NOT_FOUND',
+          message: 'Retailer credentials not found',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    res.status(200).json({
+      retailer,
+      username: credentials.username,
+      twoFactorEnabled: credentials.twoFactorEnabled,
+      encryptionType: credentials.encryptionType,
+      // Note: password is intentionally excluded from response for security
+      message: 'Credentials retrieved successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Migrate existing credentials to user-specific encryption
+ */
+export const migrateCredentialsToUserEncryption = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: {
+          code: 'AUTHENTICATION_REQUIRED',
+          message: 'Authentication is required',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    const { userPassword } = req.body;
+
+    if (!userPassword) {
+      res.status(400).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'User password is required for credential migration',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    const { createUserCredentialService } = await import('../services/userCredentialService');
+    const userCredentialService = createUserCredentialService();
+    
+    const results = await userCredentialService.migrateAllCredentialsToUserEncryption(
+      req.user.id,
+      userPassword
+    );
+
+    logger.info('Credential migration completed', {
+      userId: req.user.id,
+      migrated: results.migrated.length,
+      skipped: results.skipped.length,
+      failed: results.failed.length
+    });
+
+    res.status(200).json({
+      message: 'Credential migration completed',
+      results: {
+        migrated: results.migrated,
+        skipped: results.skipped,
+        failed: results.failed
+      },
+      summary: {
+        totalProcessed: results.migrated.length + results.skipped.length + results.failed.length,
+        successfullyMigrated: results.migrated.length,
+        alreadySecure: results.skipped.length,
+        failedMigration: results.failed.length
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * List retailer credentials with encryption type information
+ */
+export const listRetailerCredentialsSecure = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: {
+          code: 'AUTHENTICATION_REQUIRED',
+          message: 'Authentication is required',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    const { createUserCredentialService } = await import('../services/userCredentialService');
+    const userCredentialService = createUserCredentialService();
+    
+    const credentials = await userCredentialService.listRetailerCredentials(req.user.id);
+
+    res.status(200).json({
+      credentials,
+      summary: {
+        total: credentials.length,
+        userEncrypted: credentials.filter(c => c.encryptionType === 'user-specific').length,
+        globalEncrypted: credentials.filter(c => c.encryptionType === 'global').length
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Add payment method
  */
 export const addPaymentMethod = async (req: Request, res: Response, next: NextFunction): Promise<void> => {

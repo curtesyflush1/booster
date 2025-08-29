@@ -1,5 +1,6 @@
 // Main exports for the encryption module
 export { AESEncryptionService } from './aesEncryption';
+export { UserEncryptionService } from './userEncryption';
 export { HashingService } from './hashingService';
 export { DataSanitizer } from './dataSanitizer';
 export { EncryptionKeyManager, generateEncryptionKey, resetEncryptionManager } from './keyManager';

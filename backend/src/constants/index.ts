@@ -21,6 +21,7 @@ export * from './webhooks';
 export const DEFAULT_VALUES = {
   DEFAULT_PAGE: 1,
   DEFAULT_LIMIT: 20,
+  MAX_QUERY_LIMIT: 100, // Maximum records that can be returned in a single query
   SMS_MONTHLY_LIMIT_PRO: 100,
   DEFAULT_QUIET_START_TIME: '22:00',
   DEFAULT_QUIET_END_TIME: '08:00',
@@ -38,6 +39,8 @@ export const DEFAULT_VALUES = {
 
 export const PORTS = {
   API_PORT: 3000,
+  DEFAULT_API_PORT: 3000,
+  DEFAULT_FRONTEND_PORT: 5173,
   REDIS_PORT: 6379,
   POSTGRES_PORT: 5432,
 } as const;
@@ -69,6 +72,9 @@ export const TIME_PERIODS = {
   VERIFICATION_CODE_EXPIRY_MINUTES: 10,
   ALERT_CLEANUP_DEFAULT_DAYS: 90,
   DEFAULT_HISTORY_DAYS: 30,
+  PRICE_HISTORY_RETENTION_DAYS: 365,
+  ALERT_DELIVERY_RETENTION_DAYS: 90,
+  SYSTEM_HEALTH_RETENTION_DAYS: 30,
 } as const;
 
 export const HTTP_TIMEOUTS = {
@@ -98,4 +104,12 @@ export const MONITORING_THRESHOLDS = {
   HIGH_DISK_THRESHOLD: 90, // 90% disk usage
   HIGH_CPU_THRESHOLD: 80, // 80% CPU usage
   ERROR_RATE_THRESHOLD: 5, // 5% error rate
+} as const;
+
+export const DATABASE_CONSTANTS = {
+  PRODUCT_AVAILABILITY_TABLE: 'product_availability',
+  RETAILERS_TABLE: 'retailers',
+  AVAILABILITY_ID_ALIAS: 'availability_id',
+  RETAILER_NAME_ALIAS: 'retailer_name',
+  RETAILER_SLUG_ALIAS: 'retailer_slug',
 } as const;

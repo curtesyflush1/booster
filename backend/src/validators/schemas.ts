@@ -919,6 +919,56 @@ export const userSchemas = {
     })
   },
 
+  // User-specific encryption schemas
+  addRetailerCredentialSecure: Joi.object({
+    retailer: Joi.string().min(1).max(50).required().messages({
+      'string.min': 'Retailer name cannot be empty',
+      'string.max': 'Retailer name must not exceed 50 characters',
+      'any.required': 'Retailer is required'
+    }),
+    username: Joi.string().min(1).max(100).required().messages({
+      'string.min': 'Username cannot be empty',
+      'string.max': 'Username must not exceed 100 characters',
+      'any.required': 'Username is required'
+    }),
+    retailerPassword: Joi.string().min(1).max(500).required().messages({
+      'string.min': 'Retailer password cannot be empty',
+      'string.max': 'Retailer password must not exceed 500 characters',
+      'any.required': 'Retailer password is required'
+    }),
+    userPassword: Joi.string().min(8).max(128).required().messages({
+      'string.min': 'User password must be at least 8 characters',
+      'string.max': 'User password must not exceed 128 characters',
+      'any.required': 'User password is required for secure encryption'
+    }),
+    twoFactorEnabled: Joi.boolean().optional().default(false)
+  }),
+
+  getRetailerCredentialSecure: {
+    params: Joi.object({
+      retailer: Joi.string().min(1).max(50).required().messages({
+        'string.min': 'Retailer name cannot be empty',
+        'string.max': 'Retailer name must not exceed 50 characters',
+        'any.required': 'Retailer is required'
+      })
+    }),
+    body: Joi.object({
+      userPassword: Joi.string().min(8).max(128).required().messages({
+        'string.min': 'User password must be at least 8 characters',
+        'string.max': 'User password must not exceed 128 characters',
+        'any.required': 'User password is required for secure decryption'
+      })
+    })
+  },
+
+  migrateCredentialsToUserEncryption: Joi.object({
+    userPassword: Joi.string().min(8).max(128).required().messages({
+      'string.min': 'User password must be at least 8 characters',
+      'string.max': 'User password must not exceed 128 characters',
+      'any.required': 'User password is required for credential migration'
+    })
+  }),
+
   addPaymentMethod: Joi.object({
     type: Joi.string().valid('credit_card', 'debit_card', 'paypal').required().messages({
       'any.only': 'Payment method type must be credit_card, debit_card, or paypal',

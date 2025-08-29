@@ -5,15 +5,71 @@ import { validateRequest } from '../middleware/validation';
 import { body, param } from 'express-validator';
 import { WEBHOOK_CONFIG, HTTP_STATUS } from '../constants';
 
-interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
+// Define proper webhook interfaces
+interface WebhookData {
+  id: string;
+  userId: string;
+  name: string;
+  url: string;
+  secret?: string;
+  isActive: boolean;
+  events: string[];
+  headers?: Record<string, string>;
+  retryConfig: {
+    maxRetries: number;
+    retryDelay: number;
+    backoffMultiplier: number;
   };
+  filters: Record<string, any>;
+  totalCalls?: number;
+  successfulCalls?: number;
+  failedCalls?: number;
+  lastTriggered?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+interface AuthenticatedUser {
+  id: string;
+  email: string;
+  role: string;
+}
+
+interface AuthenticatedRequest extends Request {
+  user?: AuthenticatedUser;
+  correlationId?: string;
 }
 
 export class WebhookController {
+  /**
+   * Check if user can access webhook (owner or admin)
+   */
+  private static async checkWebhookAccess(
+    webhookId: string, 
+    user: AuthenticatedUser | undefined,
+    res: Response
+  ): Promise<WebhookData | null> {
+    const webhook = await webhookService.getWebhook(webhookId);
+    
+    if (!webhook) {
+      res.status(HTTP_STATUS.NOT_FOUND).json({ 
+        error: 'Webhook not found',
+        correlationId: (res.req as any).correlationId 
+      });
+      return null;
+    }
+
+    if (webhook.userId !== user?.id && user?.role !== 'admin') {
+      res.status(HTTP_STATUS.FORBIDDEN).json({ 
+        error: 'Access denied',
+        correlationId: (res.req as any).correlationId 
+      });
+      return null;
+    }
+
+    return webhook;
+  }
+
   // Validation middleware
   static validateWebhookConfig = [
     body('name').isString().notEmpty().withMessage('Webhook name is required'),
@@ -85,10 +141,16 @@ export class WebhookController {
         }
       });
     } catch (error) {
-      logger.error('Failed to create webhook:', error);
+      logger.error('Failed to create webhook:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        userId,
+        correlationId: req.correlationId
+      });
       res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
         error: 'Failed to create webhook',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: error instanceof Error ? error.message : 'Unknown error',
+        correlationId: req.correlationId
       });
     }
   }
@@ -102,13 +164,19 @@ export class WebhookController {
       const webhook = await webhookService.getWebhook(webhookId);
 
       if (!webhook) {
-        res.status(404).json({ error: 'Webhook not found' });
+        res.status(HTTP_STATUS.NOT_FOUND).json({ 
+          error: 'Webhook not found',
+          correlationId: req.correlationId 
+        });
         return;
       }
 
       // Only return webhook if user owns it or is admin
       if (webhook.userId !== req.user?.id && req.user?.role !== 'admin') {
-        res.status(403).json({ error: 'Access denied' });
+        res.status(HTTP_STATUS.FORBIDDEN).json({ 
+          error: 'Access denied',
+          correlationId: req.correlationId 
+        });
         return;
       }
 

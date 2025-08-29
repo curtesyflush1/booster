@@ -2,8 +2,8 @@ import { Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 import { AuthenticatedRequest } from '../types/express';
 import { DashboardService } from '../services/dashboardService';
-import { handleControllerError, sendSuccessResponse, sendErrorResponse } from '../utils/controllerHelpers';
-import { DASHBOARD_TIME_WINDOWS } from '../constants';
+import { handleControllerError, sendSuccessResponse } from '../utils/controllerHelpers';
+import { parseProductIds, parseSinceDate } from '../utils/dashboardValidation';
 
 /**
  * Get comprehensive dashboard data for the authenticated user
@@ -25,6 +25,49 @@ export const getDashboardData = async (req: AuthenticatedRequest, res: Response,
     sendSuccessResponse(res, { dashboard: dashboardData });
   } catch (error) {
     handleControllerError(error, req, next, 'getDashboardData');
+  }
+};
+
+/**
+ * Get consolidated dashboard data including all dashboard, portfolio, and insights data in a single call
+ * This reduces the number of API requests from 3 to 1 for better performance
+ */
+export const getConsolidatedDashboardData = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  const startTime = Date.now();
+  
+  try {
+    const userId = req.user.id;
+    const { productIds } = req.query;
+
+    // Parse optional product IDs for insights with proper validation
+    const targetProductIds = parseProductIds(productIds);
+
+    // Fetch all dashboard data in parallel for optimal performance
+    const [dashboardData, portfolioData, insightsData] = await Promise.all([
+      DashboardService.getDashboardData(userId),
+      DashboardService.getPortfolioData(userId),
+      DashboardService.getPredictiveInsights(userId, targetProductIds)
+    ]);
+
+    const consolidatedData = {
+      dashboard: dashboardData,
+      portfolio: portfolioData,
+      insights: insightsData,
+      timestamp: new Date().toISOString()
+    };
+
+    logger.info('Consolidated dashboard data retrieved', {
+      userId,
+      watchCount: dashboardData.stats.totalWatches,
+      portfolioItems: portfolioData.totalItems,
+      insightsCount: insightsData.length,
+      duration: Date.now() - startTime,
+      correlationId: req.headers['x-correlation-id']
+    });
+
+    sendSuccessResponse(res, consolidatedData);
+  } catch (error) {
+    handleControllerError(error, req, next, 'getConsolidatedDashboardData');
   }
 };
 
@@ -92,32 +135,3 @@ export const getDashboardUpdates = async (req: AuthenticatedRequest, res: Respon
   }
 };
 
-// Helper functions for input parsing and validation
-const parseProductIds = (productIds: unknown): string[] | undefined => {
-  if (!productIds || typeof productIds !== 'string') {
-    return undefined;
-  }
-  
-  return productIds.split(',').filter(id => id.trim().length > 0);
-};
-
-const parseSinceDate = (since: unknown): Date | undefined => {
-  if (!since || typeof since !== 'string') {
-    return undefined;
-  }
-  
-  const date = new Date(since);
-  if (isNaN(date.getTime())) {
-    return undefined;
-  }
-  
-  // Validate date is reasonable (not in future, not more than 30 days ago)
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - DASHBOARD_TIME_WINDOWS.UPDATES_MAX_AGE);
-  
-  if (date > now || date < thirtyDaysAgo) {
-    return undefined;
-  }
-  
-  return date;
-};

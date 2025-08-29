@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { CommunityController } from '../controllers/communityController';
 import { authenticate } from '../middleware/auth';
 import { generalRateLimit } from '../middleware/rateLimiter';
+import { sanitizeParameters } from '../middleware/parameterSanitization';
 import { validateJoiBody, validateJoiQuery, validateJoiParams, validateJoi, communitySchemas } from '../validators';
 
 const router = Router();
@@ -39,6 +40,7 @@ router.get('/testimonials',
  * @access Private
  */
 router.put('/testimonials/:id', 
+  sanitizeParameters,
   validateJoi(communitySchemas.updateTestimonial), 
   CommunityController.updateTestimonial
 );
@@ -49,6 +51,7 @@ router.put('/testimonials/:id',
  * @access Private
  */
 router.delete('/testimonials/:id', 
+  sanitizeParameters,
   validateJoi(communitySchemas.deleteTestimonial), 
   CommunityController.deleteTestimonial
 );
@@ -80,6 +83,7 @@ router.get('/posts',
  * @access Private
  */
 router.post('/posts/:id/like', 
+  sanitizeParameters,
   validateJoi(communitySchemas.togglePostLike), 
   CommunityController.togglePostLike
 );
@@ -90,6 +94,7 @@ router.post('/posts/:id/like',
  * @access Private
  */
 router.post('/posts/:id/comments', 
+  sanitizeParameters,
   validateJoi(communitySchemas.addComment), 
   CommunityController.addComment
 );
@@ -100,6 +105,7 @@ router.post('/posts/:id/comments',
  * @access Private
  */
 router.get('/posts/:id/comments', 
+  sanitizeParameters,
   validateJoi(communitySchemas.getPostComments), 
   CommunityController.getPostComments
 );

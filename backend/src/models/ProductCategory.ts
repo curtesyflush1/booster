@@ -116,7 +116,8 @@ export class ProductCategory extends BaseModel<IProductCategory> {
 
   // Get child categories
   static async getChildCategories(parentId: string): Promise<IProductCategory[]> {
-    return this.findBy<IProductCategory>({ parent_id: parentId });
+    const result = await this.findBy<IProductCategory>({ parent_id: parentId });
+    return result.data;
   }
 
   // Get category tree starting from a specific category

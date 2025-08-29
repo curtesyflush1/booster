@@ -106,6 +106,37 @@ router.delete('/retailer-credentials/:retailer', sanitizeParameters, generalRate
 router.post('/retailer-credentials/:retailer/verify', sanitizeParameters, generalRateLimit, userController.verifyRetailerCredentials);
 
 /**
+ * @route   POST /api/users/retailer-credentials/secure
+ * @desc    Add retailer credentials with user-specific encryption
+ * @access  Private
+ */
+router.post('/retailer-credentials/secure', generalRateLimit, validateBody(userSchemas.addRetailerCredentialSecure), userController.storeRetailerCredentialsSecure);
+
+/**
+ * @route   POST /api/users/retailer-credentials/secure/:retailer
+ * @desc    Get retailer credentials with user-specific decryption
+ * @access  Private
+ */
+router.post('/retailer-credentials/secure/:retailer', sanitizeParameters, generalRateLimit, validateJoi({
+  params: userSchemas.getRetailerCredentialSecure.params,
+  body: userSchemas.getRetailerCredentialSecure.body
+}), userController.getRetailerCredentialsSecure);
+
+/**
+ * @route   GET /api/users/retailer-credentials/secure
+ * @desc    List retailer credentials with encryption type information
+ * @access  Private
+ */
+router.get('/retailer-credentials/secure', userController.listRetailerCredentialsSecure);
+
+/**
+ * @route   POST /api/users/retailer-credentials/migrate
+ * @desc    Migrate existing credentials to user-specific encryption
+ * @access  Private
+ */
+router.post('/retailer-credentials/migrate', generalRateLimit, validateBody(userSchemas.migrateCredentialsToUserEncryption), userController.migrateCredentialsToUserEncryption);
+
+/**
  * @route   POST /api/users/payment-methods
  * @desc    Add payment method
  * @access  Private

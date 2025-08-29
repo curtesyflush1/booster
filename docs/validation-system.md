@@ -237,15 +237,23 @@ const productValidation = {
 ```
 
 ### Query Parameter Validation
+
+**Pagination parameters are mandatory for all list endpoints** as part of the pagination enforcement system:
+
 ```typescript
 const queryValidation = {
+  // Mandatory pagination parameters
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(20),
+  
+  // Optional sorting and filtering
   sort: Joi.string().valid('name', 'price', 'created_at').default('created_at'),
   order: Joi.string().valid('asc', 'desc').default('desc'),
   search: Joi.string().min(1).max(100).optional()
 };
 ```
+
+See [Pagination System Documentation](pagination-system.md) for complete pagination implementation details.
 
 ### UUID Parameter Validation
 ```typescript
@@ -498,6 +506,61 @@ const optimizedValidation = {
 };
 ```
 
+## Pagination Integration
+
+The validation system works closely with the pagination enforcement system to ensure all list endpoints use proper pagination:
+
+### Pagination Validation Schemas
+```typescript
+// Standard pagination schema used across all list endpoints
+export const paginationSchema = Joi.object({
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(20)
+});
+
+// Extended pagination with sorting
+export const paginationWithSortSchema = paginationSchema.keys({
+  sort: Joi.string().valid('name', 'created_at', 'updated_at').default('created_at'),
+  order: Joi.string().valid('asc', 'desc').default('desc')
+});
+```
+
+### Pagination Middleware Integration
+```typescript
+// Combines validation with pagination enforcement
+router.get('/api/products',
+  enforcePagination,                    // 1. Enforce pagination parameters
+  validateJoiQuery(productSchemas.list.query), // 2. Validate all query parameters
+  productController.list                // 3. Process request
+);
+```
+
+### Error Handling
+Pagination validation errors are handled consistently with other validation errors:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Request validation failed",
+    "details": [
+      {
+        "field": "query.page",
+        "message": "\"page\" must be greater than or equal to 1",
+        "value": 0
+      },
+      {
+        "field": "query.limit",
+        "message": "\"limit\" must be less than or equal to 100",
+        "value": 150
+      }
+    ]
+  }
+}
+```
+
+See [Pagination System Documentation](pagination-system.md) for complete pagination implementation details.
+
 ## Future Enhancements
 
 ### Planned Improvements
@@ -505,11 +568,13 @@ const optimizedValidation = {
 - **Custom Validators**: Support for business-specific validation rules
 - **Async Validation**: Support for database-dependent validation
 - **Schema Versioning**: Handle API versioning with schema evolution
+- **Pagination Schema Templates**: Reusable pagination schemas for different data types
 
 ### Integration Opportunities
 - **OpenAPI Integration**: Generate OpenAPI specs from Joi schemas
 - **GraphQL Support**: Convert Joi schemas to GraphQL input types
 - **Database Validation**: Sync Joi schemas with database constraints
 - **Client-Side Validation**: Generate client validation from server schemas
+- **Pagination UI Generation**: Generate pagination controls from schemas
 
-This comprehensive validation system provides a robust, performant, and maintainable foundation for all API input validation in BoosterBeacon, ensuring data integrity and security across the entire application.
+This comprehensive validation system provides a robust, performant, and maintainable foundation for all API input validation in BoosterBeacon, ensuring data integrity and security across the entire application while working seamlessly with the pagination enforcement system.

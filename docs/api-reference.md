@@ -135,6 +135,9 @@ See [Error Logging System Documentation](error-logging.md) for complete details.
 ```
 
 ### Paginated Response
+
+**All endpoints returning multiple records use mandatory pagination** to prevent performance issues:
+
 ```json
 {
   "success": true,
@@ -151,6 +154,18 @@ See [Error Logging System Documentation](error-logging.md) for complete details.
   "timestamp": "2024-08-26T14:30:22Z"
 }
 ```
+
+#### Pagination Parameters
+- `page` (integer, optional): Page number (default: 1, min: 1)
+- `limit` (integer, optional): Items per page (default: 20, min: 1, max: 100)
+
+#### Pagination Enforcement
+- **Mandatory**: All list endpoints require pagination parameters
+- **Performance Protection**: Prevents memory issues with large datasets
+- **Automatic Validation**: Invalid pagination parameters return 400 error
+- **Consistent Format**: All paginated responses follow the same structure
+
+See [Pagination Enforcement Documentation](../backend/docs/PAGINATION_ENFORCEMENT.md) for implementation details.
 
 ## Core Endpoints
 
@@ -1605,6 +1620,187 @@ DELETE /api/v1/watches/packs/:packId
 ```
 **Requires:** Admin authentication
 
+## Key Management Service (KMS) Endpoints
+
+### Get KMS Health Status
+```http
+GET /api/admin/kms/health
+```
+**Authentication:** Required (Admin)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "provider": "aws",
+    "healthy": true,
+    "lastChecked": "2025-01-15T10:30:00Z",
+    "responseTime": 150
+  }
+}
+```
+
+### Get Key Metadata
+```http
+GET /api/admin/kms/key/metadata
+```
+**Authentication:** Required (Admin)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "keyId": "default",
+    "description": "BoosterBeacon encryption key",
+    "createdAt": "2025-01-01T00:00:00Z",
+    "lastRotated": "2025-01-10T00:00:00Z",
+    "enabled": true,
+    "keyUsage": "ENCRYPT_DECRYPT",
+    "keySpec": "AES-256"
+  }
+}
+```
+
+### Rotate Encryption Key
+```http
+POST /api/admin/kms/key/rotate
+```
+**Authentication:** Required (Admin)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Encryption key rotated successfully",
+  "data": {
+    "newKeyVersion": "default-1642204800000"
+  }
+}
+```
+
+### Create New Encryption Key
+```http
+POST /api/admin/kms/key/create
+```
+**Authentication:** Required (Admin)
+
+**Request Body:**
+```json
+{
+  "keyId": "new-key-id",
+  "description": "New encryption key for specific purpose",
+  "keySpec": "AES_256"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Encryption key created successfully",
+  "data": {
+    "keyId": "new-key-id",
+    "arn": "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+  }
+}
+```
+
+### Get KMS Configuration
+```http
+GET /api/admin/kms/config
+```
+**Authentication:** Required (Admin)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "provider": "aws",
+    "keyId": "default",
+    "region": "us-east-1",
+    "timeout": 10000,
+    "retryAttempts": 3
+  }
+}
+```
+
+### Test KMS Configuration
+```http
+POST /api/admin/kms/config/test
+```
+**Authentication:** Required (Admin)
+
+**Request Body:**
+```json
+{
+  "provider": "aws",
+  "keyId": "test-key",
+  "region": "us-east-1",
+  "credentials": {
+    "accessKeyId": "AKIA...",
+    "secretAccessKey": "..."
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "KMS configuration test passed",
+  "data": {
+    "provider": "aws",
+    "healthy": true,
+    "responseTime": 245
+  }
+}
+```
+
+### Update KMS Configuration
+```http
+PUT /api/admin/kms/config
+```
+**Authentication:** Required (Admin)
+
+**Request Body:**
+```json
+{
+  "provider": "aws",
+  "keyId": "default",
+  "region": "us-east-1",
+  "timeout": 15000,
+  "retryAttempts": 5,
+  "credentials": {
+    "accessKeyId": "AKIA...",
+    "secretAccessKey": "..."
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "KMS configuration updated successfully",
+  "data": {
+    "provider": "aws",
+    "keyId": "default",
+    "region": "us-east-1"
+  }
+}
+```
+
+**Features:**
+- **Multi-Provider Support**: AWS KMS, Google Cloud KMS, HashiCorp Vault, Environment Variables
+- **Enterprise Security**: AES-256-GCM authenticated encryption
+- **Key Rotation**: Manual and automatic key rotation capabilities
+- **Performance Optimization**: 5-minute key caching with automatic expiry
+- **Audit Logging**: Comprehensive logging of all key operations
+- **Rate Limiting**: 50 requests per 15 minutes per IP
+
 ## Error Codes
 
 | Code | Description |
@@ -2274,3 +2470,143 @@ GET /api/v1/ml/portfolio/analysis
 - Health monitoring and metrics
 - CSV import/export capabilities
 - Comprehensive validation and error handling
+#
+# Enhanced Security Endpoints
+
+### Per-User Encrypted Retailer Credentials
+
+BoosterBeacon provides enhanced security for retailer credentials through per-user encryption, where each user's credentials are encrypted using keys derived from their password.
+
+#### Store Credentials with User-Specific Encryption
+
+```http
+POST /api/users/retailer-credentials/secure
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+
+{
+  "retailer": "bestbuy",
+  "username": "user@example.com",
+  "retailerPassword": "retailer_password",
+  "userPassword": "user_login_password",
+  "twoFactorEnabled": true
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Retailer credentials added successfully with enhanced security",
+  "retailer": "bestbuy",
+  "encryptionType": "user-specific"
+}
+```
+
+#### Retrieve Credentials with User-Specific Decryption
+
+```http
+POST /api/users/retailer-credentials/secure/:retailer
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+
+{
+  "userPassword": "user_login_password"
+}
+```
+
+**Response:**
+```json
+{
+  "retailer": "bestbuy",
+  "username": "user@example.com",
+  "twoFactorEnabled": true,
+  "encryptionType": "user-specific",
+  "message": "Credentials retrieved successfully"
+}
+```
+
+#### List Credentials with Encryption Type Information
+
+```http
+GET /api/users/retailer-credentials/secure
+Authorization: Bearer <jwt_token>
+```
+
+**Response:**
+```json
+{
+  "credentials": [
+    {
+      "retailer": "bestbuy",
+      "username": "user@example.com",
+      "twoFactorEnabled": true,
+      "lastVerified": "2023-12-01T10:00:00Z",
+      "isActive": true,
+      "encryptionType": "user-specific"
+    },
+    {
+      "retailer": "walmart",
+      "username": "user2@example.com",
+      "twoFactorEnabled": false,
+      "lastVerified": "2023-11-15T14:30:00Z",
+      "isActive": true,
+      "encryptionType": "global"
+    }
+  ],
+  "summary": {
+    "total": 2,
+    "userEncrypted": 1,
+    "globalEncrypted": 1
+  }
+}
+```
+
+#### Migrate Existing Credentials to User-Specific Encryption
+
+```http
+POST /api/users/retailer-credentials/migrate
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+
+{
+  "userPassword": "user_login_password"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Credential migration completed",
+  "results": {
+    "migrated": ["walmart", "costco"],
+    "skipped": ["bestbuy"],
+    "failed": []
+  },
+  "summary": {
+    "totalProcessed": 3,
+    "successfullyMigrated": 2,
+    "alreadySecure": 1,
+    "failedMigration": 0
+  }
+}
+```
+
+### Security Benefits
+
+The per-user encryption system provides several security advantages:
+
+1. **Database Compromise Protection**: Even if the database is compromised, retailer credentials remain encrypted with user-specific keys
+2. **Key Isolation**: Each user has unique encryption keys derived from their password
+3. **Forward Security**: Password changes can trigger re-encryption with new keys
+4. **Zero Trust Architecture**: No shared encryption keys across the system
+
+### Migration Strategy
+
+Users can gradually migrate from global encryption to user-specific encryption:
+
+1. **Backward Compatibility**: Existing global-encrypted credentials continue to work
+2. **Automatic Detection**: System automatically detects encryption type when retrieving credentials
+3. **Seamless Migration**: One-click migration of all existing credentials
+4. **Mixed Support**: Users can have both global and user-encrypted credentials simultaneously
+
+For more details, see the [Per-User Encryption Documentation](per-user-encryption.md).

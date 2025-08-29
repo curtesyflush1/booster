@@ -2,14 +2,14 @@ import { Router } from 'express';
 import { WebhookController } from '../controllers/webhookController';
 import { authenticate } from '../middleware/auth';
 import { generalRateLimit } from '../middleware/rateLimiter';
+import { sanitizeParameters } from '../middleware/parameterSanitization';
 
 const router = Router();
 
-// Apply authentication to all webhook routes
+// Apply middleware to all webhook routes
 router.use(authenticate);
-
-// Apply rate limiting
 router.use(generalRateLimit);
+router.use(sanitizeParameters);
 
 /**
  * @route POST /api/webhooks
@@ -37,7 +37,7 @@ router.get('/:webhookId', WebhookController.validateWebhookId, WebhookController
  * @desc Update webhook
  * @access Private
  */
-router.put('/:webhookId', WebhookController.validateWebhookId, WebhookController.updateWebhook);
+router.put('/:webhookId', WebhookController.validateWebhookId, WebhookController.validateWebhookConfig, WebhookController.updateWebhook);
 
 /**
  * @route DELETE /api/webhooks/:webhookId

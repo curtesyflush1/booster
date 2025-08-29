@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { 
   getDashboardData, 
+  getConsolidatedDashboardData,
   getPredictiveInsights, 
   getPortfolioData, 
   getDashboardUpdates 
@@ -417,6 +418,119 @@ describe('Dashboard Controller', () => {
       expect(mockRes.status).toHaveBeenCalledWith(200);
       const call = (mockRes.json as jest.Mock).mock.calls[0][0];
       expect(call.updates.newAlerts).toEqual([]);
+    });
+  });
+
+  describe('getConsolidatedDashboardData', () => {
+    it('should return consolidated dashboard data with all components', async () => {
+      // Mock all the required data
+      MockedUser.getUserStats.mockResolvedValue({
+        totalUsers: 100,
+        activeUsers: 80
+      });
+
+      MockedWatch.getUserWatchStats.mockResolvedValue({
+        active: 5,
+        topProducts: [
+          { product_id: 'prod1', alert_count: 10 },
+          { product_id: 'prod2', alert_count: 8 }
+        ]
+      });
+
+      MockedAlert.getUserAlertStats.mockResolvedValue({
+        total: 25,
+        unread: 3,
+        clickThroughRate: 75,
+        recentAlerts: 5,
+        byType: { restock: 15, price_drop: 10 }
+      });
+
+      MockedAlert.findByUserId.mockResolvedValue({
+        data: [
+          { id: 'alert1', product_id: 'prod1', created_at: new Date() },
+          { id: 'alert2', product_id: 'prod2', created_at: new Date() }
+        ],
+        total: 2,
+        page: 1,
+        limit: 10
+      });
+
+      MockedAlert.findByProductId.mockResolvedValue([]);
+      MockedProduct.findById.mockResolvedValue({
+        id: 'prod1',
+        name: 'Test Product',
+        msrp: 100
+      });
+
+      await getConsolidatedDashboardData(mockReq as AuthenticatedRequest, mockRes as Response, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        data: expect.objectContaining({
+          dashboard: expect.objectContaining({
+            stats: expect.objectContaining({
+              totalWatches: 5,
+              unreadAlerts: 3,
+              totalAlerts: 25
+            }),
+            recentAlerts: expect.any(Array),
+            watchedProducts: expect.any(Array)
+          }),
+          portfolio: expect.objectContaining({
+            totalItems: 5,
+            performance: expect.objectContaining({
+              alertsGenerated: 25
+            })
+          }),
+          insights: expect.any(Array),
+          timestamp: expect.any(String)
+        })
+      });
+    });
+
+    it('should handle productIds query parameter for insights', async () => {
+      mockReq.query = { productIds: 'prod1,prod2' };
+
+      // Mock required data
+      MockedUser.getUserStats.mockResolvedValue({});
+      MockedWatch.getUserWatchStats.mockResolvedValue({
+        active: 0,
+        topProducts: []
+      });
+      MockedAlert.getUserAlertStats.mockResolvedValue({
+        total: 0,
+        unread: 0,
+        clickThroughRate: 0,
+        recentAlerts: 0,
+        byType: {}
+      });
+      MockedAlert.findByUserId.mockResolvedValue({
+        data: [],
+        total: 0,
+        page: 1,
+        limit: 10
+      });
+      MockedProduct.findById.mockResolvedValue({
+        id: 'prod1',
+        name: 'Test Product',
+        msrp: 100
+      });
+      MockedAlert.findByProductId.mockResolvedValue([]);
+
+      await getConsolidatedDashboardData(mockReq as AuthenticatedRequest, mockRes as Response, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      const responseData = (mockRes.json as jest.Mock).mock.calls[0][0].data;
+      expect(responseData.insights).toEqual(expect.any(Array));
+    });
+
+    it('should handle errors in consolidated data fetch', async () => {
+      MockedUser.getUserStats.mockRejectedValue(new Error('Database error'));
+
+      await getConsolidatedDashboardData(mockReq as AuthenticatedRequest, mockRes as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
     });
   });
 

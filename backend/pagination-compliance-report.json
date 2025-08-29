@@ -1,0 +1,1250 @@
+{
+  "summary": {
+    "totalFiles": 193,
+    "totalIssues": 154,
+    "highSeverity": 3,
+    "mediumSeverity": 139,
+    "lowSeverity": 12
+  },
+  "issues": [
+    {
+      "file": "/opt/booster/backend/src/config/database.ts",
+      "line": 87,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "export const db: Knex = knex(config);",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/controllers/communityController.ts",
+      "line": 104,
+      "issue": "Potential array operation on paginated result",
+      "code": "testimonials: result.testimonials.map(t => ({",
+      "severity": "low",
+      "suggestion": "Ensure you are operating on result.data, not the paginated result object"
+    },
+    {
+      "file": "/opt/booster/backend/src/controllers/communityController.ts",
+      "line": 296,
+      "issue": "Potential array operation on paginated result",
+      "code": "posts: result.posts.map(p => ({",
+      "severity": "low",
+      "suggestion": "Ensure you are operating on result.data, not the paginated result object"
+    },
+    {
+      "file": "/opt/booster/backend/src/controllers/communityController.ts",
+      "line": 422,
+      "issue": "Potential array operation on paginated result",
+      "code": "comments: result.comments.map(c => ({",
+      "severity": "low",
+      "suggestion": "Ensure you are operating on result.data, not the paginated result object"
+    },
+    {
+      "file": "/opt/booster/backend/src/controllers/mlController.ts",
+      "line": 194,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('products.*')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/controllers/mlController.ts",
+      "line": 251,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('products.*')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/controllers/retailerController.ts",
+      "line": 127,
+      "issue": "Potential array operation on paginated result",
+      "code": "averageResponseTime: healthStatuses.reduce((sum, h) => sum + h.responseTime, 0) / healthStatuses.length,",
+      "severity": "low",
+      "suggestion": "Ensure you are operating on result.data, not the paginated result object"
+    },
+    {
+      "file": "/opt/booster/backend/src/controllers/retailerController.ts",
+      "line": 157,
+      "issue": "Potential array operation on paginated result",
+      "code": "averageResponseTime: metrics.reduce((sum, m) => sum + m.averageResponseTime, 0) / metrics.length,",
+      "severity": "low",
+      "suggestion": "Ensure you are operating on result.data, not the paginated result object"
+    },
+    {
+      "file": "/opt/booster/backend/src/controllers/watchController.ts",
+      "line": 463,
+      "issue": "Potential array operation on paginated result",
+      "code": "successResponse(res, result, `Bulk import completed. Created ${createdWatches.length} watches.`);",
+      "severity": "low",
+      "suggestion": "Ensure you are operating on result.data, not the paginated result object"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/Alert.ts",
+      "line": 295,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('type')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/Alert.ts",
+      "line": 302,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('status')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/Alert.ts",
+      "line": 359,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(this.db.raw('EXTRACT(EPOCH FROM (sent_at - created_at)) as delivery_seconds'))",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/Alert.ts",
+      "line": 369,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('type')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/Alert.ts",
+      "line": 375,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('priority')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/BaseModel.ts",
+      "line": 109,
+      "issue": "Using deprecated findByLegacy method",
+      "code": "static async findByLegacy<T>(criteria: Partial<T>): Promise<T[]> {",
+      "severity": "medium",
+      "suggestion": "Migrate to paginated findBy() method"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/BaseModel.ts",
+      "line": 110,
+      "issue": "Using deprecated findByLegacy method",
+      "code": "logger.warn(`DEPRECATED: Using findByLegacy for ${this.name}. Use findBy() with pagination instead.`);",
+      "severity": "medium",
+      "suggestion": "Migrate to paginated findBy() method"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/Product.ts",
+      "line": 393,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(`${this.getTableName()}.*`)",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/Product.ts",
+      "line": 400,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(`${this.getTableName()}.*`,",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/Product.ts",
+      "line": 464,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/Product.ts",
+      "line": 495,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/Product.ts",
+      "line": 530,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('category_id')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/Product.ts",
+      "line": 537,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('series')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/ProductCategory.ts",
+      "line": 173,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/UserWatchPack.ts",
+      "line": 268,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/UserWatchPack.ts",
+      "line": 324,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(this.db.raw('SUM(jsonb_array_length(watch_packs.product_ids)) as total_products'))",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/UserWatchPack.ts",
+      "line": 353,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('user_id')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/UserWatchPack.ts",
+      "line": 402,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "this.select('id')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/Watch.ts",
+      "line": 261,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('product_id', 'alert_count')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/Watch.ts",
+      "line": 301,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('product_id')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/Watch.ts",
+      "line": 353,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "this.select('id')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/Watch.ts",
+      "line": 367,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "this.select('id').from('users');",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/models/WatchPack.ts",
+      "line": 328,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(this.db.raw('AVG(jsonb_array_length(product_ids)) as avg_products'));",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 26,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "await knex('system_health').insert({",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 41,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "return knex('system_health')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 42,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('*')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 44,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "this.select(knex.raw('MAX(id)'))",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 61,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "await knex('system_metrics').insert({",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 83,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "knex('system_metrics')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 88,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "knex('system_metrics')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 93,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "knex('system_metrics')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 98,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "knex('system_metrics')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 103,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "knex('system_metrics')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 133,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "knex('users')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 138,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "knex('users')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 142,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "knex('users')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 146,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "knex('users')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 175,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "knex('alerts')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 179,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "knex('alerts')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 183,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "knex('alerts')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 187,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "knex('alerts')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 189,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(knex.raw('AVG(EXTRACT(EPOCH FROM (sent_at - created_at))) as avg_seconds'))",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 213,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "knex('ml_models')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 217,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "knex('ml_models')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/repositories/SystemRepository.ts",
+      "line": 221,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "knex('ml_models')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/routes/admin.ts",
+      "line": 49,
+      "issue": "Route may need pagination middleware",
+      "code": "router.get('/users', requirePermission(Permission.USER_VIEW), validateJoiQuery(adminSchemas.getUsers.query), adminController.getUsers);",
+      "severity": "medium",
+      "suggestion": "Add enforcePagination middleware for routes returning multiple records"
+    },
+    {
+      "file": "/opt/booster/backend/src/routes/admin.ts",
+      "line": 52,
+      "issue": "Route may need pagination middleware",
+      "code": "router.get('/users/stats',",
+      "severity": "medium",
+      "suggestion": "Add enforcePagination middleware for routes returning multiple records"
+    },
+    {
+      "file": "/opt/booster/backend/src/routes/admin.ts",
+      "line": 58,
+      "issue": "Route may need pagination middleware",
+      "code": "router.get('/users/:userId', sanitizeParameters, requirePermission(Permission.USER_VIEW), adminController.getUserDetails);",
+      "severity": "medium",
+      "suggestion": "Add enforcePagination middleware for routes returning multiple records"
+    },
+    {
+      "file": "/opt/booster/backend/src/routes/admin.ts",
+      "line": 136,
+      "issue": "Route may need pagination middleware",
+      "code": "router.get('/rbac/users/:userId/permissions',",
+      "severity": "medium",
+      "suggestion": "Add enforcePagination middleware for routes returning multiple records"
+    },
+    {
+      "file": "/opt/booster/backend/src/routes/mlRoutes.ts",
+      "line": 24,
+      "issue": "Route may need pagination middleware",
+      "code": "router.get('/products/:productId/price-prediction', sanitizeParameters, validate(mlSchemas.getPricePrediction), MLController.getPricePrediction);",
+      "severity": "medium",
+      "suggestion": "Add enforcePagination middleware for routes returning multiple records"
+    },
+    {
+      "file": "/opt/booster/backend/src/routes/mlRoutes.ts",
+      "line": 25,
+      "issue": "Route may need pagination middleware",
+      "code": "router.get('/products/:productId/sellout-risk', sanitizeParameters, validate(mlSchemas.getSelloutRisk), MLController.getSelloutRisk);",
+      "severity": "medium",
+      "suggestion": "Add enforcePagination middleware for routes returning multiple records"
+    },
+    {
+      "file": "/opt/booster/backend/src/routes/mlRoutes.ts",
+      "line": 26,
+      "issue": "Route may need pagination middleware",
+      "code": "router.get('/products/:productId/roi-estimate', sanitizeParameters, validate(mlSchemas.getROIEstimate), MLController.getROIEstimate);",
+      "severity": "medium",
+      "suggestion": "Add enforcePagination middleware for routes returning multiple records"
+    },
+    {
+      "file": "/opt/booster/backend/src/routes/mlRoutes.ts",
+      "line": 27,
+      "issue": "Route may need pagination middleware",
+      "code": "router.get('/products/:productId/hype-meter', sanitizeParameters, validate(mlSchemas.getHypeMeter), MLController.getHypeMeter);",
+      "severity": "medium",
+      "suggestion": "Add enforcePagination middleware for routes returning multiple records"
+    },
+    {
+      "file": "/opt/booster/backend/src/routes/mlRoutes.ts",
+      "line": 28,
+      "issue": "Route may need pagination middleware",
+      "code": "router.get('/products/:productId/market-insights', sanitizeParameters, validate(mlSchemas.getMarketInsights), MLController.getMarketInsights);",
+      "severity": "medium",
+      "suggestion": "Add enforcePagination middleware for routes returning multiple records"
+    },
+    {
+      "file": "/opt/booster/backend/src/routes/mlRoutes.ts",
+      "line": 29,
+      "issue": "Route may need pagination middleware",
+      "code": "router.get('/products/:productId/analysis', sanitizeParameters, validate(mlSchemas.getComprehensiveAnalysis), MLController.getComprehensiveAnalysis);",
+      "severity": "medium",
+      "suggestion": "Add enforcePagination middleware for routes returning multiple records"
+    },
+    {
+      "file": "/opt/booster/backend/src/routes/monitoring.ts",
+      "line": 29,
+      "issue": "Route may need pagination middleware",
+      "code": "router.get('/alerts/rules', requireAdmin, getAlertRules);",
+      "severity": "medium",
+      "suggestion": "Add enforcePagination middleware for routes returning multiple records"
+    },
+    {
+      "file": "/opt/booster/backend/src/routes/monitoring.ts",
+      "line": 34,
+      "issue": "Route may need pagination middleware",
+      "code": "router.get('/alerts/active', authenticate, getActiveAlerts);",
+      "severity": "medium",
+      "suggestion": "Add enforcePagination middleware for routes returning multiple records"
+    },
+    {
+      "file": "/opt/booster/backend/src/routes/monitoring.ts",
+      "line": 35,
+      "issue": "Route may need pagination middleware",
+      "code": "router.get('/alerts/history', authenticate, getAlertHistory);",
+      "severity": "medium",
+      "suggestion": "Add enforcePagination middleware for routes returning multiple records"
+    },
+    {
+      "file": "/opt/booster/backend/src/routes/social.ts",
+      "line": 27,
+      "issue": "Route may need pagination middleware",
+      "code": "router.get('/alerts/:alertId/share', sanitizeParameters, SocialController.validateAlertId, SocialController.shareAlert);",
+      "severity": "medium",
+      "suggestion": "Add enforcePagination middleware for routes returning multiple records"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/adminAuditService.ts",
+      "line": 71,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('*')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/adminAuditService.ts",
+      "line": 142,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "const totalResult = await knex('admin_audit_log')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/adminAuditService.ts",
+      "line": 150,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "const actionsByTypeResult = await knex('admin_audit_log')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/adminAuditService.ts",
+      "line": 151,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('action')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/adminAuditService.ts",
+      "line": 163,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "const actionsByAdminResult = await knex('admin_audit_log')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/adminAuditService.ts",
+      "line": 164,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('admin_audit_log.admin_user_id', 'users.email')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/adminAuditService.ts",
+      "line": 178,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "const recentActivity = await knex('admin_audit_log')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/adminAuditService.ts",
+      "line": 179,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('*')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/adminMLService.ts",
+      "line": 230,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "let query = knex('ml_training_data')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/adminMLService.ts",
+      "line": 231,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('*')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/adminMLService.ts",
+      "line": 350,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "knex('ml_models')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/adminMLService.ts",
+      "line": 351,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('name', 'metrics')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/adminUserService.ts",
+      "line": 26,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/adminUserService.ts",
+      "line": 120,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/alertAnalyticsService.ts",
+      "line": 114,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(Alert['db'].raw('DATE(created_at) as date'))",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/csvService.ts",
+      "line": 77,
+      "issue": "Potential array operation on paginated result",
+      "code": "result.totalRows = records.length;",
+      "severity": "low",
+      "suggestion": "Ensure you are operating on result.data, not the paginated result object"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/csvService.ts",
+      "line": 299,
+      "issue": "Potential array operation on paginated result",
+      "code": "result.warnings.push(`Large file detected (${records.length} rows). Import may take some time.`);",
+      "severity": "low",
+      "suggestion": "Ensure you are operating on result.data, not the paginated result object"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/dataCollectionService.ts",
+      "line": 40,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/dataCollectionService.ts",
+      "line": 89,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/dataCollectionService.ts",
+      "line": 208,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/dataCollectionService.ts",
+      "line": 253,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('id', 'name')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/dataCollectionService.ts",
+      "line": 256,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "this.select('*')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/dataCollectionService.ts",
+      "line": 267,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('price', 'recorded_at')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/dataCollectionService.ts",
+      "line": 280,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('in_stock', 'last_checked')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/discordBotService.ts",
+      "line": 306,
+      "issue": "Potential array operation on paginated result",
+      "code": "const failures = results.filter(result => result.status === 'rejected');",
+      "severity": "low",
+      "suggestion": "Ensure you are operating on result.data, not the paginated result object"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/emailDeliveryService.ts",
+      "line": 357,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/emailPreferencesService.ts",
+      "line": 314,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/mlPredictionService.ts",
+      "line": 130,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "return knex('price_history')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/mlPredictionService.ts",
+      "line": 131,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/mlPredictionService.ts",
+      "line": 144,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "return knex('product_availability')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/mlPredictionService.ts",
+      "line": 145,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/mlPredictionService.ts",
+      "line": 158,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "return knex('product_availability')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/mlPredictionService.ts",
+      "line": 159,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('in_stock')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/mlPredictionService.ts",
+      "line": 165,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "return knex('watches')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/mlPredictionService.ts",
+      "line": 175,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "return knex('alerts')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/mlPredictionService.ts",
+      "line": 178,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/mlPredictionService.ts",
+      "line": 188,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "return knex('watches')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/mlPredictionService.ts",
+      "line": 197,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "return knex('product_availability')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/mlPredictionService.ts",
+      "line": 198,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/mlPredictionService.ts",
+      "line": 488,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "const watchCount = await knex('watches')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/mlPredictionService.ts",
+      "line": 494,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "const alertStats = await knex('alerts')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/mlPredictionService.ts",
+      "line": 497,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/mlPredictionService.ts",
+      "line": 704,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "const recentWatches = await knex('watches')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/mlPredictionService.ts",
+      "line": 710,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "const olderWatches = await knex('watches')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/mlPredictionService.ts",
+      "line": 748,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "const competitorData = await knex('product_availability')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/mlPredictionService.ts",
+      "line": 749,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/priceComparisonService.ts",
+      "line": 92,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/priceComparisonService.ts",
+      "line": 285,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('price', 'recorded_at')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/priceComparisonService.ts",
+      "line": 339,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/priceComparisonService.ts",
+      "line": 392,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/priceComparisonService.ts",
+      "line": 498,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('popularity_score')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/priceComparisonService.ts",
+      "line": 525,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('retailer_id', 'price', 'recorded_at')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/priceComparisonService.ts",
+      "line": 600,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('product_id')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/priceComparisonService.ts",
+      "line": 612,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/priceDropAlertService.ts",
+      "line": 77,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/priceDropAlertService.ts",
+      "line": 221,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('preferences')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/priceDropAlertService.ts",
+      "line": 405,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('preferences')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/priceDropAlertService.ts",
+      "line": 456,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(this.db.raw('data->\\'alertType\\' as alert_type'))",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/priceDropAlertService.ts",
+      "line": 478,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select(",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/rbacInitializationService.ts",
+      "line": 54,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "await knex('roles')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/rbacInitializationService.ts",
+      "line": 80,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "const users = await knex('users').select('id', 'role', 'admin_permissions');",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/rbacInitializationService.ts",
+      "line": 120,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "await knex('users')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/rbacInitializationService.ts",
+      "line": 220,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "const usersWithInvalidRoles = await knex('users')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/rbacInitializationService.ts",
+      "line": 231,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "const users = await knex('users').select('id', 'admin_permissions');",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/rbacInitializationService.ts",
+      "line": 250,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "const existingRoles = await knex('roles')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/rbacInitializationService.ts",
+      "line": 304,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "const usersWithInvalidRoles = await knex('users')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/rbacInitializationService.ts",
+      "line": 306,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('id', 'role');",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/rbacInitializationService.ts",
+      "line": 310,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "await knex('users')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/rbacInitializationService.ts",
+      "line": 325,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "const users = await knex('users').select('id', 'admin_permissions');",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/rbacInitializationService.ts",
+      "line": 335,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "await knex('users')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/rbacInitializationService.ts",
+      "line": 350,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "const existingRoles = await knex('roles')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/rbacInitializationService.ts",
+      "line": 360,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "await knex('roles').insert({",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/rbacInitializationService.ts",
+      "line": 403,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "await knex('permission_audit_log').insert({",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/services/subscriptionService.ts",
+      "line": 483,
+      "issue": "Direct database query without LIMIT clause",
+      "code": ".select('event_type')",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/utils/database.ts",
+      "line": 11,
+      "issue": "Potential array operation on paginated result",
+      "code": "return Array.isArray(result) && result.length > 0;",
+      "severity": "low",
+      "suggestion": "Ensure you are operating on result.data, not the paginated result object"
+    },
+    {
+      "file": "/opt/booster/backend/src/utils/migrationHelpers.ts",
+      "line": 90,
+      "issue": "Potential array operation on paginated result",
+      "code": "return result.rows.length > 0;",
+      "severity": "low",
+      "suggestion": "Ensure you are operating on result.data, not the paginated result object"
+    },
+    {
+      "file": "/opt/booster/backend/src/utils/migrationHelpers.ts",
+      "line": 114,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "const invalidRows = await knex(tableName)",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/utils/paginationMigration.ts",
+      "line": 62,
+      "issue": "Unpaginated findBy() call detected",
+      "code": "pattern: 'Model.findBy(criteria)',",
+      "severity": "high",
+      "suggestion": "Add pagination options: .findBy(criteria, { page: 1, limit: 20 })"
+    },
+    {
+      "file": "/opt/booster/backend/src/utils/paginationMigration.ts",
+      "line": 64,
+      "issue": "Unpaginated findBy() call detected",
+      "code": "before: `const users = await User.findBy({ is_active: true });`,",
+      "severity": "high",
+      "suggestion": "Add pagination options: .findBy(criteria, { page: 1, limit: 20 })"
+    },
+    {
+      "file": "/opt/booster/backend/src/utils/paginationMigration.ts",
+      "line": 69,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "pattern: 'knex.select().where()',",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/utils/paginationMigration.ts",
+      "line": 71,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "before: `const products = await knex('products').select('*').where('is_active', true);`,",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/utils/paginationMigration.ts",
+      "line": 84,
+      "issue": "Unpaginated findBy() call detected",
+      "code": "const products = await Product.findBy({ is_active: true });",
+      "severity": "high",
+      "suggestion": "Add pagination options: .findBy(criteria, { page: 1, limit: 20 })"
+    },
+    {
+      "file": "/opt/booster/backend/src/utils/paginationMigration.ts",
+      "line": 229,
+      "issue": "Potential array operation on paginated result",
+      "code": "const recordCount = Array.isArray(result) ? result.length : 0;",
+      "severity": "low",
+      "suggestion": "Ensure you are operating on result.data, not the paginated result object"
+    },
+    {
+      "file": "/opt/booster/backend/src/utils/queryInterceptor.ts",
+      "line": 141,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "const query = knex(tableName)",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/utils/queryInterceptor.ts",
+      "line": 255,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "let query = knex(tableName)",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    },
+    {
+      "file": "/opt/booster/backend/src/utils/queryInterceptor.ts",
+      "line": 262,
+      "issue": "Direct database query without LIMIT clause",
+      "code": "let countQuery = knex(tableName)",
+      "severity": "medium",
+      "suggestion": "Add .limit() clause or use createPaginatedQuery() helper"
+    }
+  ],
+  "recommendations": [
+    "Update BaseModel.findBy() calls to include pagination options",
+    "Add pagination middleware to routes returning multiple records",
+    "Replace direct Knex queries with paginated helpers",
+    "Update array operations to work with result.data instead of full result",
+    "Remove deprecated findByLegacy calls"
+  ]
+}

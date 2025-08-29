@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { DiscordController } from '../controllers/discordController';
 import { authenticate } from '../middleware/auth';
 import { generalRateLimit } from '../middleware/rateLimiter';
+import { sanitizeParameters } from '../middleware/parameterSanitization';
 
 const router = Router();
 
@@ -30,41 +31,41 @@ router.get('/servers', DiscordController.listServerConfigs);
  * @desc Get Discord server configuration
  * @access Private
  */
-router.get('/servers/:serverId', DiscordController.validateServerId, DiscordController.getServerConfig);
+router.get('/servers/:serverId', sanitizeParameters, DiscordController.validateServerId, DiscordController.getServerConfig);
 
 /**
  * @route PUT /api/discord/servers/:serverId
  * @desc Update Discord server configuration
  * @access Private
  */
-router.put('/servers/:serverId', DiscordController.validateServerId, DiscordController.updateServerConfig);
+router.put('/servers/:serverId', sanitizeParameters, DiscordController.validateServerId, DiscordController.updateServerConfig);
 
 /**
  * @route DELETE /api/discord/servers/:serverId
  * @desc Remove Discord server configuration
  * @access Private
  */
-router.delete('/servers/:serverId', DiscordController.validateServerId, DiscordController.removeServerConfig);
+router.delete('/servers/:serverId', sanitizeParameters, DiscordController.validateServerId, DiscordController.removeServerConfig);
 
 /**
  * @route POST /api/discord/servers/:serverId/test
  * @desc Test Discord connection
  * @access Private
  */
-router.post('/servers/:serverId/test', DiscordController.validateServerId, DiscordController.testConnection);
+router.post('/servers/:serverId/test', sanitizeParameters, DiscordController.validateServerId, DiscordController.testConnection);
 
 /**
  * @route GET /api/discord/servers/:serverId/stats
  * @desc Get Discord server statistics
  * @access Private
  */
-router.get('/servers/:serverId/stats', DiscordController.validateServerId, DiscordController.getServerStats);
+router.get('/servers/:serverId/stats', sanitizeParameters, DiscordController.validateServerId, DiscordController.getServerStats);
 
 /**
  * @route POST /api/discord/servers/:serverId/test-alert
  * @desc Send test alert to Discord server
  * @access Private
  */
-router.post('/servers/:serverId/test-alert', DiscordController.validateServerId, DiscordController.sendTestAlert);
+router.post('/servers/:serverId/test-alert', sanitizeParameters, DiscordController.validateServerId, DiscordController.sendTestAlert);
 
 export default router;

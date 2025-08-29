@@ -10,6 +10,25 @@ The authentication system provides enterprise-grade security features including:
 - Multi-device session management
 - Comprehensive audit logging
 - Role-based access control (RBAC) integration
+- Enterprise Key Management Service (KMS) integration for secure encryption
+
+## Key Management Integration
+
+BoosterBeacon integrates with enterprise Key Management Services for secure encryption key management:
+
+### Supported KMS Providers
+- **AWS KMS**: Enterprise-grade key management with automatic rotation
+- **Google Cloud KMS**: Native GCP integration with Secret Manager
+- **HashiCorp Vault**: Multi-cloud and on-premises key management
+- **Environment Variables**: Development and testing fallback
+
+### Security Features
+- **AES-256-GCM Encryption**: Authenticated encryption for all sensitive data
+- **Key Rotation**: Manual and automatic key rotation capabilities
+- **Audit Logging**: Comprehensive logging of all key operations
+- **Performance Optimization**: 5-minute key caching with automatic expiry
+
+See [KMS Integration Documentation](kms-integration.md) for complete setup and configuration.
 
 ## JWT Token Management
 

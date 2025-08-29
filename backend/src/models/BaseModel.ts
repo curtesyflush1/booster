@@ -1,7 +1,7 @@
 import { Knex } from 'knex';
 import { db, handleDatabaseError } from '../config/database';
 import { logger } from '../utils/logger';
-import { IDatabaseError, IValidationError, IPaginatedResult } from '../types/database';
+import { IValidationError, IPaginatedResult } from '../types/database';
 import { safeCount } from '../utils/database';
 import { DEFAULT_VALUES } from '../constants';
 
@@ -55,15 +55,116 @@ export abstract class BaseModel<T = any> {
     }
   }
 
-  // Find records by criteria
-  static async findBy<T>(criteria: Partial<T>): Promise<T[]> {
+  // Find records by criteria with mandatory pagination
+  static async findBy<T>(
+    criteria: Partial<T>,
+    options: {
+      page?: number;
+      limit?: number;
+      orderBy?: string;
+      orderDirection?: 'asc' | 'desc';
+    } = {}
+  ): Promise<IPaginatedResult<T>> {
     try {
-      const records = await this.db(this.getTableName())
-        .where(criteria);
+      const {
+        page = DEFAULT_VALUES.DEFAULT_PAGE,
+        limit = DEFAULT_VALUES.DEFAULT_LIMIT,
+        orderBy = 'created_at',
+        orderDirection = 'desc'
+      } = options;
+
+      // Enforce maximum limit to prevent performance issues
+      const safeLimit = Math.min(limit, DEFAULT_VALUES.MAX_QUERY_LIMIT || 100);
+      const offset = (page - 1) * safeLimit;
+
+      // Get total count
+      const countResult = await this.db(this.getTableName())
+        .where(criteria)
+        .count('* as count');
+      const total = safeCount(countResult);
+
+      // Get paginated data
+      const data = await this.db(this.getTableName())
+        .where(criteria)
+        .orderBy(orderBy, orderDirection)
+        .offset(offset)
+        .limit(safeLimit);
+
+      logger.debug(`Found ${data.length} ${this.name} records (page ${page}, limit ${safeLimit})`);
       
-      return records;
+      return {
+        data,
+        total,
+        page,
+        limit: safeLimit
+      };
     } catch (error) {
       logger.error(`Error finding ${this.name} records:`, error);
+      throw handleDatabaseError(error);
+    }
+  }
+
+  // Legacy method for backward compatibility - DEPRECATED
+  // Use findBy() with pagination options instead
+  static async findByLegacy<T>(criteria: Partial<T>): Promise<T[]> {
+    logger.warn(`DEPRECATED: Using findByLegacy for ${this.name}. Use findBy() with pagination instead.`);
+    const result = await this.findBy<T>(criteria, { limit: DEFAULT_VALUES.MAX_QUERY_LIMIT || 100 });
+    return result.data;
+  }
+
+  // Safe unpaginated query with explicit limit enforcement
+  // Only use when you truly need all records and have verified the dataset size
+  static async findByUnpaginated<T>(
+    criteria: Partial<T>,
+    options: {
+      maxRecords: number;
+      orderBy?: string;
+      orderDirection?: 'asc' | 'desc';
+      reason?: string; // Required for audit logging
+    }
+  ): Promise<T[]> {
+    try {
+      const {
+        maxRecords,
+        orderBy = 'created_at',
+        orderDirection = 'desc',
+        reason = 'Unpaginated query'
+      } = options;
+
+      // Enforce absolute maximum to prevent memory issues
+      const absoluteMax = DEFAULT_VALUES.MAX_QUERY_LIMIT * 10; // 1000 records max
+      if (maxRecords > absoluteMax) {
+        throw new Error(`Requested ${maxRecords} records exceeds absolute maximum of ${absoluteMax}. Use pagination instead.`);
+      }
+
+      // Log the unpaginated query for monitoring
+      logger.warn(`Unpaginated query for ${this.name}:`, {
+        criteria,
+        maxRecords,
+        reason,
+        stackTrace: new Error().stack?.split('\n').slice(1, 4).join('\n')
+      });
+
+      // First check the count to warn about large datasets
+      const countResult = await this.db(this.getTableName())
+        .where(criteria)
+        .count('* as count');
+      const total = safeCount(countResult);
+
+      if (total > maxRecords) {
+        logger.error(`Unpaginated query would return ${total} records but limit is ${maxRecords}. Consider pagination.`);
+        throw new Error(`Query would return ${total} records, exceeding limit of ${maxRecords}. Use pagination for large datasets.`);
+      }
+
+      const records = await this.db(this.getTableName())
+        .where(criteria)
+        .orderBy(orderBy, orderDirection)
+        .limit(maxRecords);
+
+      logger.debug(`Unpaginated query returned ${records.length} ${this.name} records`);
+      return records;
+    } catch (error) {
+      logger.error(`Error in unpaginated ${this.name} query:`, error);
       throw handleDatabaseError(error);
     }
   }
@@ -171,25 +272,8 @@ export abstract class BaseModel<T = any> {
         orderDirection = 'desc'
       } = options;
 
-      const offset = (page - 1) * limit;
-
-      // Get total count using type-safe utility
-      const countResult = await this.db(this.getTableName())
-        .count('* as count');
-      const total = safeCount(countResult);
-
-      // Get paginated data
-      const data = await this.db(this.getTableName())
-        .orderBy(orderBy, orderDirection)
-        .offset(offset)
-        .limit(limit);
-
-      return {
-        data,
-        total,
-        page,
-        limit
-      };
+      const query = this.db(this.getTableName());
+      return await this.getPaginatedResults<T>(query, page, limit, orderBy, orderDirection);
     } catch (error) {
       logger.error(`Error finding all ${this.name} records:`, error);
       throw handleDatabaseError(error);
@@ -241,13 +325,48 @@ export abstract class BaseModel<T = any> {
     }
   }
 
-  // Execute raw query
+  // Execute raw query with pagination awareness
   static async raw<T = any>(query: string, bindings: any[] = []): Promise<T> {
     try {
+      // Log warning for raw queries that might return large datasets
+      const queryLower = query.toLowerCase();
+      const hasLimit = queryLower.includes('limit');
+      const hasSelect = queryLower.includes('select');
+      
+      if (hasSelect && !hasLimit) {
+        logger.warn(`Raw query without LIMIT detected in ${this.name}:`, {
+          query: query.substring(0, 200) + (query.length > 200 ? '...' : ''),
+          suggestion: 'Consider adding LIMIT clause to prevent large result sets'
+        });
+      }
+
       const result = await this.db.raw(query, bindings);
       return result.rows || result;
     } catch (error) {
       logger.error(`Error executing raw query for ${this.name}:`, error);
+      throw handleDatabaseError(error);
+    }
+  }
+
+  // Safe method to get a small sample of records for testing/debugging
+  static async sample<T>(
+    criteria: Partial<T> = {},
+    sampleSize: number = 10
+  ): Promise<T[]> {
+    try {
+      if (sampleSize > 100) {
+        throw new Error('Sample size cannot exceed 100 records');
+      }
+
+      const records = await this.db(this.getTableName())
+        .where(criteria)
+        .orderByRaw('RANDOM()') // PostgreSQL random sampling
+        .limit(sampleSize);
+
+      logger.debug(`Retrieved ${records.length} sample ${this.name} records`);
+      return records;
+    } catch (error) {
+      logger.error(`Error sampling ${this.name} records:`, error);
       throw handleDatabaseError(error);
     }
   }
@@ -394,4 +513,5 @@ export abstract class BaseModel<T = any> {
     }
     return null;
   }
+
 }

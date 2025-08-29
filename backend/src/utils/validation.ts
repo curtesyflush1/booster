@@ -173,12 +173,28 @@ export function sanitizeUrlParameter(value: string): string {
     return '';
   }
   
+  // Decode URL encoding first
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(value);
+  } catch (error) {
+    // If decoding fails, use the original string
+    decoded = value;
+  }
+  
   // Remove null bytes, control characters, and potentially dangerous characters
-  let sanitized = value
+  let sanitized = decoded
     .replace(/\0/g, '') // Remove null bytes
+    .replace(/%00/g, '') // Remove URL-encoded null bytes
     .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
     .replace(/[<>]/g, '') // Remove HTML brackets (but keep quotes for search)
     .replace(/[;\\]/g, '') // Remove SQL injection characters
+    .replace(/--/g, '') // Remove SQL comment markers
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    .replace(/\.\.\//g, '') // Remove path traversal sequences
+    .replace(/\.\.\\/g, '') // Remove Windows path traversal sequences
+    .replace(/\.\.%2f/gi, '') // Remove URL-encoded path traversal
+    .replace(/\.\.%5c/gi, '') // Remove URL-encoded Windows path traversal
     .trim();
   
   // Limit length to prevent buffer overflow attacks
@@ -209,9 +225,12 @@ export function sanitizeSetName(setName: string): string {
   // Remove dangerous characters but keep Pokemon set name characters
   let sanitized = decoded
     .replace(/\0/g, '') // Remove null bytes
+    .replace(/%00/g, '') // Remove URL-encoded null bytes
     .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
     .replace(/[<>]/g, '') // Remove HTML brackets
     .replace(/[;\\]/g, '') // Remove SQL injection characters
+    .replace(/--/g, '') // Remove SQL comment markers
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
     .trim();
   
   // Allow alphanumeric, spaces, hyphens, ampersands, apostrophes, colons, periods, and parentheses
@@ -310,6 +329,8 @@ export function sanitizeSearchQuery(query: string): string {
     .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
     .replace(/[<>]/g, '') // Remove HTML brackets
     .replace(/[;\\]/g, '') // Remove SQL injection characters
+    .replace(/--/g, '') // Remove SQL comment markers
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
     .trim();
   
   // Allow alphanumeric, spaces, and common punctuation for search

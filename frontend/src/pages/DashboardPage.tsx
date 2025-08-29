@@ -60,20 +60,38 @@ const DashboardPage: React.FC = () => {
     }
   }, [lastMessage]);
 
+  /**
+   * Load dashboard data using consolidated endpoint for better performance.
+   * Falls back to individual API calls if consolidated endpoint fails.
+   * This optimization reduces initial API requests from 3 to 1.
+   */
   const loadDashboardData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const [dashboardResponse, portfolioResponse, insightsResponse] = await Promise.all([
-        apiClient.get('/api/dashboard'),
-        apiClient.get('/api/dashboard/portfolio'),
-        apiClient.get('/api/dashboard/insights')
-      ]);
+      try {
+        // Use the new consolidated endpoint to reduce API calls from 3 to 1
+        const consolidatedResponse = await apiClient.get('/api/dashboard/consolidated');
+        const { dashboard, portfolio, insights } = consolidatedResponse.data;
 
-      setDashboardData(dashboardResponse.data.dashboard);
-      setPortfolioData(portfolioResponse.data.portfolio);
-      setPredictiveInsights(insightsResponse.data.insights);
+        setDashboardData(dashboard);
+        setPortfolioData(portfolio);
+        setPredictiveInsights(insights);
+      } catch (consolidatedError) {
+        console.warn('Consolidated endpoint failed, falling back to individual calls:', consolidatedError);
+        
+        // Fallback to individual API calls if consolidated endpoint fails
+        const [dashboardResponse, portfolioResponse, insightsResponse] = await Promise.all([
+          apiClient.get('/api/dashboard'),
+          apiClient.get('/api/dashboard/portfolio'),
+          apiClient.get('/api/dashboard/insights')
+        ]);
+
+        setDashboardData(dashboardResponse.data.dashboard);
+        setPortfolioData(portfolioResponse.data.portfolio);
+        setPredictiveInsights(insightsResponse.data.insights);
+      }
     } catch (err) {
       console.error('Error loading dashboard data:', err);
       setError('Failed to load dashboard data. Please try again.');

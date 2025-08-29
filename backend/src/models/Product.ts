@@ -3,7 +3,26 @@ import { IProduct, IValidationError, IPaginatedResult } from '../types/database'
 import { safeCount, safeStatsMap } from '../utils/database';
 import { handleDatabaseError } from '../config/database';
 import { logger } from '../utils/logger';
-import { VALIDATION_LIMITS, STRING_LIMITS, DEFAULT_VALUES, NUMERIC_LIMITS } from '../constants';
+import { VALIDATION_LIMITS, STRING_LIMITS, DEFAULT_VALUES, NUMERIC_LIMITS, DATABASE_CONSTANTS } from '../constants';
+
+// Type for product availability data with retailer information
+interface IProductAvailability {
+  id: string;
+  product_id: string;
+  retailer_id: string;
+  price: number;
+  in_stock: boolean;
+  availability_status: string;
+  url: string;
+  cart_url: string;
+  last_checked: Date;
+  store_locations: any;
+  retailer_name: string;
+  retailer_slug: string;
+}
+
+// Type for product with availability information
+type IProductWithAvailability = IProduct & { availability: IProductAvailability[] };
 
 export class Product extends BaseModel<IProduct> {
   protected static override tableName = 'products';
@@ -267,12 +286,20 @@ export class Product extends BaseModel<IProduct> {
     }
   }
 
-  // Get products by set
-  static async findBySet(setName: string): Promise<IProduct[]> {
+  // Get products by set with pagination
+  static async findBySet(
+    setName: string,
+    options: {
+      page?: number;
+      limit?: number;
+      orderBy?: string;
+      orderDirection?: 'asc' | 'desc';
+    } = {}
+  ): Promise<IPaginatedResult<IProduct>> {
     return this.findBy<IProduct>({
       set_name: setName,
       is_active: true
-    });
+    }, options);
   }
 
   // Update popularity score
@@ -364,7 +391,7 @@ export class Product extends BaseModel<IProduct> {
       sort_by?: string;
       sort_order?: string;
     } = {}
-  ): Promise<IPaginatedResult<IProduct & { availability?: any }>> {
+  ): Promise<IPaginatedResult<IProduct & { availability?: IProductAvailability }>> {
     try {
       const {
         category_id,
@@ -445,30 +472,124 @@ export class Product extends BaseModel<IProduct> {
     }
   }
 
-  // Get product with availability information
-  static async getProductWithAvailability(productId: string): Promise<(IProduct & { availability: any[] }) | null> {
+  /**
+   * Private helper method to build the product with availability query
+   * @private
+   */
+  private static buildProductWithAvailabilityQuery() {
+    const tableName = this.getTableName();
+    const { PRODUCT_AVAILABILITY_TABLE, RETAILERS_TABLE, AVAILABILITY_ID_ALIAS, RETAILER_NAME_ALIAS, RETAILER_SLUG_ALIAS } = DATABASE_CONSTANTS;
+    
+    return this.db(tableName)
+      .select(
+        `${tableName}.*`,
+        `${PRODUCT_AVAILABILITY_TABLE}.id as ${AVAILABILITY_ID_ALIAS}`,
+        `${PRODUCT_AVAILABILITY_TABLE}.retailer_id`,
+        `${PRODUCT_AVAILABILITY_TABLE}.price`,
+        `${PRODUCT_AVAILABILITY_TABLE}.in_stock`,
+        `${PRODUCT_AVAILABILITY_TABLE}.availability_status`,
+        `${PRODUCT_AVAILABILITY_TABLE}.url`,
+        `${PRODUCT_AVAILABILITY_TABLE}.cart_url`,
+        `${PRODUCT_AVAILABILITY_TABLE}.last_checked`,
+        `${PRODUCT_AVAILABILITY_TABLE}.store_locations`,
+        `${RETAILERS_TABLE}.name as ${RETAILER_NAME_ALIAS}`,
+        `${RETAILERS_TABLE}.slug as ${RETAILER_SLUG_ALIAS}`
+      )
+      .leftJoin(PRODUCT_AVAILABILITY_TABLE, `${tableName}.id`, `${PRODUCT_AVAILABILITY_TABLE}.product_id`)
+      .leftJoin(RETAILERS_TABLE, `${PRODUCT_AVAILABILITY_TABLE}.retailer_id`, `${RETAILERS_TABLE}.id`)
+      .where(function() {
+        this.where(`${RETAILERS_TABLE}.is_active`, true).orWhereNull(`${RETAILERS_TABLE}.id`);
+      })
+      .orderBy(`${PRODUCT_AVAILABILITY_TABLE}.last_checked`, 'desc');
+  }
+
+  /**
+   * Private helper method to process query results into product with availability format
+   * @private
+   */
+  private static processProductWithAvailabilityResults(results: any[]): IProductWithAvailability | null {
+    if (results.length === 0) return null;
+
+    // Extract product data from first result
+    const productData = results[0];
+    const product: IProduct = {
+      id: productData.id,
+      name: productData.name,
+      slug: productData.slug,
+      sku: productData.sku,
+      upc: productData.upc,
+      category_id: productData.category_id,
+      set_name: productData.set_name,
+      series: productData.series,
+      release_date: productData.release_date,
+      msrp: productData.msrp,
+      image_url: productData.image_url,
+      description: productData.description,
+      metadata: productData.metadata,
+      is_active: productData.is_active,
+      popularity_score: productData.popularity_score,
+      created_at: productData.created_at,
+      updated_at: productData.updated_at
+    };
+
+    // Build availability array from results, filtering out null availability records
+    const { AVAILABILITY_ID_ALIAS, RETAILER_NAME_ALIAS, RETAILER_SLUG_ALIAS } = DATABASE_CONSTANTS;
+    const availability: IProductAvailability[] = results
+      .filter(row => row[AVAILABILITY_ID_ALIAS] !== null)
+      .map(row => ({
+        id: row[AVAILABILITY_ID_ALIAS],
+        product_id: row.id,
+        retailer_id: row.retailer_id,
+        price: row.price,
+        in_stock: row.in_stock,
+        availability_status: row.availability_status,
+        url: row.url,
+        cart_url: row.cart_url,
+        last_checked: row.last_checked,
+        store_locations: row.store_locations,
+        retailer_name: row[RETAILER_NAME_ALIAS],
+        retailer_slug: row[RETAILER_SLUG_ALIAS]
+      }));
+
+    return {
+      ...product,
+      availability
+    };
+  }
+
+  // Get product with availability information using a single JOIN query
+  static async getProductWithAvailability(productId: string): Promise<IProductWithAvailability | null> {
+    // Input validation
+    if (!productId || typeof productId !== 'string' || productId.trim().length === 0) {
+      throw new Error('Valid productId is required');
+    }
+
     try {
-      const product = await this.findById<IProduct>(productId);
-      if (!product) return null;
+      const results = await this.buildProductWithAvailabilityQuery()
+        .where(`${this.getTableName()}.id`, productId.trim());
 
-      // Get availability data from all retailers
-      const availability = await this.db('product_availability')
-        .select(
-          'product_availability.*',
-          'retailers.name as retailer_name',
-          'retailers.slug as retailer_slug'
-        )
-        .leftJoin('retailers', 'product_availability.retailer_id', 'retailers.id')
-        .where('product_availability.product_id', productId)
-        .where('retailers.is_active', true)
-        .orderBy('product_availability.last_checked', 'desc');
-
-      return {
-        ...product,
-        availability
-      };
+      return this.processProductWithAvailabilityResults(results);
     } catch (error) {
       logger.error(`Error getting product with availability:`, error);
+      throw handleDatabaseError(error);
+    }
+  }
+
+  // Get product by slug with availability information using a single JOIN query
+  static async getProductWithAvailabilityBySlug(slug: string): Promise<IProductWithAvailability | null> {
+    // Input validation
+    if (!slug || typeof slug !== 'string' || slug.trim().length === 0) {
+      throw new Error('Valid slug is required');
+    }
+
+    try {
+      const normalizedSlug = slug.trim().toLowerCase();
+      const results = await this.buildProductWithAvailabilityQuery()
+        .where(`${this.getTableName()}.slug`, normalizedSlug);
+
+      return this.processProductWithAvailabilityResults(results);
+    } catch (error) {
+      logger.error(`Error getting product with availability by slug:`, error);
       throw handleDatabaseError(error);
     }
   }

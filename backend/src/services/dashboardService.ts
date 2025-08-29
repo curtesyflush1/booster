@@ -91,8 +91,7 @@ export class DashboardService {
   static async getDashboardData(userId: string): Promise<DashboardData> {
     try {
       // Get user statistics in parallel for better performance
-      const [userStats, watchStats, alertStats, recentAlerts, watchedProducts] = await Promise.all([
-        User.getUserStats(userId),
+      const [watchStats, alertStats, recentAlerts, watchedProducts] = await Promise.all([
         Watch.getUserWatchStats(userId),
         Alert.getUserAlertStats(userId),
         Alert.findByUserId(userId, { page: 1, limit: DASHBOARD_CONFIG.DEFAULT_RECENT_ALERTS_LIMIT }),
@@ -214,7 +213,7 @@ export class DashboardService {
         timestamp: new Date().toISOString()
       };
     } catch (error) {
-      logger.error('Error getting dashboard updates', { userId, error });
+      logger.error('Error getting dashboard updates', { userId, since, error });
       throw error;
     }
   }
@@ -345,6 +344,7 @@ export class DashboardService {
    * Get recent watch updates
    */
   private static async getRecentWatchUpdates(userId: string, since: Date) {
+    logger.debug('Getting recent watch updates', { userId, since });
     // This would track watch modifications
     // For now, return empty array
     return [];

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { SocialController } from '../controllers/socialController';
 import { authenticate } from '../middleware/auth';
 import { generalRateLimit } from '../middleware/rateLimiter';
+import { sanitizeParameters } from '../middleware/parameterSanitization';
 
 const router = Router();
 
@@ -23,7 +24,7 @@ router.post('/share-links', SocialController.validateShareData, SocialController
  * @desc Generate share links for a specific alert
  * @access Private
  */
-router.get('/alerts/:alertId/share', SocialController.validateAlertId, SocialController.shareAlert);
+router.get('/alerts/:alertId/share', sanitizeParameters, SocialController.validateAlertId, SocialController.shareAlert);
 
 /**
  * @route POST /api/social/posts

@@ -1,10 +1,21 @@
 import { BaseModel } from './BaseModel';
 import { IAlert, IValidationError, IPaginatedResult } from '../types/database';
+
+// Internal types for database query results
+interface IUserStatsQueryResult {
+  total_count: string | number;
+  unread_count: string | number;
+  recent_count: string | number;
+  sent_count: string | number;
+  clicked_count: string | number;
+  type_counts: string | Record<string, any>;
+  status_counts: string | Record<string, any>;
+}
 import { safeCount, safeStatsMap } from '../utils/database';
 import { handleDatabaseError } from '../config/database';
 import { logger } from '../utils/logger';
 import { withCache } from '../utils/cache';
-import { INTERVALS, CACHE_LIMITS, VALIDATION_LIMITS, DEFAULT_VALUES, TIME_PERIODS } from '../constants';
+import { INTERVALS, VALIDATION_LIMITS, DEFAULT_VALUES, TIME_PERIODS } from '../constants';
 
 export class Alert extends BaseModel<IAlert> {
   protected static override tableName = 'alerts';
@@ -272,7 +283,9 @@ export class Alert extends BaseModel<IAlert> {
     return count;
   }
 
-  // Get alert statistics for a user
+  // Get alert statistics for a user (optimized with single query)
+  // This method was optimized to use a single complex SQL query with CTEs and aggregations
+  // instead of multiple separate queries, reducing database round trips from 6 to 1
   static async getUserAlertStats(userId: string): Promise<{
     total: number;
     unread: number;
@@ -281,58 +294,178 @@ export class Alert extends BaseModel<IAlert> {
     clickThroughRate: number;
     recentAlerts: number;
   }> {
-    const totalResult = await this.db(this.getTableName())
-      .where('user_id', userId)
-      .count('* as count');
+    // Input validation
+    if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
+      throw new Error('Valid userId is required');
+    }
 
-    const unreadResult = await this.db(this.getTableName())
-      .where('user_id', userId)
-      .whereNull('read_at')
-      .count('* as count');
+    try {
+      const startTime = Date.now();
+      const sevenDaysAgo = new Date(Date.now() - INTERVALS.RECENT_ALERTS_PERIOD);
+      const result = await this.executeUserStatsQuery(userId.trim(), sevenDaysAgo);
+      
+      const queryTime = Date.now() - startTime;
+      if (queryTime > 1000) {
+        logger.warn(`Slow getUserAlertStats query for user ${userId}: ${queryTime}ms`);
+      }
 
-    // Get counts by type
-    const typeStats = await this.db(this.getTableName())
-      .select('type')
-      .count('* as count')
-      .where('user_id', userId)
-      .groupBy('type');
+      const stats = result.rows?.[0];
+      if (!stats || stats.total_count === 0) {
+        logger.debug(`No alert stats found for user ${userId}`);
+        return this.getEmptyUserStats();
+      }
 
-    // Get counts by status
-    const statusStats = await this.db(this.getTableName())
-      .select('status')
-      .count('* as count')
-      .where('user_id', userId)
-      .groupBy('status');
+      return this.processUserStatsResult(stats, userId);
+    } catch (error) {
+      logger.error(`Error getting user alert stats for user ${userId}:`, {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        userId
+      });
+      throw handleDatabaseError(error);
+    }
+  }
 
-    // Calculate click-through rate
-    const sentResult = await this.db(this.getTableName())
-      .where('user_id', userId)
-      .where('status', 'sent')
-      .count('* as count');
+  /**
+   * Execute the optimized user stats query using CTEs for better performance
+   * @private
+   * @param userId - The user ID to get stats for
+   * @param sevenDaysAgo - Date threshold for recent alerts calculation
+   * @returns Promise resolving to database query result
+   * @throws Database error if query fails
+   */
+  private static async executeUserStatsQuery(userId: string, sevenDaysAgo: Date) {
+    return this.db.raw(`
+      WITH base_stats AS (
+        SELECT 
+          COUNT(*) as total_count,
+          COUNT(CASE WHEN read_at IS NULL THEN 1 END) as unread_count,
+          COUNT(CASE WHEN created_at >= ? THEN 1 END) as recent_count,
+          COUNT(CASE WHEN status = 'sent' THEN 1 END) as sent_count,
+          COUNT(CASE WHEN clicked_at IS NOT NULL THEN 1 END) as clicked_count
+        FROM ${this.getTableName()}
+        WHERE user_id = ?
+      ),
+      type_stats AS (
+        SELECT type, COUNT(*) as count
+        FROM ${this.getTableName()}
+        WHERE user_id = ?
+        GROUP BY type
+      ),
+      status_stats AS (
+        SELECT status, COUNT(*) as count
+        FROM ${this.getTableName()}
+        WHERE user_id = ?
+        GROUP BY status
+      )
+      SELECT 
+        bs.total_count,
+        bs.unread_count,
+        bs.recent_count,
+        bs.sent_count,
+        bs.clicked_count,
+        COALESCE(
+          json_object_agg(ts.type, ts.count) FILTER (WHERE ts.type IS NOT NULL),
+          '{}'::json
+        ) as type_counts,
+        COALESCE(
+          json_object_agg(ss.status, ss.count) FILTER (WHERE ss.status IS NOT NULL),
+          '{}'::json
+        ) as status_counts
+      FROM base_stats bs
+      LEFT JOIN type_stats ts ON true
+      LEFT JOIN status_stats ss ON true
+      GROUP BY bs.total_count, bs.unread_count, bs.recent_count, bs.sent_count, bs.clicked_count
+    `, [sevenDaysAgo, userId, userId, userId]);
+  }
 
-    const clickedResult = await this.db(this.getTableName())
-      .where('user_id', userId)
-      .whereNotNull('clicked_at')
-      .count('* as count');
+  /**
+   * Process the raw database result into the expected format
+   * @private
+   * @param stats - Raw database query result
+   * @param userId - User ID for logging context
+   * @returns Processed user stats object
+   */
+  private static processUserStatsResult(stats: IUserStatsQueryResult, userId: string) {
+    const sentCount = parseInt(String(stats.sent_count)) || 0;
+    const clickedCount = parseInt(String(stats.clicked_count)) || 0;
+    const clickThroughRate = sentCount > 0 ? (clickedCount / sentCount) : 0;
 
-    // Get recent alerts (last 7 days)
-    const sevenDaysAgo = new Date(Date.now() - INTERVALS.RECENT_ALERTS_PERIOD);
-    const recentResult = await this.db(this.getTableName())
-      .where('user_id', userId)
-      .where('created_at', '>=', sevenDaysAgo)
-      .count('* as count');
-
-    const sentCount = safeCount(sentResult);
-    const clickedCount = safeCount(clickedResult);
-    const clickThroughRate = sentCount > 0 ? (clickedCount / sentCount) * DEFAULT_VALUES.PERCENTAGE_PRECISION : 0;
+    const { byType, byStatus } = this.parseJsonAggregations(stats, userId);
 
     return {
-      total: safeCount(totalResult),
-      unread: safeCount(unreadResult),
-      byType: safeStatsMap(typeStats, 'type'),
-      byStatus: safeStatsMap(statusStats, 'status'),
+      total: parseInt(String(stats.total_count)) || 0,
+      unread: parseInt(String(stats.unread_count)) || 0,
+      byType,
+      byStatus,
       clickThroughRate: Math.round(clickThroughRate * DEFAULT_VALUES.PERCENTAGE_PRECISION) / DEFAULT_VALUES.PERCENTAGE_PRECISION,
-      recentAlerts: safeCount(recentResult)
+      recentAlerts: parseInt(String(stats.recent_count)) || 0
+    };
+  }
+
+  /**
+   * Parse JSON aggregations safely with error handling
+   * @private
+   * @param stats - Database result containing JSON aggregations
+   * @param userId - User ID for logging context
+   * @returns Object containing parsed byType and byStatus maps
+   */
+  private static parseJsonAggregations(stats: IUserStatsQueryResult, userId: string): {
+    byType: Record<string, number>;
+    byStatus: Record<string, number>;
+  } {
+    let byType: Record<string, number> = {};
+    let byStatus: Record<string, number> = {};
+
+    try {
+      const typeData = typeof stats.type_counts === 'string' 
+        ? JSON.parse(stats.type_counts) 
+        : stats.type_counts || {};
+      
+      const statusData = typeof stats.status_counts === 'string'
+        ? JSON.parse(stats.status_counts)
+        : stats.status_counts || {};
+
+      // Convert string values to numbers
+      byType = this.convertToNumberMap(typeData);
+      byStatus = this.convertToNumberMap(statusData);
+    } catch (parseError) {
+      logger.warn(`Error parsing JSON aggregations for user ${userId}:`, parseError);
+      // Fall back to empty objects if JSON parsing fails
+      byType = {};
+      byStatus = {};
+    }
+
+    return { byType, byStatus };
+  }
+
+  /**
+   * Convert object values to numbers safely, handling various input types
+   * @private
+   * @param data - Object with potentially mixed value types
+   * @returns Object with all values converted to numbers (0 for invalid values)
+   */
+  private static convertToNumberMap(data: Record<string, any>): Record<string, number> {
+    const result: Record<string, number> = {};
+    Object.entries(data).forEach(([key, value]) => {
+      result[key] = parseInt(String(value)) || 0;
+    });
+    return result;
+  }
+
+  /**
+   * Return empty stats structure for users with no alerts
+   * @private
+   * @returns Empty user stats object with zero values
+   */
+  private static getEmptyUserStats() {
+    return {
+      total: 0,
+      unread: 0,
+      byType: {},
+      byStatus: {},
+      clickThroughRate: 0,
+      recentAlerts: 0
     };
   }
 

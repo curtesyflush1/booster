@@ -33,7 +33,10 @@
     "rbac:repair": "ts-node scripts/initialize-rbac.ts -- --repair",
     "rbac:test": "ts-node scripts/test-rbac.ts",
     "seed:dev": "knex seed:run",
-    "db:backup": "pg_dump $DATABASE_URL > backups/backup-$(date +%Y%m%d-%H%M%S).sql"
+    "db:backup": "pg_dump $DATABASE_URL > backups/backup-$(date +%Y%m%d-%H%M%S).sql",
+    "kms:test": "ts-node scripts/simple-kms-test.ts",
+    "kms:test-integration": "ts-node scripts/test-kms-integration.ts",
+    "ts-node": "ts-node"
   },
   "keywords": [
     "pokemon",
@@ -44,6 +47,10 @@
   "author": "BoosterBeacon",
   "license": "MIT",
   "dependencies": {
+    "@aws-sdk/client-kms": "^3.876.0",
+    "@aws-sdk/client-ssm": "^3.876.0",
+    "@google-cloud/kms": "^4.5.0",
+    "@google-cloud/secret-manager": "^5.6.0",
     "@types/dompurify": "^3.0.5",
     "@types/jsdom": "^21.1.7",
     "@types/nodemailer": "^7.0.1",
