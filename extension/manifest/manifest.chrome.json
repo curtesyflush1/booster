@@ -12,11 +12,16 @@
   ],
   
   "host_permissions": [
+    "https://api.boosterbeacon.com/*"
+  ],
+  
+  "optional_permissions": [],
+  
+  "optional_host_permissions": [
     "https://www.bestbuy.com/*",
     "https://www.walmart.com/*",
     "https://www.costco.com/*",
-    "https://www.samsclub.com/*",
-    "https://api.boosterbeacon.com/*"
+    "https://www.samsclub.com/*"
   ],
   
   "background": {

@@ -137,36 +137,76 @@ export function log(level: 'info' | 'warn' | 'error', message: string, data?: an
 }
 
 /**
- * Debounce function to limit rapid function calls
+ * Debounce function optimized for extension context with proper cleanup
  */
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: number;
+): ((...args: Parameters<T>) => void) & { cancel: () => void } {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
   
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = window.setTimeout(() => func(...args), wait);
+  const debounced = (...args: Parameters<T>) => {
+    if (timeout !== undefined) {
+      clearTimeout(timeout);
+    }
+    timeout = setTimeout(() => {
+      timeout = undefined;
+      func(...args);
+    }, wait);
   };
+
+  debounced.cancel = () => {
+    if (timeout !== undefined) {
+      clearTimeout(timeout);
+      timeout = undefined;
+    }
+  };
+  
+  return debounced as ((...args: Parameters<T>) => void) & { cancel: () => void };
 }
 
 /**
- * Throttle function to limit function calls to once per interval
+ * Throttle function optimized for extension context with proper cleanup
  */
 export function throttle<T extends (...args: any[]) => any>(
   func: T,
   limit: number
-): (...args: Parameters<T>) => void {
-  let inThrottle: boolean;
+): ((...args: Parameters<T>) => void) & { cancel: () => void } {
+  let inThrottle = false;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  let lastArgs: Parameters<T> | undefined;
   
-  return (...args: Parameters<T>) => {
+  const throttled = (...args: Parameters<T>) => {
+    lastArgs = args;
+    
     if (!inThrottle) {
       func(...args);
       inThrottle = true;
-      setTimeout(() => inThrottle = false, limit);
+      
+      timeout = setTimeout(() => {
+        inThrottle = false;
+        timeout = undefined;
+        
+        // Execute with last arguments if called during throttle period
+        if (lastArgs) {
+          const argsToUse = lastArgs;
+          lastArgs = undefined;
+          throttled(...argsToUse);
+        }
+      }, limit);
     }
   };
+
+  throttled.cancel = () => {
+    if (timeout !== undefined) {
+      clearTimeout(timeout);
+      timeout = undefined;
+    }
+    inThrottle = false;
+    lastArgs = undefined;
+  };
+  
+  return throttled as ((...args: Parameters<T>) => void) & { cancel: () => void };
 }
 
 /**
