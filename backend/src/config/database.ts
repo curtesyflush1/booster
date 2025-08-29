@@ -1,6 +1,7 @@
 import knex, { Knex } from 'knex';
 import { logger } from '../utils/logger';
 import { HTTP_TIMEOUTS, RETRY_CONFIG, DEFAULT_VALUES } from '../constants';
+import { DATABASE_CONSTANTS } from '../constants/database';
 
 // Database configuration interface
 interface IDatabaseConfig {
@@ -48,8 +49,8 @@ function getDatabaseConfig(): IDatabaseConfig {
       password: process.env.DB_PASSWORD || 'password'
     },
     pool: {
-      min: DEFAULT_VALUES.DB_POOL_MIN_CONNECTIONS,
-      max: DEFAULT_VALUES.DB_POOL_MAX_CONNECTIONS,
+      min: DATABASE_CONSTANTS.POOL.MIN_CONNECTIONS,
+      max: DATABASE_CONSTANTS.POOL.MAX_CONNECTIONS,
       acquireTimeoutMillis: HTTP_TIMEOUTS.DB_ACQUIRE_TIMEOUT,
       createTimeoutMillis: HTTP_TIMEOUTS.DB_CREATE_TIMEOUT,
       destroyTimeoutMillis: HTTP_TIMEOUTS.DB_DESTROY_TIMEOUT,
@@ -72,11 +73,11 @@ function getDatabaseConfig(): IDatabaseConfig {
     if (!databaseUrl && typeof baseConfig.connection === 'object') {
       baseConfig.connection.database = process.env.DB_NAME_TEST || 'boosterbeacon_test';
     }
-    baseConfig.pool.min = DEFAULT_VALUES.DB_POOL_MIN_CONNECTIONS_TEST;
-    baseConfig.pool.max = DEFAULT_VALUES.DB_POOL_MAX_CONNECTIONS_TEST;
+    baseConfig.pool.min = DATABASE_CONSTANTS.POOL.MIN_CONNECTIONS_TEST;
+    baseConfig.pool.max = DATABASE_CONSTANTS.POOL.MAX_CONNECTIONS_TEST;
   } else if (env === 'production') {
-    baseConfig.pool.min = DEFAULT_VALUES.DB_POOL_MIN_CONNECTIONS_PROD;
-    baseConfig.pool.max = DEFAULT_VALUES.DB_POOL_MAX_CONNECTIONS_PROD;
+    baseConfig.pool.min = DATABASE_CONSTANTS.POOL.MIN_CONNECTIONS_PROD;
+    baseConfig.pool.max = DATABASE_CONSTANTS.POOL.MAX_CONNECTIONS_PROD;
   }
 
   return baseConfig;
@@ -98,7 +99,7 @@ export async function checkDatabaseHealth(): Promise<boolean> {
 }
 
 // Initialize database connection with retry logic
-export async function initializeDatabase(maxRetries: number = DEFAULT_VALUES.DEFAULT_MAX_RETRIES): Promise<void> {
+export async function initializeDatabase(maxRetries: number = DATABASE_CONSTANTS.RETRY.MAX_ATTEMPTS): Promise<void> {
   let retries = 0;
   
   while (retries < maxRetries) {
@@ -123,7 +124,7 @@ export async function initializeDatabase(maxRetries: number = DEFAULT_VALUES.DEF
       }
       
       // Wait before retrying (exponential backoff)
-      await new Promise(resolve => setTimeout(resolve, Math.pow(2, retries) * RETRY_CONFIG.DB_CONNECTION_RETRY_DELAY_BASE));
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, retries) * DATABASE_CONSTANTS.RETRY.BASE_DELAY));
     }
   }
 }

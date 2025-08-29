@@ -10,10 +10,23 @@ Welcome to the BoosterBeacon documentation. This guide covers all aspects of the
 - [Testing Guide](troubleshooting-tests.md) - Comprehensive testing documentation
 
 ### System Architecture
+
+#### **🏗️ Architecture Overview**
+- [Architecture Overview](architecture-overview.md) - **NEW** Comprehensive guide to BoosterBeacon's modern architecture patterns and design decisions
+
+#### **🏗️ Core Architecture Patterns**
+- [Repository Pattern Implementation](repository-pattern.md) - **NEW** Clean data access layer with interface-based dependency injection
+- [Alert Processing Strategy Pattern](alert-strategy-pattern.md) - **NEW** Extensible alert processing with strategy pattern architecture
+- [Dependency Injection System](dependency-injection.md) - **UPDATED** Complete DI architecture with repository integration
+- [Caching System Architecture](caching-system.md) - **NEW** Multi-tier caching with Redis and intelligent fallback strategies
+- [Enhanced Logging System](enhanced-logging.md) - **NEW** Comprehensive logging with correlation IDs and structured output
+- [Frontend Component Architecture](frontend-architecture.md) - **NEW** Component composition patterns and modern React architecture
+- [Type Safety System](type-safety.md) - **NEW** Runtime type checking and comprehensive validation utilities
+
+#### **📋 System Documentation**
 - [API Reference](api-reference.md) - Complete API endpoint documentation
 - [Database Schema](../README.md#database-schema) - Database structure and relationships
 - [Technology Stack](../README.md#technology-stack) - Technical architecture overview
-- [Dependency Injection System](../backend/docs/DEPENDENCY_INJECTION.md) - **NEW** Complete DI architecture and implementation guide
 
 ### Core Systems
 
@@ -57,14 +70,20 @@ Welcome to the BoosterBeacon documentation. This guide covers all aspects of the
 ### Recent Updates
 
 #### August 28, 2025 - System Architecture & Performance Improvements
-- **[KMS Integration Documentation](kms-integration.md)** - NEW enterprise Key Management Service integration
-- **[Dependency Injection Documentation](../backend/docs/DEPENDENCY_INJECTION.md)** - NEW complete DI system implementation guide
-- **[Pagination Enforcement Documentation](../backend/docs/PAGINATION_ENFORCEMENT.md)** - NEW comprehensive pagination system preventing performance issues
-- **[Validation System Documentation](validation-system.md)** - UPDATED comprehensive guide with Joi standardization
-- **[Parameter Sanitization Documentation](parameter-sanitization.md)** - NEW security protection guide
-- **[Token Revocation Documentation](../backend/docs/TOKEN_REVOCATION.md)** - NEW JWT token blacklist system
-- **[Enhanced Error Logging Documentation](error-logging.md)** - NEW comprehensive error handling system
-- **[Content Sanitization Documentation](../backend/docs/CONTENT_SANITIZATION.md)** - NEW HTML content sanitization system
+- **[Repository Pattern Implementation](repository-pattern.md)** - **NEW** Clean data access layer with interface-based dependency injection
+- **[Alert Processing Strategy Pattern](alert-strategy-pattern.md)** - **NEW** Extensible alert processing with strategy pattern architecture
+- **[Caching System Architecture](caching-system.md)** - **NEW** Multi-tier caching with Redis and in-memory fallback
+- **[Enhanced Logging System](enhanced-logging.md)** - **NEW** Comprehensive logging with correlation IDs and structured output
+- **[Frontend Component Architecture](frontend-architecture.md)** - **NEW** Component composition patterns and custom hooks
+- **[Type Safety System](type-safety.md)** - **NEW** Runtime type checking and validation utilities
+- **[KMS Integration Documentation](kms-integration.md)** - **NEW** Enterprise Key Management Service integration
+- **[Dependency Injection Documentation](dependency-injection.md)** - **NEW** Complete DI system implementation guide
+- **[Pagination Enforcement Documentation](../backend/docs/PAGINATION_ENFORCEMENT.md)** - **NEW** Comprehensive pagination system preventing performance issues
+- **[Validation System Documentation](validation-system.md)** - **UPDATED** Comprehensive guide with Joi standardization
+- **[Parameter Sanitization Documentation](parameter-sanitization.md)** - **NEW** Security protection guide
+- **[Token Revocation Documentation](../backend/docs/TOKEN_REVOCATION.md)** - **NEW** JWT token blacklist system
+- **[Enhanced Error Logging Documentation](error-logging.md)** - **UPDATED** Comprehensive error handling system
+- **[Content Sanitization Documentation](../backend/docs/CONTENT_SANITIZATION.md)** - **NEW** HTML content sanitization system
 - **Dependency Injection Complete** - Full DI system with enhanced testability and maintainability
 - **Pagination Enforcement System** - Mandatory pagination preventing performance degradation with large datasets
 - **Service Refactoring** - Core services migrated to DI pattern with repository abstraction
@@ -88,12 +107,17 @@ Welcome to the BoosterBeacon documentation. This guide covers all aspects of the
 ## 🔍 Quick Navigation
 
 ### For Developers
+- [Repository Pattern Implementation](repository-pattern.md) - **NEW** Clean data access layer with dependency injection
+- [Alert Processing Strategy Pattern](alert-strategy-pattern.md) - **NEW** Extensible alert processing architecture
+- [Caching System Architecture](caching-system.md) - **NEW** Multi-tier caching with performance optimization
+- [Enhanced Logging System](enhanced-logging.md) - **NEW** Comprehensive logging with correlation IDs
+- [Frontend Component Architecture](frontend-architecture.md) - **NEW** Component composition and custom hooks
+- [Type Safety System](type-safety.md) - **NEW** Runtime type checking and validation utilities
 - [KMS Integration](kms-integration.md) - **NEW** Enterprise Key Management Service integration
-- [Dependency Injection System](../backend/docs/DEPENDENCY_INJECTION.md) - **NEW** Complete DI architecture and implementation guide
+- [Dependency Injection System](dependency-injection.md) - **NEW** Complete DI architecture and implementation guide
 - [Pagination Enforcement System](../backend/docs/PAGINATION_ENFORCEMENT.md) - **NEW** Mandatory pagination system preventing performance issues
 - [Validation System](validation-system.md) - **UPDATED** Request validation patterns and Joi standardization
 - [Parameter Sanitization](parameter-sanitization.md) - **NEW** Input sanitization and security protection
-- [Error Logging System](error-logging.md) - **NEW** Enhanced error logging with correlation IDs and debugging context
 - [Token Revocation System](../backend/docs/TOKEN_REVOCATION.md) - **NEW** JWT token blacklist and multi-device logout
 - [Content Sanitization System](../backend/docs/CONTENT_SANITIZATION.md) - **NEW** HTML content sanitization with DOMPurify
 - [Authentication Security](authentication-security.md) - Security implementation and JWT token management
@@ -119,8 +143,14 @@ Welcome to the BoosterBeacon documentation. This guide covers all aspects of the
 
 ## 📈 Project Status
 
-BoosterBeacon is **production ready** with **all 26 major systems completed (100%)**:
+BoosterBeacon is **production ready** with **all 32 major systems completed (100%)**:
 
+- ✅ **Repository Pattern Implementation** - Clean data access layer with interface-based dependency injection (August 28, 2025)
+- ✅ **Alert Processing Strategy Pattern** - Extensible alert processing with strategy pattern architecture (August 28, 2025)
+- ✅ **Caching System Architecture** - Multi-tier caching with Redis and in-memory fallback (August 28, 2025)
+- ✅ **Enhanced Logging System** - Comprehensive logging with correlation IDs and structured output (August 28, 2025)
+- ✅ **Frontend Component Architecture** - Component composition patterns and custom hooks (August 28, 2025)
+- ✅ **Type Safety System** - Runtime type checking and validation utilities (August 28, 2025)
 - ✅ **KMS Integration System** - Enterprise Key Management Service with multi-provider support (August 28, 2025)
 - ✅ **Dependency Injection System** - Complete DI architecture with enhanced testability (August 28, 2025)
 - ✅ **Pagination Enforcement System** - Mandatory pagination preventing performance issues (August 28, 2025)

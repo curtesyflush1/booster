@@ -4,8 +4,11 @@ import { Product } from '../models/Product';
 import { Watch } from '../models/Watch';
 import { QuietHoursService } from './quietHoursService';
 import { AlertDeliveryService } from './alertDeliveryService';
+import { CachedUserService } from './cachedUserService';
 import { logger } from '../utils/logger';
 import { IAlert, IUser, IProduct, IWatch, IAlertData } from '../types/database';
+import { AlertProcessorFactory } from './alertStrategies/AlertProcessorFactory';
+import { AlertGenerationData } from './alertStrategies/AlertProcessingStrategy';
 
 // Custom error types for better error handling
 export class AlertValidationError extends Error {
@@ -22,15 +25,7 @@ export class AlertRateLimitError extends Error {
   }
 }
 
-export interface AlertGenerationData {
-  userId: string;
-  productId: string;
-  retailerId: string;
-  watchId?: string;
-  type: 'restock' | 'price_drop' | 'low_stock' | 'pre_order';
-  priority?: 'low' | 'medium' | 'high' | 'urgent';
-  data: IAlertData;
-}
+// AlertGenerationData is now imported from the strategy interface
 
 export interface AlertProcessingResult {
   alertId: string;
@@ -112,8 +107,9 @@ export class AlertProcessingService {
         );
       }
 
-      // Determine priority if not specified
-      const priority = alertData.priority || await this.calculatePriority(alertData);
+      // Use strategy pattern to determine priority
+      const strategy = AlertProcessorFactory.getProcessor(alertData.type);
+      const priority = alertData.priority || await strategy.calculatePriority(alertData);
 
       // Create the alert
       const alertCreateData: Partial<IAlert> = {
@@ -263,15 +259,16 @@ export class AlertProcessingService {
         };
       }
 
-      // Get user preferences for delivery channels
-      const user = await User.findById<IUser>(alert.user_id);
+      // Get user preferences for delivery channels (with caching)
+      const user = await CachedUserService.getUserWithPreferences(alert.user_id);
       if (!user) {
         await Alert.markAsFailed(alertId, 'User not found');
         return { success: false, reason: 'User not found' };
       }
 
-      // Determine delivery channels based on user preferences and subscription tier
-      const deliveryChannels = this.determineDeliveryChannels(user, alert);
+      // Use strategy pattern to determine delivery channels
+      const strategy = AlertProcessorFactory.getProcessor(alert.type as any);
+      const deliveryChannels = strategy.determineDeliveryChannels(user, alert);
       if (deliveryChannels.length === 0) {
         await Alert.markAsFailed(alertId, 'No delivery channels available');
         return { success: false, reason: 'No delivery channels available' };
@@ -401,9 +398,9 @@ export class AlertProcessingService {
       return { isValid: false, errors };
     }
 
-    // Database validation with parallel queries for performance
+    // Database validation with parallel queries for performance (using cached user service)
     const [user, product, watch] = await Promise.all([
-      User.findById<IUser>(alertData.userId),
+      CachedUserService.getUserWithPreferences(alertData.userId),
       Product.findById<IProduct>(alertData.productId),
       alertData.watchId ? Watch.findById<IWatch>(alertData.watchId) : null
     ]);
@@ -521,107 +518,7 @@ export class AlertProcessingService {
     return { allowed: true };
   }
 
-  /**
-   * Calculate alert priority based on various factors
-   */
-  private static async calculatePriority(alertData: AlertGenerationData): Promise<'low' | 'medium' | 'high' | 'urgent'> {
-    try {
-      const product = await Product.findById<IProduct>(alertData.productId);
-      const popularityScore = product?.popularity_score || 0;
-
-      const basePriority = this.getBasePriorityByType(alertData, popularityScore);
-      return this.boostPriorityForPopularity(basePriority, popularityScore);
-    } catch (error) {
-      logger.error('Failed to calculate priority', {
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-      return 'medium'; // Default fallback
-    }
-  }
-
-  /**
-   * Get base priority based on alert type
-   */
-  private static getBasePriorityByType(
-    alertData: AlertGenerationData, 
-    popularityScore: number
-  ): 'low' | 'medium' | 'high' | 'urgent' {
-    switch (alertData.type) {
-      case 'restock':
-        return popularityScore > this.POPULARITY_THRESHOLD_HIGH ? 'high' : 'medium';
-      
-      case 'price_drop':
-        return this.calculatePriceDropPriority(alertData);
-      
-      case 'low_stock':
-        return 'high'; // Low stock is usually urgent
-      
-      case 'pre_order':
-        return 'medium';
-      
-      default:
-        return 'medium';
-    }
-  }
-
-  /**
-   * Calculate priority for price drop alerts
-   */
-  private static calculatePriceDropPriority(alertData: AlertGenerationData): 'low' | 'medium' | 'high' | 'urgent' {
-    if (alertData.data.price && alertData.data.original_price) {
-      const dropPercentage = ((alertData.data.original_price - alertData.data.price) / alertData.data.original_price) * 100;
-      return dropPercentage > this.PRICE_DROP_THRESHOLD_HIGH ? 'high' : 'medium';
-    }
-    return 'medium';
-  }
-
-  /**
-   * Boost priority based on product popularity
-   */
-  private static boostPriorityForPopularity(
-    basePriority: 'low' | 'medium' | 'high' | 'urgent', 
-    popularityScore: number
-  ): 'low' | 'medium' | 'high' | 'urgent' {
-    if (popularityScore > this.POPULARITY_THRESHOLD_URGENT) {
-      return basePriority === 'high' ? 'urgent' : 'high';
-    }
-    return basePriority;
-  }
-
-  /**
-   * Determine delivery channels based on user preferences and subscription
-   */
-  private static determineDeliveryChannels(user: IUser, _alert: IAlert): string[] {
-    const channels: string[] = [];
-    const settings = user.notification_settings;
-
-    // Web push is always available
-    if (settings.web_push) {
-      channels.push('web_push');
-    }
-
-    // Email is available for all users
-    if (settings.email) {
-      channels.push('email');
-    }
-
-    // SMS and Discord are Pro features
-    if (user.subscription_tier === 'pro') {
-      if (settings.sms) {
-        channels.push('sms');
-      }
-      if (settings.discord && settings.discord_webhook) {
-        channels.push('discord');
-      }
-    }
-
-    // Ensure at least one channel is available
-    if (channels.length === 0 && settings.web_push !== false) {
-      channels.push('web_push'); // Fallback to web push
-    }
-
-    return channels;
-  }
+  // Priority calculation and delivery channel determination now handled by strategy pattern
 
   /**
    * Update watch alert count

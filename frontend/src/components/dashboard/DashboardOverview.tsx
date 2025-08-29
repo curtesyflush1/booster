@@ -1,5 +1,5 @@
 import React from 'react';
-import { Crown, Bell, Eye, TrendingUp, Activity, Target, Zap, Clock } from 'lucide-react';
+import { Bell, Eye, TrendingUp, Activity, Target, Zap, Clock } from 'lucide-react';
 import { DashboardStats } from '../../types';
 
 interface DashboardOverviewProps {

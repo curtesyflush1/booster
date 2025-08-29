@@ -14,7 +14,7 @@ interface WatchCardProps {
   onEdit?: (watch: Watch) => void;
 }
 
-export const WatchCard: React.FC<WatchCardProps> = ({
+const WatchCardComponent: React.FC<WatchCardProps> = ({
   watch,
   isSelected,
   onSelect,
@@ -255,3 +255,21 @@ export const WatchCard: React.FC<WatchCardProps> = ({
     </div>
   );
 };
+
+// Memoize WatchCard to prevent unnecessary re-renders when props haven't changed
+export const WatchCard = React.memo(WatchCardComponent, (prevProps, nextProps) => {
+  // Custom comparison function for better performance
+  return (
+    prevProps.watch.id === nextProps.watch.id &&
+    prevProps.watch.isActive === nextProps.watch.isActive &&
+    prevProps.watch.alertCount === nextProps.watch.alertCount &&
+    prevProps.watch.lastAlertSent === nextProps.watch.lastAlertSent &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.onSelect === nextProps.onSelect &&
+    prevProps.onToggle === nextProps.onToggle &&
+    prevProps.onDelete === nextProps.onDelete &&
+    prevProps.onEdit === nextProps.onEdit &&
+    JSON.stringify(prevProps.watch.product.availability) === JSON.stringify(nextProps.watch.product.availability) &&
+    JSON.stringify(prevProps.watch.filters) === JSON.stringify(nextProps.watch.filters)
+  );
+});

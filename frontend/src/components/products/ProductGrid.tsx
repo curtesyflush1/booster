@@ -18,7 +18,7 @@ interface ProductGridProps {
   onLoadMore: () => void;
 }
 
-export const ProductGrid: React.FC<ProductGridProps> = ({
+const ProductGridComponent: React.FC<ProductGridProps> = ({
   products,
   loading,
   error,
@@ -91,3 +91,20 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
     </div>
   );
 };
+
+// Memoize ProductGrid to prevent unnecessary re-renders when props haven't changed
+export const ProductGrid = React.memo(ProductGridComponent, (prevProps, nextProps) => {
+  // Custom comparison function for better performance
+  return (
+    prevProps.products.length === nextProps.products.length &&
+    prevProps.products.every((product, index) => product.id === nextProps.products[index]?.id) &&
+    prevProps.loading === nextProps.loading &&
+    prevProps.error === nextProps.error &&
+    prevProps.searchQuery === nextProps.searchQuery &&
+    prevProps.pagination.total === nextProps.pagination.total &&
+    prevProps.pagination.hasNext === nextProps.pagination.hasNext &&
+    prevProps.showWatchActions === nextProps.showWatchActions &&
+    prevProps.onProductSelect === nextProps.onProductSelect &&
+    prevProps.onLoadMore === nextProps.onLoadMore
+  );
+});

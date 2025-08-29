@@ -11,7 +11,7 @@ interface SocialLinksProps {
 /**
  * Social media links component for BoosterBeacon
  */
-const SocialLinks: React.FC<SocialLinksProps> = ({
+const SocialLinksComponent: React.FC<SocialLinksProps> = ({
   className = '',
   size = 'md',
   showLabels = false,
@@ -133,5 +133,8 @@ const SocialLinks: React.FC<SocialLinksProps> = ({
     </div>
   );
 };
+
+// Memoize SocialLinks since it's a static component that rarely changes
+const SocialLinks = React.memo(SocialLinksComponent);
 
 export default SocialLinks;

@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback } from 'react';
 import { User, AuthToken, LoginCredentials, RegisterData } from '../types';
 import { apiClient } from '../services/apiClient';
+import { useTokenRefresh } from '../hooks/useTokenRefresh';
+import { useAuthErrorListener } from '../hooks/useAuthErrorListener';
 
 // Auth State Interface
 interface AuthState {
@@ -116,38 +118,33 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
+  // Handle auth errors
+  const handleAuthError = useCallback(() => {
+    dispatch({ type: 'AUTH_LOGOUT' });
+  }, []);
+
+  // Handle token refresh
+  const handleTokenRefresh = useCallback(async () => {
+    try {
+      await refreshToken();
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      dispatch({ type: 'AUTH_LOGOUT' });
+    }
+  }, []);
+
+  // Use custom hooks
+  useAuthErrorListener(handleAuthError);
+  useTokenRefresh({
+    token: state.token,
+    onRefresh: handleTokenRefresh,
+    refreshBufferMinutes: 5
+  });
+
   // Check authentication status on mount
   useEffect(() => {
     checkAuthStatus();
   }, []);
-
-  // Listen for auth errors from API client
-  useEffect(() => {
-    const handleAuthError = () => {
-      dispatch({ type: 'AUTH_LOGOUT' });
-    };
-
-    window.addEventListener('auth-error', handleAuthError);
-    return () => window.removeEventListener('auth-error', handleAuthError);
-  }, []);
-
-  // Auto-refresh token before expiry
-  useEffect(() => {
-    if (!state.token) return;
-
-    const tokenExpiryTime = new Date(state.token.expiresAt).getTime();
-    const currentTime = Date.now();
-    const timeUntilExpiry = tokenExpiryTime - currentTime;
-    const refreshTime = timeUntilExpiry - 5 * 60 * 1000; // Refresh 5 minutes before expiry
-
-    if (refreshTime > 0) {
-      const timeoutId = setTimeout(() => {
-        refreshToken().catch(console.error);
-      }, refreshTime);
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [state.token]);
 
   /**
    * Check current authentication status

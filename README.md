@@ -4,7 +4,7 @@
 
 BoosterBeacon is a production-ready, real-time monitoring and alerting system that helps Pokémon TCG collectors never miss a drop. Get instant notifications when sealed products restock at major retailers with official cart deep-links for one-tap purchasing.
 
-**🎯 Status**: **Production Ready** - All 26 major systems completed (100% feature complete)
+**🎯 Status**: **Production Ready** - All 26 major systems completed with advanced architecture patterns (100% feature complete)
 
 ## ✨ Features
 
@@ -18,13 +18,27 @@ BoosterBeacon is a production-ready, real-time monitoring and alerting system th
 
 ## 🏗️ Architecture
 
+BoosterBeacon implements modern architectural patterns including Repository Pattern, Strategy Pattern, Dependency Injection, and Multi-Tier Caching for enterprise-grade scalability and maintainability.
+
 ```
 booster/
-├── backend/          # Node.js/Express API server
-├── frontend/         # React PWA application  
-├── extension/        # Browser extension
-├── shared/           # Shared code and types
-└── docs/            # Documentation
+├── backend/          # Node.js/Express API server with DI architecture
+│   ├── src/
+│   │   ├── controllers/     # Type-safe controllers with standardized error handling
+│   │   ├── services/        # Business services with dependency injection
+│   │   ├── repositories/    # Data access layer with repository pattern
+│   │   ├── strategies/      # Alert processing strategies (extensible)
+│   │   ├── utils/           # Type guards, validation, and helper utilities
+│   │   └── types/           # Comprehensive TypeScript definitions
+├── frontend/         # React PWA with component composition patterns
+│   ├── src/
+│   │   ├── components/      # Atomic design components with accessibility
+│   │   ├── hooks/           # Custom hooks for state and side effects
+│   │   ├── context/         # Global state management
+│   │   └── services/        # API client and external integrations
+├── extension/        # Browser extension with TypeScript
+├── shared/           # Shared types and utilities
+└── docs/            # Comprehensive system documentation
 ```
 
 ## 🚀 Quick Start
@@ -653,19 +667,25 @@ Current tables:
 ## 🏗️ Technology Stack
 
 ### Backend
-- **Runtime**: Node.js 18+ with TypeScript
-- **Framework**: Express.js with Helmet.js security
-- **Database**: PostgreSQL 15+ with advanced Redis caching and token revocation
-- **Authentication**: JWT tokens with bcrypt
+- **Runtime**: Node.js 18+ with TypeScript and comprehensive type safety
+- **Framework**: Express.js with Helmet.js security and standardized error handling
+- **Architecture**: Repository Pattern, Strategy Pattern, and Dependency Injection
+- **Database**: PostgreSQL 15+ with type-safe query builders and connection pooling
+- **Caching**: Multi-tier caching with Redis and intelligent fallback strategies
+- **Authentication**: JWT tokens with Redis-based revocation and bcrypt hashing
+- **Logging**: Structured JSON logging with correlation IDs and performance monitoring
 - **Retailer Integration**: Multi-retailer API and scraping with circuit breakers
-- **Testing**: Jest with Supertest
+- **Testing**: Jest with Supertest and enhanced mocking capabilities
 
 ### Frontend
-- **Framework**: React 18+ with TypeScript
-- **Build Tool**: Vite
-- **UI Library**: Tailwind CSS
-- **PWA**: Service Worker support
-- **Testing**: Jest with React Testing Library
+- **Framework**: React 18+ with TypeScript and component composition patterns
+- **Architecture**: Atomic design principles with custom hooks separation
+- **Build Tool**: Vite with optimized bundle splitting and lazy loading
+- **UI Library**: Tailwind CSS with accessibility-first components
+- **State Management**: React Context with useReducer and custom hooks
+- **Performance**: Strategic memoization, callback optimization, and code splitting
+- **PWA**: Service Worker support with offline capabilities
+- **Testing**: Jest with React Testing Library and comprehensive component testing
 
 ### Infrastructure
 - **Containerization**: Docker with Docker Compose
@@ -690,13 +710,26 @@ Current tables:
 - **Data Protection**: SQL injection prevention, XSS protection, secure headers
 - **Validation System**: Centralized Joi validation with schema caching and performance optimization
 - **Pagination Enforcement**: Mandatory pagination system preventing performance degradation with large datasets
+- **Type Safety**: Comprehensive type guards and validation utilities for runtime type checking
+- **Repository Pattern**: Clean data access layer with interface-based dependency injection
 
 **📚 Comprehensive Documentation**: Complete system documentation including:
-- [KMS Integration Guide](docs/kms-integration.md) - **NEW** Enterprise Key Management Service integration and configuration
-- [Dependency Injection Implementation](backend/docs/DEPENDENCY_INJECTION.md) - **NEW** Complete DI system architecture and migration guide
+
+### **🏗️ Architecture Documentation**
+- [Architecture Overview](docs/architecture-overview.md) - **NEW** Comprehensive guide to modern architecture patterns and design decisions
+- [Repository Pattern Implementation](docs/repository-pattern.md) - **NEW** Clean data access layer with interface-based dependency injection
+- [Alert Processing Strategy Pattern](docs/alert-strategy-pattern.md) - **NEW** Extensible alert processing with strategy pattern architecture  
+- [Dependency Injection Implementation](backend/docs/DEPENDENCY_INJECTION.md) - **UPDATED** Complete DI system with repository integration
+- [Caching System Architecture](docs/caching-system.md) - **NEW** Multi-tier caching with Redis and intelligent fallback strategies
+- [Enhanced Logging System](docs/enhanced-logging.md) - **NEW** Comprehensive logging with correlation IDs and structured output
+- [Frontend Component Architecture](docs/frontend-architecture.md) - **NEW** Component composition patterns and modern React architecture
+- [Type Safety System](docs/type-safety.md) - **NEW** Runtime type checking and comprehensive validation utilities
+
+### **🔒 Security & Infrastructure**
+- [KMS Integration Guide](docs/kms-integration.md) - Enterprise Key Management Service integration and configuration
 - [Pagination Enforcement System](backend/docs/PAGINATION_ENFORCEMENT.md) - **NEW** Comprehensive pagination system preventing performance issues
 - [Token Revocation System](backend/docs/TOKEN_REVOCATION.md) - **NEW** JWT token blacklist and multi-device logout system
-- [Enhanced Error Logging System](docs/error-logging.md) - **NEW** Comprehensive error handling with correlation IDs and debugging context
+- [Enhanced Error Logging System](docs/error-logging.md) - **UPDATED** Comprehensive error handling with correlation IDs and debugging context
 - [Content Sanitization System](backend/docs/CONTENT_SANITIZATION.md) - **NEW** HTML content sanitization with DOMPurify integration
 - [Authentication Security Documentation](docs/authentication-security.md) - JWT token management and security features
 - [Parameter Sanitization Guide](docs/parameter-sanitization.md) - Input validation and XSS/SQL injection prevention

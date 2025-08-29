@@ -8,7 +8,7 @@ interface ProductCardProps {
   showWatchActions?: boolean;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({
+const ProductCardComponent: React.FC<ProductCardProps> = ({
   product,
   onSelect,
   showWatchActions = true
@@ -88,3 +88,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     </div>
   );
 };
+
+// Memoize ProductCard to prevent unnecessary re-renders when props haven't changed
+export const ProductCard = React.memo(ProductCardComponent, (prevProps, nextProps) => {
+  // Custom comparison function for better performance
+  return (
+    prevProps.product.id === nextProps.product.id &&
+    prevProps.product.name === nextProps.product.name &&
+    prevProps.product.msrp === nextProps.product.msrp &&
+    prevProps.product.imageUrl === nextProps.product.imageUrl &&
+    prevProps.product.thumbnailUrl === nextProps.product.thumbnailUrl &&
+    prevProps.showWatchActions === nextProps.showWatchActions &&
+    prevProps.onSelect === nextProps.onSelect &&
+    JSON.stringify(prevProps.product.availability) === JSON.stringify(nextProps.product.availability)
+  );
+});

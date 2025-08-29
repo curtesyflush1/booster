@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TrendingUp, TrendingDown, AlertTriangle, Target, Zap, DollarSign, Clock, BarChart3 } from 'lucide-react';
+import { TrendingUp, AlertTriangle, Target, Zap, DollarSign, BarChart3 } from 'lucide-react';
 import { MLPrediction } from '../../types';
 
 interface PredictiveInsightsProps {
@@ -7,7 +7,7 @@ interface PredictiveInsightsProps {
   watchedProducts: any[];
 }
 
-const PredictiveInsights: React.FC<PredictiveInsightsProps> = ({ insights, watchedProducts }) => {
+const PredictiveInsights: React.FC<PredictiveInsightsProps> = ({ insights }) => {
   const [sortBy, setSortBy] = useState<'hype' | 'roi' | 'sellout'>('hype');
   const [filterBy, setFilterBy] = useState<'all' | 'high_confidence' | 'urgent'>('all');
 

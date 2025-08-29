@@ -53,7 +53,7 @@ const PricingPage: React.FC = memo(() => {
     if (loading) {
         return (
             <div className="min-h-screen bg-background-primary flex items-center justify-center">
-                <LoadingSpinner size="large" />
+                <LoadingSpinner size="lg" />
             </div>
         );
     }

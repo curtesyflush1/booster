@@ -21,7 +21,7 @@ interface SEOHeadProps extends Partial<SEOConfig> {
  * SEOHead component for managing page-level SEO
  * Handles meta tags, structured data, and social sharing optimization
  */
-const SEOHead: React.FC<SEOHeadProps> = ({
+const SEOHeadComponent: React.FC<SEOHeadProps> = ({
   product,
   breadcrumbs,
   faqs,
@@ -56,5 +56,21 @@ const SEOHead: React.FC<SEOHeadProps> = ({
 
   return null; // This component doesn't render anything
 };
+
+// Memoize SEOHead to prevent unnecessary re-renders when SEO config hasn't changed
+const SEOHead = React.memo(SEOHeadComponent, (prevProps, nextProps) => {
+  // Custom comparison function for SEO props
+  return (
+    JSON.stringify(prevProps.product) === JSON.stringify(nextProps.product) &&
+    JSON.stringify(prevProps.breadcrumbs) === JSON.stringify(nextProps.breadcrumbs) &&
+    JSON.stringify(prevProps.faqs) === JSON.stringify(nextProps.faqs) &&
+    prevProps.structuredDataId === nextProps.structuredDataId &&
+    prevProps.title === nextProps.title &&
+    prevProps.description === nextProps.description &&
+    prevProps.keywords === nextProps.keywords &&
+    prevProps.image === nextProps.image &&
+    prevProps.url === nextProps.url
+  );
+});
 
 export default SEOHead;

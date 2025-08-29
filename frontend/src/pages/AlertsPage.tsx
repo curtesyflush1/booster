@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { 
   Bell, 
   Filter, 
@@ -10,10 +10,13 @@ import {
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { alertService, AlertFilters } from '../services/alertService';
 import { Alert, PaginatedResponse } from '../types';
-import AlertInbox from '../components/alerts/AlertInbox';
-import AlertFiltersPanel from '../components/alerts/AlertFiltersPanel';
-import AlertStats from '../components/alerts/AlertStats';
-import AlertAnalytics from '../components/alerts/AlertAnalytics';
+import LoadingSpinner from '../components/LoadingSpinner';
+
+// Lazy load heavy alert components for better code splitting
+const AlertInbox = lazy(() => import('../components/alerts/AlertInbox'));
+const AlertFiltersPanel = lazy(() => import('../components/alerts/AlertFiltersPanel'));
+const AlertStats = lazy(() => import('../components/alerts/AlertStats'));
+const AlertAnalytics = lazy(() => import('../components/alerts/AlertAnalytics'));
 
 
 type ViewMode = 'inbox' | 'analytics' | 'preferences';
@@ -130,20 +133,26 @@ const AlertsPage: React.FC = () => {
     switch (viewMode) {
       case 'inbox':
         return (
-          <AlertInbox
-            alerts={alerts}
-            loading={loading}
-            error={error}
-            selectedAlerts={selectedAlerts}
-            onAlertSelect={handleAlertSelect}
-            onSelectAll={handleSelectAll}
-            onAlertAction={handleAlertAction}
-            onPageChange={handlePageChange}
-            onRefresh={() => loadAlerts()}
-          />
+          <Suspense fallback={<LoadingSpinner size="lg" />}>
+            <AlertInbox
+              alerts={alerts}
+              loading={loading}
+              error={error}
+              selectedAlerts={selectedAlerts}
+              onAlertSelect={handleAlertSelect}
+              onSelectAll={handleSelectAll}
+              onAlertAction={handleAlertAction}
+              onPageChange={handlePageChange}
+              onRefresh={() => loadAlerts()}
+            />
+          </Suspense>
         );
       case 'analytics':
-        return <AlertAnalytics />;
+        return (
+          <Suspense fallback={<LoadingSpinner size="lg" />}>
+            <AlertAnalytics />
+          </Suspense>
+        );
       case 'preferences':
         return (
           <div className="bg-background-secondary rounded-lg p-6">
@@ -202,7 +211,9 @@ const AlertsPage: React.FC = () => {
       </div>
 
       {/* Stats Overview */}
-      <AlertStats />
+      <Suspense fallback={<LoadingSpinner size="md" />}>
+        <AlertStats />
+      </Suspense>
 
       {/* Filters and Actions Bar */}
       {viewMode === 'inbox' && (
@@ -252,10 +263,12 @@ const AlertsPage: React.FC = () => {
           {/* Filters Panel */}
           {showFilters && (
             <div className="mt-4 pt-4 border-t border-background-tertiary">
-              <AlertFiltersPanel
-                filters={filters}
-                onFiltersChange={handleFiltersChange}
-              />
+              <Suspense fallback={<LoadingSpinner size="sm" />}>
+                <AlertFiltersPanel
+                  filters={filters}
+                  onFiltersChange={handleFiltersChange}
+                />
+              </Suspense>
             </div>
           )}
         </div>

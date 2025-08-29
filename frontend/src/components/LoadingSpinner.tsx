@@ -5,7 +5,7 @@ interface LoadingSpinnerProps {
   className?: string;
 }
 
-const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ 
+const LoadingSpinnerComponent: React.FC<LoadingSpinnerProps> = ({ 
   size = 'md', 
   className = '' 
 }) => {
@@ -27,5 +27,8 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
     </div>
   );
 };
+
+// Memoize LoadingSpinner since it's a simple component that's rendered frequently
+const LoadingSpinner = React.memo(LoadingSpinnerComponent);
 
 export default LoadingSpinner;

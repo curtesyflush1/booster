@@ -297,7 +297,7 @@ const CollectionGaps: React.FC<{ gapAnalysis: any; isProUser: boolean }> = ({ ga
 );
 
 // Performance Metrics Section
-const PerformanceMetrics: React.FC<{ performance: any; isProUser: boolean }> = ({ performance, isProUser }) => (
+const PerformanceMetrics: React.FC<{ performance: any; isProUser: boolean }> = ({ performance }) => (
   <div className="card-dark p-6">
     <h3 className="text-lg font-semibold text-white mb-4">Performance Metrics</h3>
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

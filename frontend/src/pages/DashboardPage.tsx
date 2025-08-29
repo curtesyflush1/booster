@@ -1,15 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 import { DashboardStats, Alert, MLPrediction } from '../types';
-import DashboardOverview from '../components/dashboard/DashboardOverview';
-import PredictiveInsights from '../components/dashboard/PredictiveInsights';
-import PortfolioTracking from '../components/dashboard/PortfolioTracking';
 import RecentActivity from '../components/dashboard/RecentActivity';
 import DashboardFilters from '../components/dashboard/DashboardFilters';
 import { useWebSocket } from '../hooks/useWebSocket';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorBoundary from '../components/ErrorBoundary';
+
+// Lazy load heavy dashboard components for better code splitting
+const DashboardOverview = lazy(() => import('../components/dashboard/DashboardOverview'));
+const PredictiveInsights = lazy(() => import('../components/dashboard/PredictiveInsights'));
+const PortfolioTracking = lazy(() => import('../components/dashboard/PortfolioTracking'));
 
 interface DashboardData {
   stats: DashboardStats;
@@ -246,10 +248,12 @@ const DashboardPage: React.FC = () => {
         {/* Tab Content */}
         {activeTab === 'overview' && dashboardData && (
           <div className="space-y-8">
-            <DashboardOverview
-              stats={dashboardData.stats}
-              insights={dashboardData.insights}
-            />
+            <Suspense fallback={<LoadingSpinner size="lg" />}>
+              <DashboardOverview
+                stats={dashboardData.stats}
+                insights={dashboardData.insights}
+              />
+            </Suspense>
             <RecentActivity
               alerts={dashboardData.recentAlerts}
               watchedProducts={dashboardData.watchedProducts}
@@ -258,17 +262,21 @@ const DashboardPage: React.FC = () => {
         )}
 
         {activeTab === 'insights' && (
-          <PredictiveInsights
-            insights={predictiveInsights}
-            watchedProducts={dashboardData?.watchedProducts || []}
-          />
+          <Suspense fallback={<LoadingSpinner size="lg" />}>
+            <PredictiveInsights
+              insights={predictiveInsights}
+              watchedProducts={dashboardData?.watchedProducts || []}
+            />
+          </Suspense>
         )}
 
         {activeTab === 'portfolio' && portfolioData && (
-          <PortfolioTracking
-            portfolio={portfolioData}
-            user={user}
-          />
+          <Suspense fallback={<LoadingSpinner size="lg" />}>
+            <PortfolioTracking
+              portfolio={portfolioData}
+              user={user}
+            />
+          </Suspense>
         )}
       </div>
     </ErrorBoundary>

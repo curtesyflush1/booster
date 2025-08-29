@@ -7,7 +7,7 @@ interface AlertFiltersPanelProps {
   onFiltersChange: (filters: AlertFilters) => void;
 }
 
-const AlertFiltersPanel: React.FC<AlertFiltersPanelProps> = ({
+const AlertFiltersPanelComponent: React.FC<AlertFiltersPanelProps> = ({
   filters,
   onFiltersChange
 }) => {
@@ -204,5 +204,12 @@ const AlertFiltersPanel: React.FC<AlertFiltersPanelProps> = ({
     </div>
   );
 };
+
+// Memoize AlertFiltersPanel to prevent unnecessary re-renders when filters haven't changed
+const AlertFiltersPanel = React.memo(AlertFiltersPanelComponent, (prevProps, nextProps) => {
+  // Custom comparison function to check if filters have actually changed
+  return JSON.stringify(prevProps.filters) === JSON.stringify(nextProps.filters) &&
+         prevProps.onFiltersChange === nextProps.onFiltersChange;
+});
 
 export default AlertFiltersPanel;

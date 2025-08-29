@@ -13,7 +13,7 @@ interface WatchPackCardProps {
   onUnsubscribe: (packId: string) => void;
 }
 
-export const WatchPackCard: React.FC<WatchPackCardProps> = ({
+const WatchPackCardComponent: React.FC<WatchPackCardProps> = ({
   watchPack,
   isSubscribed,
   onSubscribe,
@@ -214,3 +214,18 @@ export const WatchPackCard: React.FC<WatchPackCardProps> = ({
     </div>
   );
 };
+
+// Memoize WatchPackCard to prevent unnecessary re-renders when props haven't changed
+export const WatchPackCard = React.memo(WatchPackCardComponent, (prevProps, nextProps) => {
+  // Custom comparison function for better performance
+  return (
+    prevProps.watchPack.id === nextProps.watchPack.id &&
+    prevProps.watchPack.name === nextProps.watchPack.name &&
+    prevProps.watchPack.isActive === nextProps.watchPack.isActive &&
+    prevProps.watchPack.subscriberCount === nextProps.watchPack.subscriberCount &&
+    prevProps.isSubscribed === nextProps.isSubscribed &&
+    prevProps.onSubscribe === nextProps.onSubscribe &&
+    prevProps.onUnsubscribe === nextProps.onUnsubscribe &&
+    JSON.stringify(prevProps.watchPack.products) === JSON.stringify(nextProps.watchPack.products)
+  );
+});

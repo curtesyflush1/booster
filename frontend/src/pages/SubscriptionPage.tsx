@@ -75,7 +75,7 @@ const SubscriptionPage: React.FC = () => {
   if (loading || state.loading) {
     return (
       <div className="min-h-screen bg-background-primary flex items-center justify-center">
-        <LoadingSpinner size="large" />
+        <LoadingSpinner size="lg" />
       </div>
     );
   }

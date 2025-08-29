@@ -530,17 +530,17 @@ This checklist is based on a deep-dive analysis of the BoosterBeacon repository.
 
 * **API Requests**
     * [x] **Consolidate Dashboard API Calls:** Create a dedicated backend endpoint to aggregate all the data required for the `DashboardPage`, reducing the number of initial API requests from multiple to a single call.
-    * [ ] **Analyze Bundle Size:** Use a tool like `vite-plugin-visualizer` to inspect the production bundle and identify opportunities for further code splitting, especially for large components.
+    * [x] **Analyze Bundle Size:** Use a tool like `vite-plugin-visualizer` to inspect the production bundle and identify opportunities for further code splitting, especially for large components.
 
 * **Rendering Performance**
-    * [ ] **Use Memoization:** For components that are re-rendered frequently with the same props, apply `React.memo` to prevent unnecessary re-renders and improve UI performance.
+    * [x] **Use Memoization:** For components that are re-rendered frequently with the same props, apply `React.memo` to prevent unnecessary re-renders and improve UI performance.
 
 ---
 
 ### 🧹 Code Quality & Maintainability (Low Priority)
 
 * **State Management**
-    * [ ] **Evaluate Advanced State Management:** As the application grows, if you notice prop-drilling or overly complex Context providers, evaluate the need for a more robust state management library like Redux Toolkit or Zustand.
+    * [x] **Evaluate Advanced State Management:** As the application grows, if you notice prop-drilling or overly complex Context providers, evaluate the need for a more robust state management library like Redux Toolkit or Zustand.
 
 ---
 

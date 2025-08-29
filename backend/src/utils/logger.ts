@@ -13,15 +13,7 @@ interface LogMeta {
   logType?: 'info' | 'error' | 'warning' | 'debug' | 'audit' | 'performance' | 'security';
 }
 
-interface LogEntry {
-  timestamp: string;
-  level: string;
-  message: string;
-  correlationId: string;
-  service: string;
-  environment: string;
-  [key: string]: any;
-}
+// LogEntry interface removed as it was unused
 
 const logLevel = process.env.LOG_LEVEL || 'info';
 const nodeEnv = process.env.NODE_ENV || 'development';
@@ -286,7 +278,7 @@ initializeLogsDirectory();
 
 // Export utility functions for middleware integration
 export const createRequestLogger = () => {
-  return (req: any, res: any, next: any) => {
+  return (req: any, _res: any, next: any) => {
     const correlationId = CorrelationIdManager.generateId();
     req.startTime = Date.now(); // Add start time for duration calculation
     

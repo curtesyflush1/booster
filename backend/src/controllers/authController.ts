@@ -3,16 +3,26 @@ import { authService } from '../services/authService';
 import { User } from '../models/User';
 import { logger } from '../utils/logger';
 import { IUserRegistration, ILoginCredentials } from '../types/database';
+import { 
+  sendSuccessResponse, 
+  sendErrorResponse, 
+  handleControllerError,
+  asyncHandler 
+} from '../utils/controllerHelpers';
+import { 
+  hasAuthenticatedUser, 
+  extractSafeUserData,
+  isValidUser 
+} from '../utils/typeGuards';
 
 /**
  * Register a new user
  * Validation handled by middleware
  */
-export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const userData: IUserRegistration = req.body;
+export const register = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const userData: IUserRegistration = req.body;
 
-    // Register user
+  try {
     const result = await authService.register(userData);
 
     logger.info('User registration successful', { 
@@ -20,36 +30,27 @@ export const register = async (req: Request, res: Response, next: NextFunction):
       email: result.user.email 
     });
 
-    res.status(201).json({
+    sendSuccessResponse(res, {
       message: 'Registration successful',
       user: result.user,
       tokens: result.tokens
-    });
+    }, 201);
   } catch (error) {
     if (error instanceof Error && error.message === 'User already exists with this email') {
-      res.status(409).json({
-        error: {
-          code: 'USER_EXISTS',
-          message: 'A user with this email already exists',
-          timestamp: new Date().toISOString()
-        }
-      });
-      return;
+      return sendErrorResponse(res, 409, 'USER_EXISTS', 'A user with this email already exists');
     }
-
-    next(error);
+    throw error;
   }
-};
+});
 
 /**
  * Login user
  * Validation handled by middleware
  */
-export const login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const credentials: ILoginCredentials = req.body;
+export const login = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const credentials: ILoginCredentials = req.body;
 
-    // Login user
+  try {
     const result = await authService.login(credentials);
 
     logger.info('User login successful', { 
@@ -57,37 +58,24 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
       email: result.user.email 
     });
 
-    res.status(200).json({
+    sendSuccessResponse(res, {
       message: 'Login successful',
       user: result.user,
       tokens: result.tokens
     });
   } catch (error) {
     if (error instanceof Error && error.message === 'Invalid credentials') {
-      res.status(401).json({
-        error: {
-          code: 'INVALID_CREDENTIALS',
-          message: 'Invalid email or password',
-          timestamp: new Date().toISOString()
-        }
-      });
-      return;
+      return sendErrorResponse(res, 401, 'INVALID_CREDENTIALS', 'Invalid email or password');
     }
 
     if (error instanceof Error && error.message.includes('Account is temporarily locked')) {
-      res.status(423).json({
-        error: {
-          code: 'ACCOUNT_LOCKED',
-          message: 'Account is temporarily locked due to too many failed login attempts',
-          timestamp: new Date().toISOString()
-        }
-      });
-      return;
+      return sendErrorResponse(res, 423, 'ACCOUNT_LOCKED', 
+        'Account is temporarily locked due to too many failed login attempts');
     }
 
-    next(error);
+    throw error;
   }
-};
+});
 
 /**
  * Refresh access token
@@ -118,42 +106,22 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
 /**
  * Get current user profile
  */
-export const getProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    if (!req.user) {
-      res.status(401).json({
-        error: {
-          code: 'AUTHENTICATION_REQUIRED',
-          message: 'Authentication is required',
-          timestamp: new Date().toISOString()
-        }
-      });
-      return;
-    }
-
-    // Get fresh user data from database
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      res.status(404).json({
-        error: {
-          code: 'USER_NOT_FOUND',
-          message: 'User not found',
-          timestamp: new Date().toISOString()
-        }
-      });
-      return;
-    }
-
-    // Remove password hash from response
-    const { password_hash, ...userWithoutPassword } = user as any;
-
-    res.status(200).json({
-      user: userWithoutPassword
-    });
-  } catch (error) {
-    next(error);
+export const getProfile = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  if (!hasAuthenticatedUser(req)) {
+    return sendErrorResponse(res, 401, 'AUTHENTICATION_REQUIRED', 'Authentication is required');
   }
-};
+
+  // Get fresh user data from database
+  const user = await User.findById(req.user.id);
+  if (!user || !isValidUser(user)) {
+    return sendErrorResponse(res, 404, 'USER_NOT_FOUND', 'User not found');
+  }
+
+  // Remove sensitive data from response
+  const safeUserData = extractSafeUserData(user);
+
+  sendSuccessResponse(res, { user: safeUserData });
+});
 
 /**
  * Request password reset
