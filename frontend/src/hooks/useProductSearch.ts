@@ -90,8 +90,9 @@ export const useProductSearch = ({
       }
       
       setPagination(response.data.pagination);
-    } catch (err: any) {
-      setError(err.message || 'Failed to search products');
+    } catch (err: unknown) {
+      const errorMessage = err && typeof err === 'object' && 'message' in err ? err.message as string : 'Failed to search products';
+      setError(errorMessage);
       console.error('Product search error:', err);
     } finally {
       setLoading(false);
@@ -123,7 +124,7 @@ export const useProductSearch = ({
   // Auto-search when filters change
   useEffect(() => {
     searchProducts(1, true);
-  }, [filters]);
+  }, [filters, searchProducts]);
 
   return {
     // State

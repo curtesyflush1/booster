@@ -10,7 +10,7 @@ browsers.forEach(browserName => {
     let page: Page;
 
     test.beforeAll(async ({ playwright }) => {
-      browser = await playwright[browserName as keyof typeof playwright].launch();
+      browser = await (playwright[browserName as keyof typeof playwright] as { launch(): Promise<Browser> }).launch();
     });
 
     test.afterAll(async () => {
@@ -144,7 +144,7 @@ browsers.forEach(browserName => {
           const stream = await navigator.mediaDevices.getUserMedia({ video: true });
           stream.getTracks().forEach(track => track.stop());
           return true;
-        } catch (error) {
+        } catch (_error) {
           return false;
         }
       });
@@ -254,7 +254,7 @@ browsers.forEach(browserName => {
       if (browserName === 'chromium') {
         const installPrompt = await page.evaluate(() => {
           return new Promise((resolve) => {
-            window.addEventListener('beforeinstallprompt', (e) => {
+            window.addEventListener('beforeinstallprompt', (_e) => {
               resolve(true);
             });
             

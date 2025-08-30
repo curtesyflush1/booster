@@ -4,7 +4,6 @@
  */
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { CheckCircle, ArrowRight, ArrowLeft, Star, Bell, Search, Zap } from 'lucide-react';
 
@@ -20,78 +19,16 @@ interface OnboardingStep {
 interface OnboardingStepProps {
   onNext: () => void;
   onPrev: () => void;
-  onComplete: (data?: any) => void;
+  onComplete: (data?: Record<string, unknown>) => void;
   isFirst: boolean;
   isLast: boolean;
 }
 
-interface OnboardingData {
-  profile: {
-    firstName: string;
-    lastName: string;
-    location: string;
-    timezone: string;
-  };
-  preferences: import('../../types').UserPreferences;
-  interests: {
-    sets: string[];
-    productTypes: string[];
-    priceRange: string;
-  };
-  firstWatch: {
-    productId?: string;
-    watchPackId?: string;
-  };
-}
+
 
 const OnboardingFlow: React.FC = () => {
-  const { user, updateUser } = useAuth();
-  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
-  const [onboardingData, setOnboardingData] = useState<OnboardingData>({
-    profile: {
-      firstName: user?.profile?.firstName || '',
-      lastName: user?.profile?.lastName || '',
-      location: '',
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-    },
-    preferences: {
-      notificationChannels: [
-        { type: 'web_push', enabled: true, settings: {} },
-        { type: 'email', enabled: false, settings: {} },
-        { type: 'sms', enabled: false, settings: {} },
-        { type: 'discord', enabled: false, settings: {} }
-      ],
-      quietHours: {
-        enabled: false,
-        startTime: '22:00',
-        endTime: '08:00',
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        days: []
-      },
-      alertFilters: {
-        maxPrice: 100,
-        retailers: [],
-        categories: [],
-        inStockOnly: true,
-        preOrderEnabled: true
-      },
-      locationSettings: {
-        zipCode: '',
-        radius: 25,
-        storeIds: [],
-        onlineOnly: true
-      },
-      theme: 'system',
-      language: 'en'
-    },
-    interests: {
-      sets: [],
-      productTypes: [],
-      priceRange: 'under-50'
-    },
-    firstWatch: {}
-  });
+
 
   const [steps, setSteps] = useState<OnboardingStep[]>([
     {
@@ -144,12 +81,7 @@ const OnboardingFlow: React.FC = () => {
     }
   ]);
 
-  const updateOnboardingData = (stepId: string, data: any) => {
-    setOnboardingData(prev => ({
-      ...prev,
-      [stepId]: { ...prev[stepId as keyof OnboardingData], ...data }
-    }));
-  };
+
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
@@ -163,40 +95,17 @@ const OnboardingFlow: React.FC = () => {
     }
   };
 
-  const handleStepComplete = (data?: any) => {
-    const currentStepData = steps[currentStep];
-    
+  const handleStepComplete = (_data?: Record<string, unknown>) => {
     // Update step completion
     setSteps(prev => prev.map((step, index) => 
       index === currentStep ? { ...step, completed: true } : step
     ));
 
-    // Update onboarding data if provided
-    if (data) {
-      updateOnboardingData(currentStepData.id, data);
-    }
-
     // Auto-advance to next step
     handleNext();
   };
 
-  const handleCompleteOnboarding = async () => {
-    try {
-      // Save all onboarding data
-      await updateUser({
-        profile: {
-          firstName: onboardingData.profile.firstName,
-          lastName: onboardingData.profile.lastName,
-        },
-        preferences: onboardingData.preferences,
-      } as any);
 
-      // Navigate to dashboard
-      navigate('/dashboard');
-    } catch (error) {
-      console.error('Failed to complete onboarding:', error);
-    }
-  };
 
   const CurrentStepComponent = steps[currentStep]?.component;
 
@@ -271,7 +180,7 @@ const OnboardingFlow: React.FC = () => {
 };
 
 // Welcome Step Component
-const WelcomeStep: React.FC<OnboardingStepProps> = ({ onComplete, isFirst }) => {
+const WelcomeStep: React.FC<OnboardingStepProps> = ({ onComplete }) => {
   return (
     <div className="bg-white rounded-lg shadow-lg p-8 text-center">
       <div className="mb-8">

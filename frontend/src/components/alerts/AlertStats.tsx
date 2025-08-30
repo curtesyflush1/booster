@@ -148,7 +148,7 @@ const AlertStats: React.FC = () => {
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {Object.entries(stats.byType).map(([type, count]) => {
-              const typeInfo = alertService.getAlertTypeInfo(type as any);
+              const typeInfo = alertService.getAlertTypeInfo(type as 'restock' | 'price_drop' | 'pre_order' | 'low_stock' | 'back_in_stock');
               const percentage = stats.total > 0 ? (count / stats.total) * 100 : 0;
               
               return (

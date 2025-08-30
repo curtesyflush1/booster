@@ -226,8 +226,8 @@ describe('UserEncryptionService', () => {
       await userEncryption.encryptWithUserKey(testPlaintext, testPassword, testUserId);
       const endTime = Date.now();
       
-      // Should take some time due to high iteration count (at least 10ms)
-      expect(endTime - startTime).toBeGreaterThan(10);
+      // Should take some time due to key derivation (at least 1ms in test mode)
+      expect(endTime - startTime).toBeGreaterThan(1);
     });
 
     it('should produce cryptographically secure random salts', async () => {

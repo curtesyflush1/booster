@@ -88,7 +88,7 @@ export const SearchFiltersPanel: React.FC<SearchFiltersPanelProps> = ({
         <div className="flex gap-2">
           <select
             value={filters.sortBy || 'popularity'}
-            onChange={(e) => onFiltersChange({ sortBy: e.target.value as any })}
+            onChange={(e) => onFiltersChange({ sortBy: e.target.value as 'popularity' | 'price' | 'name' | 'releaseDate' })}
             className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {SORT_OPTIONS.map(option => (

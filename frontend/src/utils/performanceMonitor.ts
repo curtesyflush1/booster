@@ -11,7 +11,7 @@ interface PerformanceMetric {
   componentName: string;
   renderTime: number;
   timestamp: number;
-  props?: Record<string, any>;
+  props?: Record<string, unknown>;
   contextUpdates?: string[];
 }
 
@@ -222,7 +222,7 @@ export const PerformanceDebugger = {
   /**
    * Log context re-render information
    */
-  logContextRender: (contextName: string, state: any, prevState?: any) => {
+  logContextRender: (contextName: string, state: Record<string, unknown>, prevState?: Record<string, unknown>) => {
     if (!import.meta.env.DEV) return;
     
     console.group(`🔄 ${contextName} Context Update`);
@@ -241,7 +241,7 @@ export const PerformanceDebugger = {
   /**
    * Log component re-render with props comparison
    */
-  logComponentRender: (componentName: string, props: any, prevProps?: any) => {
+  logComponentRender: (componentName: string, props: Record<string, unknown>, prevProps?: Record<string, unknown>) => {
     if (!import.meta.env.DEV) return;
     
     console.group(`🔄 ${componentName} Re-render`);

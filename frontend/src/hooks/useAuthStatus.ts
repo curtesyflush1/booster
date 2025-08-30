@@ -33,9 +33,10 @@ export const useAuthStatus = (): AuthStatusResult => {
       const userData = response.data.user;
 
       setUser(userData);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Auth status check failed:', error);
-      setError(error.message || 'Authentication check failed');
+      const errorMessage = error && typeof error === 'object' && 'message' in error ? error.message as string : 'Authentication check failed';
+      setError(errorMessage);
       setUser(null);
     } finally {
       setIsLoading(false);

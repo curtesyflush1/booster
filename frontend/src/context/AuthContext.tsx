@@ -123,6 +123,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     dispatch({ type: 'AUTH_LOGOUT' });
   }, []);
 
+  /**
+   * Refresh authentication token
+   */
+  const refreshToken = async (): Promise<void> => {
+    try {
+      if (!state.token?.refreshToken) {
+        throw new Error('No refresh token available');
+      }
+
+      const response = await apiClient.post('/auth/refresh', {
+        refreshToken: state.token.refreshToken,
+      });
+
+      const { token } = response.data;
+      apiClient.setAuthToken(token.accessToken, true);
+
+      dispatch({
+        type: 'AUTH_SUCCESS',
+        payload: { user: state.user!, token },
+      });
+    } catch (error: any) {
+      console.error('Token refresh failed:', error);
+      dispatch({ type: 'AUTH_LOGOUT' });
+      throw error;
+    }
+  };
+
   // Handle token refresh
   const handleTokenRefresh = useCallback(async () => {
     try {
@@ -131,7 +158,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Token refresh failed:', error);
       dispatch({ type: 'AUTH_LOGOUT' });
     }
-  }, []);
+  }, [refreshToken]);
 
   // Use custom hooks
   useAuthErrorListener(handleAuthError);

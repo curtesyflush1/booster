@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Eye, EyeOff, ShoppingCart, ExternalLink, Calendar, 
   Package, MapPin, TrendingUp, AlertCircle, Clock, Star
@@ -36,21 +36,22 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   useEffect(() => {
     loadProduct();
     checkWatchStatus();
-  }, [productId]);
+  }, [productId, loadProduct, checkWatchStatus]);
 
-  const loadProduct = async () => {
+  const loadProduct = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiClient.get<Product>(`/products/${productId}`);
       setProduct(response.data);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load product');
+    } catch (err: unknown) {
+      const errorMessage = err && typeof err === 'object' && 'message' in err ? err.message as string : 'Failed to load product';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [productId]);
 
-  const loadPriceHistory = async () => {
+  const loadPriceHistory = useCallback(async () => {
     if (!product) return;
     
     try {
@@ -62,9 +63,9 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
     } finally {
       setPriceHistoryLoading(false);
     }
-  };
+  }, [product, productId]);
 
-  const checkWatchStatus = async () => {
+  const checkWatchStatus = useCallback(async () => {
     try {
       const response = await apiClient.get(`/watches?product_id=${productId}`);
       setIsWatched(response.data.data.length > 0);
@@ -72,7 +73,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
       // User might not be authenticated
       console.error('Failed to check watch status:', err);
     }
-  };
+  }, [productId]);
 
   const handleWatchToggle = async () => {
     setWatchLoading(true);
@@ -102,7 +103,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
     if (activeTab === 'history' && !priceHistory.length) {
       loadPriceHistory();
     }
-  }, [activeTab, product]);
+  }, [activeTab, product, loadPriceHistory, priceHistory.length]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {

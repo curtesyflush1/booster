@@ -11,7 +11,7 @@ export interface SEOConfig {
   ogImage?: string;
   ogType?: 'website' | 'article' | 'product';
   twitterCard?: 'summary' | 'summary_large_image';
-  structuredData?: Record<string, any>;
+  structuredData?: Record<string, unknown>;
   noIndex?: boolean;
   noFollow?: boolean;
 }
@@ -97,7 +97,7 @@ export const POKEMON_TCG_KEYWORDS = {
 /**
  * Generate structured data for the website
  */
-export const generateWebsiteStructuredData = (): Record<string, any> => ({
+export const generateWebsiteStructuredData = (): Record<string, unknown> => ({
   '@context': 'https://schema.org',
   '@type': 'WebApplication',
   name: 'BoosterBeacon',
@@ -126,7 +126,7 @@ export const generateWebsiteStructuredData = (): Record<string, any> => ({
 /**
  * Generate structured data for a product
  */
-export const generateProductStructuredData = (product: ProductSEO): Record<string, any> => ({
+export const generateProductStructuredData = (product: ProductSEO): Record<string, unknown> => ({
   '@context': 'https://schema.org',
   '@type': 'Product',
   name: product.name,
@@ -150,7 +150,7 @@ export const generateProductStructuredData = (product: ProductSEO): Record<strin
 /**
  * Generate breadcrumb structured data
  */
-export const generateBreadcrumbStructuredData = (items: BreadcrumbItem[]): Record<string, any> => ({
+export const generateBreadcrumbStructuredData = (items: BreadcrumbItem[]): Record<string, unknown> => ({
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: items.map((item, index) => ({
@@ -164,7 +164,7 @@ export const generateBreadcrumbStructuredData = (items: BreadcrumbItem[]): Recor
 /**
  * Generate FAQ structured data
  */
-export const generateFAQStructuredData = (faqs: Array<{ question: string; answer: string }>): Record<string, any> => ({
+export const generateFAQStructuredData = (faqs: Array<{ question: string; answer: string }>): Record<string, unknown> => ({
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
   mainEntity: faqs.map(faq => ({
@@ -187,7 +187,7 @@ export const generateLocalBusinessStructuredData = (location: {
   state: string;
   zipCode: string;
   phone?: string;
-}): Record<string, any> => ({
+}): Record<string, unknown> => ({
   '@context': 'https://schema.org',
   '@type': 'LocalBusiness',
   name: location.name,
@@ -265,7 +265,7 @@ export const updateMetaTags = (config: SEOConfig): void => {
 /**
  * Update structured data
  */
-export const updateStructuredData = (data: Record<string, any>, id: string = 'structured-data'): void => {
+export const updateStructuredData = (data: Record<string, unknown>, id: string = 'structured-data'): void => {
   // Remove existing structured data with the same ID
   const existingScript = document.getElementById(id);
   if (existingScript) {
@@ -310,7 +310,7 @@ export const generateLocationKeywords = (city: string, state: string): string[] 
 /**
  * Social media sharing URLs
  */
-export const generateSocialShareUrls = (url: string, title: string, description: string) => ({
+export const generateSocialShareUrls = (url: string, title: string, _description: string) => ({
   facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
   twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}&hashtags=PokemonTCG,BoosterBeacon`,
   linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,

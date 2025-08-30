@@ -51,6 +51,9 @@ export const useDocumentTitle = ({ title, description, keywords }: UseDocumentTi
  * Enhanced SEO hook with comprehensive meta tag and structured data management
  */
 export const useSEO = (options: Partial<UseSEOOptions>) => {
+  const structuredDataString = JSON.stringify(options.structuredData);
+  const keywordsString = options.keywords?.join(',');
+  
   useEffect(() => {
     const config: SEOConfig = {
       ...DEFAULT_SEO,
@@ -91,16 +94,17 @@ export const useSEO = (options: Partial<UseSEOOptions>) => {
       }
     };
   }, [
+    options,
     options.title,
     options.description,
-    options.keywords?.join(','),
+    keywordsString,
     options.canonical,
     options.ogImage,
     options.ogType,
     options.twitterCard,
     options.noIndex,
     options.noFollow,
-    JSON.stringify(options.structuredData),
+    structuredDataString,
     options.structuredDataId
   ]);
 };

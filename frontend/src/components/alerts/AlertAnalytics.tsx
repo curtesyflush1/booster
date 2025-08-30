@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -16,7 +16,7 @@ const AlertAnalytics: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState(30);
 
-  const loadAnalytics = async (days: number = selectedPeriod) => {
+  const loadAnalytics = useCallback(async (days: number = selectedPeriod) => {
     try {
       setLoading(true);
       setError(null);
@@ -28,11 +28,11 @@ const AlertAnalytics: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedPeriod]);
 
   useEffect(() => {
     loadAnalytics();
-  }, [selectedPeriod]);
+  }, [selectedPeriod, loadAnalytics]);
 
   const handlePeriodChange = (days: number) => {
     setSelectedPeriod(days);

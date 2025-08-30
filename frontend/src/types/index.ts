@@ -71,7 +71,7 @@ export interface RetailerCredential {
 export interface NotificationChannel {
   type: 'web_push' | 'email' | 'sms' | 'discord';
   enabled: boolean;
-  settings: Record<string, any>;
+  settings: Record<string, unknown>;
 }
 
 export interface QuietHours {
@@ -289,7 +289,7 @@ export interface ApiError {
   code: string;
   message: string;
   timestamp: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export interface PaginatedResponse<T> {
@@ -426,7 +426,7 @@ export interface FormField {
 }
 
 export interface FormState {
-  values: Record<string, any>;
+  values: Record<string, unknown>;
   errors: Record<string, string>;
   touched: Record<string, boolean>;
   isSubmitting: boolean;
@@ -436,7 +436,7 @@ export interface FormState {
 // Analytics types
 export interface AnalyticsEvent {
   name: string;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
   timestamp?: string;
   userId?: string;
   sessionId?: string;

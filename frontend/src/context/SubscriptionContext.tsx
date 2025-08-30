@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback } from 'react';
 import { subscriptionService, SubscriptionStatus, UsageStats, QuotaInfo, BillingEvent } from '../services/subscriptionService';
 import { useAuth } from './AuthContext';
 
@@ -92,16 +92,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   const [state, dispatch] = useReducer(subscriptionReducer, initialState);
   const { user, isAuthenticated } = useAuth();
 
-  // Load subscription data when user is authenticated
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      refreshSubscriptionData();
-    } else {
-      dispatch({ type: 'RESET_STATE' });
-    }
-  }, [isAuthenticated, user]);
-
-  const refreshSubscriptionData = async (): Promise<void> => {
+  const refreshSubscriptionData = useCallback(async (): Promise<void> => {
     if (!isAuthenticated) return;
 
     try {
@@ -112,7 +103,16 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       console.error('Error loading subscription data:', error);
       dispatch({ type: 'SET_ERROR', payload: 'Failed to load subscription data' });
     }
-  };
+  }, [isAuthenticated]);
+
+  // Load subscription data when user is authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      refreshSubscriptionData();
+    } else {
+      dispatch({ type: 'RESET_STATE' });
+    }
+  }, [isAuthenticated, user, refreshSubscriptionData]);
 
   const upgradeToProPlan = async (planSlug: string): Promise<void> => {
     try {

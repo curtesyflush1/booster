@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Camera, X, Flashlight, FlashlightOff, RotateCcw } from 'lucide-react';
 import { Product } from '../../types';
 import { apiClient } from '../../services/apiClient';
@@ -36,9 +36,9 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
     return () => {
       stopCamera();
     };
-  }, [isOpen, currentCameraIndex]);
+  }, [isOpen, currentCameraIndex, initializeCamera, stopCamera]);
 
-  const initializeCamera = async () => {
+  const initializeCamera = useCallback(async () => {
     try {
       setError(null);
       
@@ -76,19 +76,20 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
 
       setIsScanning(true);
       startScanning();
-    } catch (err: any) {
-      setError(err.message || 'Failed to access camera');
+    } catch (err: unknown) {
+      const errorMessage = err && typeof err === 'object' && 'message' in err ? err.message as string : 'Failed to access camera';
+      setError(errorMessage);
       console.error('Camera initialization error:', err);
     }
-  };
+  }, [currentCameraIndex, startScanning]);
 
-  const stopCamera = () => {
+  const stopCamera = useCallback(() => {
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
       setStream(null);
     }
     setIsScanning(false);
-  };
+  }, [stream]);
 
   const toggleFlash = async () => {
     if (!stream || !hasFlash) return;
@@ -96,7 +97,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
     try {
       const track = stream.getVideoTracks()[0];
       await track.applyConstraints({
-        advanced: [{ torch: !flashEnabled } as any]
+        advanced: [{ torch: !flashEnabled } as { torch: boolean }]
       });
       setFlashEnabled(!flashEnabled);
     } catch (err) {
@@ -110,7 +111,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
     }
   };
 
-  const startScanning = () => {
+  const startScanning = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return;
 
     const scanInterval = setInterval(() => {
@@ -139,7 +140,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
       // In a real implementation, you would use a library like QuaggaJS or ZXing
       detectBarcode(imageData);
     }, 500); // Scan every 500ms
-  };
+  }, [isScanning, detectBarcode]);
 
   const detectBarcode = async (_imageData: ImageData) => {
     // This is a simplified barcode detection

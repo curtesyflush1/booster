@@ -8,7 +8,7 @@ import React from 'react';
  * Shallow comparison function for React.memo
  * Compares all properties of two objects at the first level
  */
-export const shallowEqual = <T extends Record<string, any>>(
+export const shallowEqual = <T extends Record<string, unknown>>(
   objA: T,
   objB: T
 ): boolean => {
@@ -33,7 +33,7 @@ export const shallowEqual = <T extends Record<string, any>>(
  * Deep comparison function for complex objects
  * Use sparingly as it can be expensive for large objects
  */
-export const deepEqual = (objA: any, objB: any): boolean => {
+export const deepEqual = (objA: unknown, objB: unknown): boolean => {
   if (objA === objB) {
     return true;
   }
@@ -54,8 +54,12 @@ export const deepEqual = (objA: any, objB: any): boolean => {
     return false;
   }
 
-  const keysA = Object.keys(objA);
-  const keysB = Object.keys(objB);
+  if (typeof objA !== 'object' || typeof objB !== 'object' || objA === null || objB === null) {
+    return false;
+  }
+
+  const keysA = Object.keys(objA as Record<string, unknown>);
+  const keysB = Object.keys(objB as Record<string, unknown>);
 
   if (keysA.length !== keysB.length) {
     return false;
@@ -66,7 +70,7 @@ export const deepEqual = (objA: any, objB: any): boolean => {
       return false;
     }
 
-    if (!deepEqual(objA[key], objB[key])) {
+    if (!deepEqual((objA as Record<string, unknown>)[key], (objB as Record<string, unknown>)[key])) {
       return false;
     }
   }
@@ -93,15 +97,15 @@ export const arrayEqual = <T extends { id: string | number }>(
  * Memoization helper for function props
  * Compares function references (useful for callback props)
  */
-export const functionEqual = (fnA: Function, fnB: Function): boolean => {
+export const functionEqual = (fnA: (...args: unknown[]) => unknown, fnB: (...args: unknown[]) => unknown): boolean => {
   return fnA === fnB;
 };
 
 /**
  * Generic memoization comparison for common component props
  */
-export const createMemoComparison = <T extends Record<string, any>>(
-  customComparisons?: Partial<Record<keyof T, (a: any, b: any) => boolean>>
+export const createMemoComparison = <T extends Record<string, unknown>>(
+  customComparisons?: Partial<Record<keyof T, (a: unknown, b: unknown) => boolean>>
 ) => {
   return (prevProps: T, nextProps: T): boolean => {
     const keys = Object.keys(prevProps) as (keyof T)[];

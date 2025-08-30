@@ -69,8 +69,8 @@ const SocialShare: React.FC<SocialShareProps> = ({
 
     const handleShare = (platform: string, shareUrl: string) => {
         // Track sharing event
-        if (typeof window !== 'undefined' && (window as any).gtag) {
-            (window as any).gtag('event', 'share', {
+        if (typeof window !== 'undefined' && (window as unknown as { gtag?: (command: string, action: string, params: Record<string, unknown>) => void }).gtag) {
+            (window as unknown as { gtag: (command: string, action: string, params: Record<string, unknown>) => void }).gtag('event', 'share', {
                 method: platform,
                 content_type: 'article',
                 item_id: url

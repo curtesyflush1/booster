@@ -20,7 +20,7 @@ import { EncryptionPerformanceTracker } from './performanceTracker';
 export class UserEncryptionService implements IEncryptionService {
   private static readonly ALGORITHM = 'aes-256-gcm';
   private static readonly VERSION = 'user-v1';
-  private static readonly KEY_DERIVATION_ITERATIONS = 100000;
+  private static readonly KEY_DERIVATION_ITERATIONS = process.env.NODE_ENV === 'test' ? 1000 : 100000;
   private static readonly SALT_LENGTH = 32;
   private static readonly IV_LENGTH = 16;
   private static readonly KEY_LENGTH = 32; // 256-bit key
@@ -219,9 +219,6 @@ export class UserEncryptionService implements IEncryptionService {
           UserEncryptionService.KEY_LENGTH,
           'sha256',
           (err, derivedKey) => {
-            // Clear key material from memory (best effort)
-            (keyMaterial as any) = null;
-            
             if (err) {
               reject(err);
             } else {

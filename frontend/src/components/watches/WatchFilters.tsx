@@ -7,7 +7,7 @@ interface WatchFiltersProps {
     is_active?: boolean;
     retailer_id?: string;
   };
-  onFiltersChange: (filters: any) => void;
+  onFiltersChange: (filters: { is_active?: boolean; retailer_id?: string }) => void;
 }
 
 export const WatchFilters: React.FC<WatchFiltersProps> = ({
@@ -32,7 +32,7 @@ export const WatchFilters: React.FC<WatchFiltersProps> = ({
     loadRetailers();
   }, []);
 
-  const handleFilterChange = (key: string, value: any) => {
+  const handleFilterChange = (key: string, value: string | boolean | undefined) => {
     onFiltersChange({
       ...filters,
       [key]: value === '' ? undefined : value

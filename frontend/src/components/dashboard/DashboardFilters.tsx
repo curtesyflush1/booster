@@ -12,7 +12,7 @@ interface DashboardFiltersProps {
     productCategory: string;
     retailer: string;
   };
-  onFilterChange: (filters: any) => void;
+  onFilterChange: (filters: { timeRange: string; productCategory: string; retailer: string }) => void;
 }
 
 const DEFAULT_FILTERS = {

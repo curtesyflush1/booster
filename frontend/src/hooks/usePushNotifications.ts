@@ -78,6 +78,19 @@ export const usePushNotifications = (): UsePushNotificationsReturn => {
   }, [isInitialized, updatePermissionState]);
 
   /**
+   * Refresh push notification statistics
+   */
+  const refreshStats = useCallback(async () => {
+    try {
+      const newStats = await pushNotificationService.getStats();
+      setStats(newStats);
+    } catch (err) {
+      console.error('Failed to refresh push notification stats:', err);
+      // Don't set error for stats refresh failure
+    }
+  }, []);
+
+  /**
    * Subscribe to push notifications
    */
   const subscribe = useCallback(async () => {
@@ -104,7 +117,7 @@ export const usePushNotifications = (): UsePushNotificationsReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [isInitialized, initialize, updatePermissionState]);
+  }, [isInitialized, initialize, updatePermissionState, refreshStats]);
 
   /**
    * Unsubscribe from push notifications
@@ -129,7 +142,7 @@ export const usePushNotifications = (): UsePushNotificationsReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [updatePermissionState]);
+  }, [updatePermissionState, refreshStats]);
 
   /**
    * Request notification permission
@@ -168,19 +181,6 @@ export const usePushNotifications = (): UsePushNotificationsReturn => {
       console.error('Test notification failed:', err);
     } finally {
       setIsLoading(false);
-    }
-  }, []);
-
-  /**
-   * Refresh push notification statistics
-   */
-  const refreshStats = useCallback(async () => {
-    try {
-      const newStats = await pushNotificationService.getStats();
-      setStats(newStats);
-    } catch (err) {
-      console.error('Failed to refresh push notification stats:', err);
-      // Don't set error for stats refresh failure
     }
   }, []);
 

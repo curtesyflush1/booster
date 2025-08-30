@@ -5,7 +5,7 @@ import LoadingSpinner from '../LoadingSpinner';
 import { ProductCard } from '../products/ProductCard';
 import FilterSection from '../dashboard/filters/FilterSection';
 import CategorySelect from '../dashboard/filters/CategorySelect';
-import { Product, ProductCategory } from '../../types';
+import { Product } from '../../types';
 
 // Mock render tracking for performance testing
 const createRenderTracker = () => {

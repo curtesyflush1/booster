@@ -4,7 +4,7 @@ import { logger } from '../utils/logger';
 
 interface RequestCache {
   [key: string]: {
-    data: any;
+    data: unknown;
     timestamp: number;
     ttl: number;
   };
@@ -13,19 +13,25 @@ interface RequestCache {
 interface RetryConfig {
   retries: number;
   retryDelay: number;
-  retryCondition?: (error: any) => boolean;
+  retryCondition?: (error: unknown) => boolean;
 }
 
 class OptimizedApiClient {
   private client: AxiosInstance;
   private cache: RequestCache = {};
-  private requestQueue: Map<string, Promise<any>> = new Map();
+  private requestQueue: Map<string, Promise<AxiosResponse<unknown>>> = new Map();
   private readonly defaultCacheTTL = 5 * 60 * 1000; // 5 minutes
   private readonly defaultRetryConfig: RetryConfig = {
     retries: 3,
     retryDelay: 1000,
     retryCondition: (error) => {
-      return error.response?.status >= 500 || error.code === 'NETWORK_ERROR';
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response) {
+        return (error.response.status as number) >= 500;
+      }
+      if (error && typeof error === 'object' && 'code' in error) {
+        return error.code === 'NETWORK_ERROR';
+      }
+      return false;
     }
   };
 
@@ -107,7 +113,7 @@ class OptimizedApiClient {
   /**
    * GET request with caching and deduplication
    */
-  async get<T = any>(
+  async get<T = unknown>(
     url: string, 
     config?: AxiosRequestConfig & { 
       cache?: boolean; 
@@ -180,7 +186,7 @@ class OptimizedApiClient {
    */
   async put<T = any>(
     url: string, 
-    data?: any, 
+    data?: Record<string, unknown>, 
     config?: AxiosRequestConfig & { retry?: Partial<RetryConfig> }
   ): Promise<AxiosResponse<T>> {
     return this.executeWithRetry(
@@ -209,7 +215,7 @@ class OptimizedApiClient {
     requestFn: () => Promise<T>,
     retryConfig: RetryConfig
   ): Promise<T> {
-    let lastError: any;
+    let lastError: unknown;
 
     for (let attempt = 0; attempt <= retryConfig.retries; attempt++) {
       try {
@@ -302,7 +308,7 @@ class OptimizedApiClient {
   /**
    * Generate cache key
    */
-  private getCacheKey(method: string, url: string, params?: any): string {
+  private getCacheKey(method: string, url: string, params?: Record<string, unknown>): string {
     const paramString = params ? JSON.stringify(params) : '';
     return `${method}:${url}:${paramString}`;
   }
@@ -310,7 +316,7 @@ class OptimizedApiClient {
   /**
    * Get data from cache
    */
-  private getFromCache(key: string): any | null {
+  private getFromCache(key: string): unknown | null {
     const cached = this.cache[key];
     if (!cached) return null;
 
@@ -325,7 +331,7 @@ class OptimizedApiClient {
   /**
    * Set data in cache
    */
-  private setCache(key: string, data: any, ttl: number): void {
+  private setCache(key: string, data: unknown, ttl: number): void {
     this.cache[key] = {
       data,
       timestamp: Date.now(),

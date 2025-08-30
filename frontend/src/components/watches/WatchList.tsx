@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Eye, Download, Upload, 
   Filter, Search, AlertCircle, CheckCircle, Clock
@@ -39,12 +39,7 @@ export const WatchList: React.FC<WatchListProps> = ({ onWatchSelect }) => {
     alertsToday: 0
   });
 
-  useEffect(() => {
-    loadWatches();
-    loadStats();
-  }, [filters, searchQuery]);
-
-  const loadWatches = async (page = 1) => {
+  const loadWatches = useCallback(async (page = 1) => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -58,12 +53,18 @@ export const WatchList: React.FC<WatchListProps> = ({ onWatchSelect }) => {
       const response = await apiClient.get<PaginatedResponse<Watch>>(`/watches?${params}`);
       setWatches(response.data.data);
       setPagination(response.data.pagination);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load watches');
+    } catch (err: unknown) {
+      const errorMessage = err && typeof err === 'object' && 'message' in err ? err.message as string : 'Failed to load watches';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, searchQuery, pagination.limit]);
+
+  useEffect(() => {
+    loadWatches();
+    loadStats();
+  }, [loadWatches]);
 
   const loadStats = async () => {
     try {

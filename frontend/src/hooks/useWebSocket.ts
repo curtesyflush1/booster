@@ -4,14 +4,14 @@ import { useAuth } from '../context/AuthContext';
 
 interface WebSocketMessage {
   type: string;
-  data?: any;
+  data?: Record<string, unknown>;
   timestamp: string;
 }
 
 interface UseWebSocketReturn {
   isConnected: boolean;
   lastMessage: WebSocketMessage | null;
-  sendMessage: (event: string, data?: any) => void;
+  sendMessage: (event: string, data?: Record<string, unknown>) => void;
   subscribe: (event: string) => void;
   unsubscribe: (event: string) => void;
   connectionError: string | null;
@@ -158,7 +158,7 @@ export const useWebSocket = (): UseWebSocketReturn => {
       console.log(`Attempting to reconnect (${reconnectAttempts.current}/${maxReconnectAttempts})`);
       connect();
     }, delay);
-  }, [connect]);
+  }, []);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
@@ -176,7 +176,7 @@ export const useWebSocket = (): UseWebSocketReturn => {
     setConnectionError(null);
   }, []);
 
-  const sendMessage = useCallback((event: string, data?: any) => {
+  const sendMessage = useCallback((event: string, data?: Record<string, unknown>) => {
     if (socketRef.current?.connected) {
       socketRef.current.emit(event, data);
     } else {

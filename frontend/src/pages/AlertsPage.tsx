@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy, useCallback } from 'react';
 import { 
   Bell, 
   Filter, 
@@ -40,7 +40,7 @@ const AlertsPage: React.FC = () => {
   });
 
   // Load alerts
-  const loadAlerts = async (newFilters?: AlertFilters) => {
+  const loadAlerts = useCallback(async (newFilters?: AlertFilters) => {
     try {
       setLoading(true);
       setError(null);
@@ -53,12 +53,12 @@ const AlertsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
 
   // Initial load
   useEffect(() => {
     loadAlerts();
-  }, []);
+  }, [loadAlerts]);
 
   // Handle filter changes
   const handleFiltersChange = (newFilters: AlertFilters) => {

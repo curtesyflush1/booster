@@ -13,7 +13,7 @@ const AlertFiltersPanelComponent: React.FC<AlertFiltersPanelProps> = ({
 }) => {
   const [localFilters, setLocalFilters] = useState<AlertFilters>(filters);
 
-  const handleFilterChange = (key: keyof AlertFilters, value: any) => {
+  const handleFilterChange = (key: keyof AlertFilters, value: string | boolean | number | undefined) => {
     const newFilters = { ...localFilters, [key]: value };
     setLocalFilters(newFilters);
     onFiltersChange(newFilters);

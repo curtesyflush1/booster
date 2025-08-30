@@ -47,7 +47,7 @@ export interface BillingEvent {
   user_id: string;
   event_type: string;
   stripe_event_id?: string;
-  event_data: Record<string, any>;
+  event_data: Record<string, unknown>;
   amount?: number;
   currency: string;
   event_date: string;

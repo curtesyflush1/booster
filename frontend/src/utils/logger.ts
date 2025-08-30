@@ -8,7 +8,7 @@ type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 interface LogEntry {
   level: LogLevel;
   message: string;
-  data?: any;
+  data?: Record<string, unknown>;
   timestamp: string;
   url?: string;
   userAgent?: string;
@@ -20,7 +20,7 @@ class Logger {
   /**
    * Log debug information (development only)
    */
-  debug(message: string, data?: any): void {
+  debug(message: string, data?: Record<string, unknown>): void {
     if (this.isDevelopment) {
       console.debug(`[DEBUG] ${message}`, data);
     }
@@ -29,7 +29,7 @@ class Logger {
   /**
    * Log general information
    */
-  info(message: string, data?: any): void {
+  info(message: string, data?: Record<string, unknown>): void {
     console.info(`[INFO] ${message}`, data);
     this.sendToService('info', message, data);
   }
@@ -37,7 +37,7 @@ class Logger {
   /**
    * Log warnings
    */
-  warn(message: string, data?: any): void {
+  warn(message: string, data?: Record<string, unknown>): void {
     console.warn(`[WARN] ${message}`, data);
     this.sendToService('warn', message, data);
   }
@@ -45,7 +45,7 @@ class Logger {
   /**
    * Log errors
    */
-  error(message: string, data?: any): void {
+  error(message: string, data?: Record<string, unknown>): void {
     console.error(`[ERROR] ${message}`, data);
     this.sendToService('error', message, data);
   }
@@ -53,7 +53,7 @@ class Logger {
   /**
    * Send logs to backend service (in production)
    */
-  private sendToService(level: LogLevel, message: string, data?: any): void {
+  private sendToService(level: LogLevel, message: string, data?: Record<string, unknown>): void {
     if (this.isDevelopment) return;
 
     const logEntry: LogEntry = {

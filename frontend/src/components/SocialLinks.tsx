@@ -74,8 +74,8 @@ const SocialLinksComponent: React.FC<SocialLinksProps> = ({
 
   const handleSocialClick = (platform: string, url: string) => {
     // Track social media clicks
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', 'click', {
+    if (typeof window !== 'undefined' && (window as unknown as { gtag?: (command: string, action: string, params: Record<string, unknown>) => void }).gtag) {
+      (window as unknown as { gtag: (command: string, action: string, params: Record<string, unknown>) => void }).gtag('event', 'click', {
         event_category: 'social',
         event_label: platform,
         value: 1

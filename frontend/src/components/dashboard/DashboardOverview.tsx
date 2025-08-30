@@ -4,7 +4,16 @@ import { DashboardStats } from '../../types';
 
 interface DashboardOverviewProps {
   stats: DashboardStats;
-  insights: any;
+  insights: {
+    engagementMetrics?: {
+      averageResponseTime?: string;
+    };
+    alertTrends?: Record<string, number>;
+    topPerformingProducts?: Array<{
+      product_id: string;
+      alert_count: number;
+    }>;
+  };
 }
 
 const DashboardOverview: React.FC<DashboardOverviewProps> = ({ stats, insights }) => {
@@ -105,7 +114,7 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ stats, insights }
             Most Watched Products
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {insights.topPerformingProducts.slice(0, 6).map((product: any, index: number) => (
+            {insights.topPerformingProducts.slice(0, 6).map((product, index: number) => (
               <div key={product.product_id} className="bg-gray-800 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-pokemon-electric font-medium">#{index + 1}</span>

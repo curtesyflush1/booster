@@ -1,7 +1,7 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
-import { DashboardStats, Alert, MLPrediction } from '../types';
+import { DashboardStats, Alert, MLPrediction, Product } from '../types';
 import RecentActivity from '../components/dashboard/RecentActivity';
 import DashboardFilters from '../components/dashboard/DashboardFilters';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -16,8 +16,8 @@ const PortfolioTracking = lazy(() => import('../components/dashboard/PortfolioTr
 interface DashboardData {
   stats: DashboardStats;
   recentAlerts: Alert[];
-  watchedProducts: any[];
-  insights: any;
+  watchedProducts: Product[];
+  insights: Record<string, unknown>;
 }
 
 interface PortfolioData {
@@ -28,9 +28,9 @@ interface PortfolioData {
     percentage: number;
     period: string;
   };
-  topHoldings: any[];
-  gapAnalysis: any;
-  performance: any;
+  topHoldings: Product[];
+  gapAnalysis: Record<string, unknown>;
+  performance: Record<string, unknown>;
 }
 
 const DashboardPage: React.FC = () => {
@@ -49,6 +49,42 @@ const DashboardPage: React.FC = () => {
 
   // WebSocket connection for real-time updates
   const { isConnected, lastMessage } = useWebSocket();
+
+  // Handle WebSocket messages
+  const handleWebSocketMessage = useCallback((message: { type: string; data?: unknown; alert?: unknown; insights?: unknown; portfolio?: unknown }) => {
+    switch (message.type) {
+      case 'dashboard_update':
+        // Update dashboard stats
+        if (dashboardData && message.data && typeof message.data === 'object') {
+          setDashboardData(prev => prev ? { ...prev, ...(message.data as Record<string, unknown>) } : null);
+        }
+        break;
+      
+      case 'new_alert':
+        // Add new alert to recent alerts
+        if (dashboardData && message.alert) {
+          setDashboardData(prev => prev ? {
+            ...prev,
+            recentAlerts: [message.alert as Alert, ...prev.recentAlerts.slice(0, 9)]
+          } : null);
+        }
+        break;
+      
+      case 'insights_update':
+        // Update predictive insights
+        if (message.insights && Array.isArray(message.insights)) {
+          setPredictiveInsights(message.insights as MLPrediction[]);
+        }
+        break;
+      
+      case 'portfolio_update':
+        // Update portfolio data
+        if (message.portfolio && typeof message.portfolio === 'object') {
+          setPortfolioData(message.portfolio as PortfolioData);
+        }
+        break;
+    }
+  }, [dashboardData]);
 
   // Load initial dashboard data
   useEffect(() => {
@@ -100,38 +136,9 @@ const DashboardPage: React.FC = () => {
     if (lastMessage) {
       handleWebSocketMessage(lastMessage);
     }
-  }, [lastMessage]);
+  }, [lastMessage, handleWebSocketMessage]);
 
-  const handleWebSocketMessage = (message: any) => {
-    switch (message.type) {
-      case 'dashboard_update':
-        // Update dashboard stats
-        if (dashboardData) {
-          setDashboardData(prev => prev ? { ...prev, ...message.data } : null);
-        }
-        break;
-      
-      case 'new_alert':
-        // Add new alert to recent alerts
-        if (dashboardData) {
-          setDashboardData(prev => prev ? {
-            ...prev,
-            recentAlerts: [message.alert, ...prev.recentAlerts.slice(0, 9)]
-          } : null);
-        }
-        break;
-      
-      case 'insights_update':
-        // Update predictive insights
-        setPredictiveInsights(message.insights);
-        break;
-      
-      case 'portfolio_update':
-        // Update portfolio data
-        setPortfolioData(message.portfolio);
-        break;
-    }
-  };
+
 
   const handleFilterChange = (newFilters: typeof filters) => {
     setFilters(newFilters);

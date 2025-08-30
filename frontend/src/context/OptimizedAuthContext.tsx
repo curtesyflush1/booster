@@ -181,7 +181,7 @@ export const OptimizedAuthProvider: React.FC<AuthProviderProps> = ({ children })
         type: 'AUTH_SUCCESS',
         payload: { user: state.user!, token },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Token refresh failed:', error);
       tokenStorage.clearTokens();
       dispatch({ type: 'AUTH_LOGOUT' });
@@ -245,11 +245,11 @@ export const OptimizedAuthProvider: React.FC<AuthProviderProps> = ({ children })
       if (duration > 1000) {
         console.warn(`Auth status check took ${duration.toFixed(2)}ms`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Auth status check failed:', error);
       
       // Handle specific error cases
-      if (error.response?.status === 401) {
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 401) {
         // Token is invalid, clear it
         tokenStorage.clearTokens();
         apiClient.clearAuthToken();
@@ -292,8 +292,8 @@ export const OptimizedAuthProvider: React.FC<AuthProviderProps> = ({ children })
         type: 'AUTH_SUCCESS',
         payload: { user, token },
       });
-    } catch (error: any) {
-      const errorMessage = error.message || 'Login failed. Please try again.';
+    } catch (error: unknown) {
+      const errorMessage = error && typeof error === 'object' && 'message' in error ? error.message as string : 'Login failed. Please try again.';
       dispatch({ type: 'AUTH_FAILURE', payload: errorMessage });
       throw error;
     }
@@ -317,8 +317,8 @@ export const OptimizedAuthProvider: React.FC<AuthProviderProps> = ({ children })
         type: 'AUTH_SUCCESS',
         payload: { user, token },
       });
-    } catch (error: any) {
-      const errorMessage = error.message || 'Registration failed. Please try again.';
+    } catch (error: unknown) {
+      const errorMessage = error && typeof error === 'object' && 'message' in error ? error.message as string : 'Registration failed. Please try again.';
       dispatch({ type: 'AUTH_FAILURE', payload: errorMessage });
       throw error;
     }

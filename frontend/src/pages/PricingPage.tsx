@@ -1,6 +1,5 @@
 import React, { memo, useState, useEffect } from 'react';
 import { PRICING_PLANS, PRICING_CONFIG } from '../constants/pricing';
-import PricingCard from '../components/pricing/PricingCard';
 import PricingHeader from '../components/pricing/PricingHeader';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useSubscription } from '../context/SubscriptionContext';

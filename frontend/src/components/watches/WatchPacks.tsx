@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Package, Search, 
   CheckCircle, TrendingUp
@@ -27,9 +27,9 @@ export const WatchPacks: React.FC = () => {
   useEffect(() => {
     loadWatchPacks();
     loadUserSubscriptions();
-  }, [activeTab, searchQuery]);
+  }, [activeTab, searchQuery, loadWatchPacks]);
 
-  const loadWatchPacks = async (page = 1) => {
+  const loadWatchPacks = useCallback(async (page = 1) => {
     try {
       setLoading(true);
       let endpoint = '/watches/packs';
@@ -59,17 +59,18 @@ export const WatchPacks: React.FC = () => {
         setWatchPacks(paginatedResponse.data);
         setPagination(paginatedResponse.pagination);
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to load watch packs');
+    } catch (err: unknown) {
+      const errorMessage = err && typeof err === 'object' && 'message' in err ? err.message as string : 'Failed to load watch packs';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, searchQuery, pagination.limit]);
 
   const loadUserSubscriptions = async () => {
     try {
       const response = await apiClient.get('/watches/packs/subscriptions');
-      const subscriptionIds = response.data.data.map((sub: any) => sub.watch_pack_id);
+      const subscriptionIds = response.data.data.map((sub: { watch_pack_id: string }) => sub.watch_pack_id);
       setUserSubscriptions(new Set(subscriptionIds));
     } catch (err) {
       // User might not be authenticated
@@ -136,7 +137,7 @@ export const WatchPacks: React.FC = () => {
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
-              onClick={() => setActiveTab(id as any)}
+              onClick={() => setActiveTab(id as 'popular' | 'all' | 'subscribed')}
               className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-colors ${
                 activeTab === id
                   ? 'bg-blue-600 text-white'

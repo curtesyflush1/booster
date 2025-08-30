@@ -1,23 +1,27 @@
 import { PricingPlan } from '../constants/pricing';
 
-export const validatePricingPlan = (plan: any): plan is PricingPlan => {
+export const validatePricingPlan = (plan: unknown): plan is PricingPlan => {
+  if (typeof plan !== 'object' || plan === null) {
+    return false;
+  }
+  
+  const planObj = plan as Record<string, unknown>;
+  
   return (
-    typeof plan === 'object' &&
-    plan !== null &&
-    typeof plan.id === 'string' &&
-    typeof plan.name === 'string' &&
-    typeof plan.price === 'string' &&
-    typeof plan.period === 'string' &&
-    typeof plan.description === 'string' &&
-    Array.isArray(plan.features) &&
-    plan.features.every((feature: any) => typeof feature === 'string') &&
-    typeof plan.cta === 'string' &&
-    typeof plan.href === 'string' &&
-    typeof plan.popular === 'boolean'
+    typeof planObj.id === 'string' &&
+    typeof planObj.name === 'string' &&
+    typeof planObj.price === 'string' &&
+    typeof planObj.period === 'string' &&
+    typeof planObj.description === 'string' &&
+    Array.isArray(planObj.features) &&
+    planObj.features.every((feature: unknown) => typeof feature === 'string') &&
+    typeof planObj.cta === 'string' &&
+    typeof planObj.href === 'string' &&
+    typeof planObj.popular === 'boolean'
   );
 };
 
-export const validatePricingPlans = (plans: any[]): PricingPlan[] => {
+export const validatePricingPlans = (plans: unknown[]): PricingPlan[] => {
   if (!Array.isArray(plans)) {
     throw new Error('Pricing plans must be an array');
   }

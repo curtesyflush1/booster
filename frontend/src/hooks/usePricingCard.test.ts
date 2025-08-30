@@ -2,6 +2,7 @@ import { renderHook } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { usePricingCard } from './usePricingCard';
 import { createMockPricingPlan } from '../test/testUtils';
+import { PricingPlan } from '../constants/pricing';
 
 const mockPlan = createMockPricingPlan();
 const mockPopularPlan = createMockPricingPlan({ 
@@ -126,11 +127,11 @@ describe('usePricingCard', () => {
 
         it('throws error when plan is null or undefined', () => {
             expect(() => {
-                renderHook(() => usePricingCard({ plan: null as any }));
+                renderHook(() => usePricingCard({ plan: null as unknown as PricingPlan }));
             }).toThrow('usePricingCard: plan is required');
 
             expect(() => {
-                renderHook(() => usePricingCard({ plan: undefined as any }));
+                renderHook(() => usePricingCard({ plan: undefined as unknown as PricingPlan }));
             }).toThrow('usePricingCard: plan is required');
         });
     });

@@ -113,6 +113,26 @@ jest.mock('knex', () => {
   return mockKnex;
 });
 
+// Mock setInterval to prevent background processes from running during tests
+const originalSetInterval = global.setInterval;
+global.setInterval = jest.fn((callback, delay) => {
+  // Only allow setInterval if it's explicitly needed for tests
+  if (process.env.ALLOW_INTERVALS === 'true') {
+    return originalSetInterval(callback, delay);
+  }
+  // Return a mock interval ID for tests
+  return 999999;
+});
+
+// Mock clearInterval to prevent issues with mock intervals
+const originalClearInterval = global.clearInterval;
+global.clearInterval = jest.fn((intervalId) => {
+  if (process.env.ALLOW_INTERVALS === 'true') {
+    return originalClearInterval(intervalId);
+  }
+  // Do nothing for mock intervals
+});
+
 // Mock KMS providers for test environment - only use EnvironmentKMSService
 jest.mock('../src/utils/encryption/kms/factory', () => {
   const { EnvironmentKMSService } = require('../src/utils/encryption/kms/envKMS');
