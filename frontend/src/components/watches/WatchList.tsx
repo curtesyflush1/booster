@@ -51,8 +51,29 @@ export const WatchList: React.FC<WatchListProps> = ({ onWatchSelect }) => {
       });
 
       const response = await apiClient.get<PaginatedResponse<Watch>>(`/watches?${params}`);
-      setWatches(response.data.data);
-      setPagination(response.data.pagination);
+      setWatches(response.data.data || []);
+      
+      // Safety check for pagination response
+      if (response.data.pagination) {
+        setPagination({
+          page: response.data.pagination.page || 1,
+          limit: response.data.pagination.limit || 20,
+          total: response.data.pagination.total || 0,
+          totalPages: response.data.pagination.totalPages || 0,
+          hasNext: response.data.pagination.hasNext || false,
+          hasPrev: response.data.pagination.hasPrev || false
+        });
+      } else {
+        // Fallback pagination if response is malformed
+        setPagination({
+          page: 1,
+          limit: 20,
+          total: response.data.data?.length || 0,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false
+        });
+      }
     } catch (err: unknown) {
       const errorMessage = err && typeof err === 'object' && 'message' in err ? err.message as string : 'Failed to load watches';
       setError(errorMessage);

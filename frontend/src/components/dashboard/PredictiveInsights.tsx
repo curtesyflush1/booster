@@ -11,6 +11,19 @@ const PredictiveInsights: React.FC<PredictiveInsightsProps> = ({ insights, watch
   const [sortBy, setSortBy] = useState<'hype' | 'roi' | 'sellout'>('hype');
   const [filterBy, setFilterBy] = useState<'all' | 'high_confidence' | 'urgent'>('all');
 
+  // Safety check for insights
+  if (!insights || !Array.isArray(insights)) {
+    return (
+      <div className="card-dark p-8 text-center">
+        <BarChart3 className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-white mb-2">No Insights Available</h3>
+        <p className="text-gray-400">
+          Start watching products to see predictive insights.
+        </p>
+      </div>
+    );
+  }
+
   const filteredInsights = insights
     .filter(insight => {
       switch (filterBy) {
@@ -67,7 +80,7 @@ const PredictiveInsights: React.FC<PredictiveInsightsProps> = ({ insights, watch
         </div>
         
         <div className="text-sm text-gray-400">
-          Showing {filteredInsights.length} of {insights.length} products
+          Showing {filteredInsights.length} of {insights?.length || 0} products
         </div>
       </div>
 
@@ -97,7 +110,7 @@ const PredictiveInsights: React.FC<PredictiveInsightsProps> = ({ insights, watch
       )}
 
       {/* Summary Statistics */}
-      {insights.length > 0 && (
+      {insights && insights.length > 0 && (
         <div className="card-dark p-6">
           <h3 className="text-lg font-semibold text-white mb-4">Portfolio Insights Summary</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

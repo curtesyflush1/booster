@@ -5,14 +5,14 @@ import { Watch } from '../models/Watch';
 import { Product } from '../models/Product';
 import { IWatchPack } from '../types/database';
 import { logger } from '../utils/logger';
-import { successResponse, errorResponse } from '../utils/responseHelpers';
+import { ResponseHelper } from '../utils/responseHelpers';
 import { validateUUID } from '../utils/validation';
 
 // Helper function to validate user authentication
 const validateAuth = (req: Request, res: Response): string | null => {
   const userId = req.user?.id;
   if (!userId) {
-    errorResponse(res, 401, 'Unauthorized');
+    ResponseHelper.error(res, 'UNAUTHORIZED', 'Unauthorized', 401);
     return null;
   }
   return userId;
@@ -35,10 +35,10 @@ export class WatchPackController {
       };
 
       const watchPacks = await WatchPack.getActiveWatchPacks(options);
-      successResponse(res, watchPacks, 'Watch packs retrieved successfully');
+      ResponseHelper.success(res, watchPacks);
     } catch (error) {
       logger.error('Error getting watch packs:', error);
-      errorResponse(res, 500, 'Failed to retrieve watch packs');
+      ResponseHelper.internalError(res, 'Failed to retrieve watch packs');
     }
   }
 
@@ -47,10 +47,10 @@ export class WatchPackController {
     try {
       const { limit = 10 } = req.query;
       const watchPacks = await WatchPack.getPopularWatchPacks(parseInt(limit as string));
-      successResponse(res, watchPacks, 'Popular watch packs retrieved successfully');
+      ResponseHelper.success(res, watchPacks);
     } catch (error) {
       logger.error('Error getting popular watch packs:', error);
-      errorResponse(res, 500, 'Failed to retrieve popular watch packs');
+      ResponseHelper.internalError(res, 'Failed to retrieve popular watch packs');
     }
   }
 
@@ -60,7 +60,7 @@ export class WatchPackController {
       const { packId } = req.params;
       
       if (!packId) {
-        errorResponse(res, 400, 'Pack ID is required');
+        ResponseHelper.badRequest(res, 'Pack ID is required');
         return;
       }
 
@@ -74,19 +74,19 @@ export class WatchPackController {
       }
 
       if (!watchPack) {
-        errorResponse(res, 404, 'Watch pack not found');
+        ResponseHelper.notFound(res, 'Watch pack not found');
         return;
       }
 
       if (!watchPack.is_active) {
-        errorResponse(res, 404, 'Watch pack not found');
+        ResponseHelper.notFound(res, 'Watch pack not found');
         return;
       }
 
-      successResponse(res, watchPack, 'Watch pack retrieved successfully');
+      ResponseHelper.success(res, watchPack);
     } catch (error) {
       logger.error('Error getting watch pack:', error);
-      errorResponse(res, 500, 'Failed to retrieve watch pack');
+      ResponseHelper.internalError(res, 'Failed to retrieve watch pack');
     }
   }
 
@@ -105,25 +105,25 @@ export class WatchPackController {
 
       // Validate required fields
       if (!name || !slug || !product_ids || !Array.isArray(product_ids)) {
-        errorResponse(res, 400, 'Name, slug, and product_ids array are required');
+        ResponseHelper.badRequest(res, 'Name, slug, and product_ids array are required');
         return;
       }
 
       if (product_ids.length === 0) {
-        errorResponse(res, 400, 'At least one product ID is required');
+        ResponseHelper.badRequest(res, 'At least one product ID is required');
         return;
       }
 
       // Validate all product IDs exist
       for (const productId of product_ids) {
         if (!validateUUID(productId)) {
-          errorResponse(res, 400, `Invalid product ID format: ${productId}`);
+          ResponseHelper.badRequest(res, `Invalid product ID format: ${productId}`);
           return;
         }
 
         const product = await Product.findById<any>(productId);
         if (!product) {
-          errorResponse(res, 404, `Product not found: ${productId}`);
+          ResponseHelper.notFound(res, `Product not found: ${productId}`);
           return;
         }
       }
@@ -139,15 +139,15 @@ export class WatchPackController {
       };
 
       const watchPack = await WatchPack.createWatchPack(packData);
-      successResponse(res, watchPack, 'Watch pack created successfully', 201);
+      ResponseHelper.success(res, watchPack, 201);
     } catch (error) {
       logger.error('Error creating watch pack:', error);
       if (error instanceof Error && error.message.includes('Validation failed')) {
-        errorResponse(res, 400, error.message);
+        ResponseHelper.badRequest(res, error.message);
       } else if (error instanceof Error && error.message.includes('already exists')) {
-        errorResponse(res, 409, error.message);
+        ResponseHelper.error(res, 'CONFLICT', error.message);
       } else {
-        errorResponse(res, 500, 'Failed to create watch pack');
+        ResponseHelper.internalError(res, 'Failed to create watch pack');
       }
     }
   }
@@ -158,13 +158,13 @@ export class WatchPackController {
       const { packId } = req.params;
 
       if (!packId || !validateUUID(packId)) {
-        errorResponse(res, 400, 'Invalid watch pack ID format');
+        ResponseHelper.badRequest(res, 'Invalid watch pack ID format');
         return;
       }
 
       const existingPack = await WatchPack.findById<IWatchPack>(packId);
       if (!existingPack) {
-        errorResponse(res, 404, 'Watch pack not found');
+        ResponseHelper.notFound(res, 'Watch pack not found');
         return;
       }
 
@@ -187,20 +187,20 @@ export class WatchPackController {
 
       if (product_ids !== undefined) {
         if (!Array.isArray(product_ids)) {
-          errorResponse(res, 400, 'Product IDs must be an array');
+          ResponseHelper.badRequest(res, 'Product IDs must be an array');
           return;
         }
 
         // Validate all product IDs exist
         for (const productId of product_ids) {
           if (!validateUUID(productId)) {
-            errorResponse(res, 400, `Invalid product ID format: ${productId}`);
+            ResponseHelper.badRequest(res, `Invalid product ID format: ${productId}`);
             return;
           }
 
           const product = await Product.findById<any>(productId);
           if (!product) {
-            errorResponse(res, 404, `Product not found: ${productId}`);
+            ResponseHelper.notFound(res, `Product not found: ${productId}`);
             return;
           }
         }
@@ -210,17 +210,17 @@ export class WatchPackController {
 
       const updatedPack = await WatchPack.updateById<IWatchPack>(packId, updateData);
       if (!updatedPack) {
-        errorResponse(res, 500, 'Failed to update watch pack');
+        ResponseHelper.internalError(res, 'Failed to update watch pack');
         return;
       }
 
-      successResponse(res, updatedPack, 'Watch pack updated successfully');
+      ResponseHelper.success(res, updatedPack);
     } catch (error) {
       logger.error('Error updating watch pack:', error);
       if (error instanceof Error && error.message.includes('Validation failed')) {
-        errorResponse(res, 400, error.message);
+        ResponseHelper.badRequest(res, error.message);
       } else {
-        errorResponse(res, 500, 'Failed to update watch pack');
+        ResponseHelper.internalError(res, 'Failed to update watch pack');
       }
     }
   }
@@ -231,26 +231,26 @@ export class WatchPackController {
       const { packId } = req.params;
 
       if (!packId || !validateUUID(packId)) {
-        errorResponse(res, 400, 'Invalid watch pack ID format');
+        ResponseHelper.badRequest(res, 'Invalid watch pack ID format');
         return;
       }
 
       const watchPack = await WatchPack.findById<IWatchPack>(packId);
       if (!watchPack) {
-        errorResponse(res, 404, 'Watch pack not found');
+        ResponseHelper.notFound(res, 'Watch pack not found');
         return;
       }
 
       const deleted = await WatchPack.deleteById(packId);
       if (!deleted) {
-        errorResponse(res, 500, 'Failed to delete watch pack');
+        ResponseHelper.internalError(res, 'Failed to delete watch pack');
         return;
       }
 
-      successResponse(res, null, 'Watch pack deleted successfully');
+      ResponseHelper.success(res, null);
     } catch (error) {
       logger.error('Error deleting watch pack:', error);
-      errorResponse(res, 500, 'Failed to delete watch pack');
+      ResponseHelper.internalError(res, 'Failed to delete watch pack');
     }
   }
 
@@ -262,14 +262,14 @@ export class WatchPackController {
 
       const { packId } = req.params;
       if (!packId || !validateUUID(packId)) {
-        errorResponse(res, 400, 'Invalid watch pack ID format');
+        ResponseHelper.badRequest(res, 'Invalid watch pack ID format');
         return;
       }
 
       // Check if watch pack exists and is active
       const watchPack = await WatchPack.findById<IWatchPack>(packId);
       if (!watchPack || !watchPack.is_active) {
-        errorResponse(res, 404, 'Watch pack not found');
+        ResponseHelper.notFound(res, 'Watch pack not found');
         return;
       }
 
@@ -277,16 +277,16 @@ export class WatchPackController {
       const existingSubscription = await UserWatchPack.findUserSubscription(userId, packId);
       if (existingSubscription) {
         if (existingSubscription.is_active) {
-          errorResponse(res, 409, 'Already subscribed to this watch pack');
+          ResponseHelper.error(res, 'CONFLICT', 'Already subscribed to this watch pack');
           return;
         } else {
           // Reactivate existing subscription
           const reactivated = await UserWatchPack.toggleSubscription(userId, packId);
           if (!reactivated) {
-            errorResponse(res, 500, 'Failed to reactivate subscription');
+            ResponseHelper.internalError(res, 'Failed to reactivate subscription');
             return;
           }
-          successResponse(res, null, 'Subscription reactivated successfully');
+          ResponseHelper.success(res, null);
           return;
         }
       }
@@ -322,13 +322,13 @@ export class WatchPackController {
         await Watch.bulkCreate(filteredWatches);
       }
 
-      successResponse(res, subscription, 'Successfully subscribed to watch pack', 201);
+      ResponseHelper.success(res, subscription, 201);
     } catch (error) {
       logger.error('Error subscribing to watch pack:', error);
       if (error instanceof Error && error.message.includes('already subscribed')) {
-        errorResponse(res, 409, error.message);
+        ResponseHelper.error(res, 'CONFLICT', error.message);
       } else {
-        errorResponse(res, 500, 'Failed to subscribe to watch pack');
+        ResponseHelper.internalError(res, 'Failed to subscribe to watch pack');
       }
     }
   }
@@ -340,24 +340,24 @@ export class WatchPackController {
       const { packId } = req.params;
 
       if (!userId) {
-        errorResponse(res, 401, 'Unauthorized');
+        ResponseHelper.error(res, 'UNAUTHORIZED', 'Unauthorized', 401);
         return;
       }
 
       if (!packId || !validateUUID(packId)) {
-        errorResponse(res, 400, 'Invalid watch pack ID format');
+        ResponseHelper.badRequest(res, 'Invalid watch pack ID format');
         return;
       }
 
       const subscription = await UserWatchPack.findUserSubscription(userId, packId);
       if (!subscription) {
-        errorResponse(res, 404, 'Subscription not found');
+        ResponseHelper.notFound(res, 'Subscription not found');
         return;
       }
 
       const unsubscribed = await UserWatchPack.unsubscribe(userId, packId);
       if (!unsubscribed) {
-        errorResponse(res, 500, 'Failed to unsubscribe from watch pack');
+        ResponseHelper.internalError(res, 'Failed to unsubscribe from watch pack');
         return;
       }
 
@@ -378,10 +378,10 @@ export class WatchPackController {
         }
       }
 
-      successResponse(res, null, 'Successfully unsubscribed from watch pack');
+      ResponseHelper.success(res, null);
     } catch (error) {
       logger.error('Error unsubscribing from watch pack:', error);
-      errorResponse(res, 500, 'Failed to unsubscribe from watch pack');
+      ResponseHelper.internalError(res, 'Failed to unsubscribe from watch pack');
     }
   }
 
@@ -390,7 +390,7 @@ export class WatchPackController {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        errorResponse(res, 401, 'Unauthorized');
+        ResponseHelper.error(res, 'UNAUTHORIZED', 'Unauthorized', 401);
         return;
       }
 
@@ -410,10 +410,14 @@ export class WatchPackController {
       }
 
       const subscriptions = await UserWatchPack.findByUserId(userId, options);
-      successResponse(res, subscriptions, 'User subscriptions retrieved successfully');
+      ResponseHelper.successWithPagination(res, subscriptions.data, {
+        page: subscriptions.page,
+        limit: subscriptions.limit,
+        total: subscriptions.total
+      });
     } catch (error) {
       logger.error('Error getting user subscriptions:', error);
-      errorResponse(res, 500, 'Failed to retrieve user subscriptions');
+      ResponseHelper.internalError(res, 'Failed to retrieve user subscriptions');
     }
   }
 
@@ -422,15 +426,15 @@ export class WatchPackController {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        errorResponse(res, 401, 'Unauthorized');
+        ResponseHelper.error(res, 'UNAUTHORIZED', 'Unauthorized', 401);
         return;
       }
 
       const subscriptions = await UserWatchPack.getUserSubscriptionsWithPacks(userId);
-      successResponse(res, subscriptions, 'User subscriptions with packs retrieved successfully');
+      ResponseHelper.success(res, subscriptions);
     } catch (error) {
       logger.error('Error getting user subscriptions with packs:', error);
-      errorResponse(res, 500, 'Failed to retrieve user subscriptions with packs');
+      ResponseHelper.internalError(res, 'Failed to retrieve user subscriptions with packs');
     }
   }
 
@@ -441,38 +445,38 @@ export class WatchPackController {
       const { packId } = req.params;
 
       if (!userId) {
-        errorResponse(res, 401, 'Unauthorized');
+        ResponseHelper.error(res, 'UNAUTHORIZED', 'Unauthorized', 401);
         return;
       }
 
       if (!packId || !validateUUID(packId)) {
-        errorResponse(res, 400, 'Invalid watch pack ID format');
+        ResponseHelper.badRequest(res, 'Invalid watch pack ID format');
         return;
       }
 
       const subscription = await UserWatchPack.findUserSubscription(userId, packId);
       if (!subscription) {
-        errorResponse(res, 404, 'Subscription not found');
+        ResponseHelper.notFound(res, 'Subscription not found');
         return;
       }
 
       const { customizations } = req.body;
       if (!customizations || typeof customizations !== 'object') {
-        errorResponse(res, 400, 'Customizations object is required');
+        ResponseHelper.badRequest(res, 'Customizations object is required');
         return;
       }
 
       const updated = await UserWatchPack.updateCustomizations(userId, packId, customizations);
       if (!updated) {
-        errorResponse(res, 500, 'Failed to update subscription customizations');
+        ResponseHelper.internalError(res, 'Failed to update subscription customizations');
         return;
       }
 
       const updatedSubscription = await UserWatchPack.findUserSubscription(userId, packId);
-      successResponse(res, updatedSubscription, 'Subscription customizations updated successfully');
+      ResponseHelper.success(res, updatedSubscription);
     } catch (error) {
       logger.error('Error updating subscription customizations:', error);
-      errorResponse(res, 500, 'Failed to update subscription customizations');
+      ResponseHelper.internalError(res, 'Failed to update subscription customizations');
     }
   }
 
@@ -482,20 +486,20 @@ export class WatchPackController {
       const { packId } = req.params;
 
       if (!packId || !validateUUID(packId)) {
-        errorResponse(res, 400, 'Invalid watch pack ID format');
+        ResponseHelper.badRequest(res, 'Invalid watch pack ID format');
         return;
       }
 
       const stats = await WatchPack.getWatchPackStats(packId);
       if (!stats) {
-        errorResponse(res, 404, 'Watch pack not found');
+        ResponseHelper.notFound(res, 'Watch pack not found');
         return;
       }
 
-      successResponse(res, stats, 'Watch pack statistics retrieved successfully');
+      ResponseHelper.success(res, stats);
     } catch (error) {
       logger.error('Error getting watch pack stats:', error);
-      errorResponse(res, 500, 'Failed to retrieve watch pack statistics');
+      ResponseHelper.internalError(res, 'Failed to retrieve watch pack statistics');
     }
   }
 
@@ -504,15 +508,15 @@ export class WatchPackController {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        errorResponse(res, 401, 'Unauthorized');
+        ResponseHelper.error(res, 'UNAUTHORIZED', 'Unauthorized', 401);
         return;
       }
 
       const stats = await UserWatchPack.getUserSubscriptionStats(userId);
-      successResponse(res, stats, 'User subscription statistics retrieved successfully');
+      ResponseHelper.success(res, stats);
     } catch (error) {
       logger.error('Error getting user subscription stats:', error);
-      errorResponse(res, 500, 'Failed to retrieve user subscription statistics');
+      ResponseHelper.internalError(res, 'Failed to retrieve user subscription statistics');
     }
   }
 
@@ -522,15 +526,15 @@ export class WatchPackController {
       const { productId } = req.params;
 
       if (!productId || !validateUUID(productId)) {
-        errorResponse(res, 400, 'Invalid product ID format');
+        ResponseHelper.badRequest(res, 'Invalid product ID format');
         return;
       }
 
       const watchPacks = await WatchPack.findPacksContainingProduct(productId);
-      successResponse(res, watchPacks, 'Watch packs containing product retrieved successfully');
+      ResponseHelper.success(res, watchPacks);
     } catch (error) {
       logger.error('Error finding packs containing product:', error);
-      errorResponse(res, 500, 'Failed to find watch packs containing product');
+      ResponseHelper.internalError(res, 'Failed to find watch packs containing product');
     }
   }
 }

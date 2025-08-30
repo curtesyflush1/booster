@@ -11,6 +11,19 @@ const RecentActivity: React.FC<RecentActivityProps> = ({ alerts, watchedProducts
   const [activeTab, setActiveTab] = useState<'alerts' | 'products'>('alerts');
   const [filterType, setFilterType] = useState<'all' | 'unread' | 'restock' | 'price_drop'>('all');
 
+  // Safety check for alerts
+  if (!alerts || !Array.isArray(alerts)) {
+    return (
+      <div className="card-dark p-6 text-center">
+        <Bell className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-white mb-2">No Recent Activity</h3>
+        <p className="text-gray-400">
+          Start watching products to see recent alerts and activity.
+        </p>
+      </div>
+    );
+  }
+
   const filteredAlerts = alerts.filter(alert => {
     if (filterType === 'all') return true;
     if (filterType === 'unread') return !alert.isRead;
@@ -64,7 +77,7 @@ const RecentActivity: React.FC<RecentActivityProps> = ({ alerts, watchedProducts
             <div className="flex items-center space-x-2">
               <Bell className="w-4 h-4" />
               <span>Recent Alerts</span>
-              {alerts.filter(a => !a.isRead).length > 0 && (
+              {alerts?.filter(a => !a.isRead).length > 0 && (
                 <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
                   {alerts.filter(a => !a.isRead).length}
                 </span>
@@ -214,6 +227,20 @@ interface WatchedProductsListProps {
 }
 
 const WatchedProductsList: React.FC<WatchedProductsListProps> = ({ products }) => {
+  // Safety check for products
+  if (!products || !Array.isArray(products)) {
+    return (
+      <div className="text-center py-8">
+        <Eye className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-white mb-2">No Watched Products</h3>
+        <p className="text-gray-400 mb-4">
+          Start watching products to see their status and insights here.
+        </p>
+        <button className="btn btn-primary">Browse Products</button>
+      </div>
+    );
+  }
+
   if (products.length === 0) {
     return (
       <div className="text-center py-8">

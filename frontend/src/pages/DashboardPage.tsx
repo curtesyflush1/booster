@@ -97,7 +97,7 @@ const DashboardPage: React.FC = () => {
       try {
         setLoading(true);
         const response = await apiClient.get('/dashboard', { params: filters });
-        setDashboardData(response.data.dashboard);
+        setDashboardData((response.data as any).dashboard);
       } catch (err) {
         console.error('Error loading dashboard data:', err);
         setError('Failed to load dashboard data.');
@@ -115,7 +115,7 @@ const DashboardPage: React.FC = () => {
     const fetchPortfolioData = async () => {
       try {
         const response = await apiClient.get('/dashboard/portfolio');
-        setPortfolioData(response.data.portfolio);
+        setPortfolioData((response.data as any).portfolio);
       } catch (err) {
         console.error('Error loading portfolio data:', err);
         // Handle portfolio-specific error if needed
@@ -131,7 +131,7 @@ const DashboardPage: React.FC = () => {
     const fetchPredictiveInsights = async () => {
       try {
         const response = await apiClient.get('/dashboard/insights');
-        setPredictiveInsights(response.data.insights);
+        setPredictiveInsights((response.data as any).insights || []);
       } catch (err) {
         console.error('Error loading predictive insights:', err);
         // Handle insights-specific error if needed

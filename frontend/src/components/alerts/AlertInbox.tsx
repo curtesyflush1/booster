@@ -111,7 +111,7 @@ const AlertInbox: React.FC<AlertInboxProps> = ({
     );
   }
 
-  if (!alerts || alerts.data.length === 0) {
+  if (!alerts || !alerts.data || alerts.data.length === 0) {
     return (
       <div className="bg-background-secondary rounded-lg p-8 text-center">
         <div className="text-6xl mb-4">🔔</div>
@@ -126,8 +126,8 @@ const AlertInbox: React.FC<AlertInboxProps> = ({
     );
   }
 
-  const allSelected = alerts.data.length > 0 && selectedAlerts.length === alerts.data.length;
-  const someSelected = selectedAlerts.length > 0 && selectedAlerts.length < alerts.data.length;
+  const allSelected = alerts.data && alerts.data.length > 0 && selectedAlerts.length === alerts.data.length;
+  const someSelected = selectedAlerts.length > 0 && alerts.data && selectedAlerts.length < alerts.data.length;
 
   return (
     <div className="space-y-4">
@@ -170,7 +170,7 @@ const AlertInbox: React.FC<AlertInboxProps> = ({
 
       {/* Alert List */}
       <div className="space-y-2">
-        {alerts.data.map((alert) => {
+        {alerts.data?.map((alert) => {
           const isSelected = selectedAlerts.includes(alert.id);
           const typeInfo = alertService.getAlertTypeInfo(alert.type);
           const priorityColor = getPriorityColor(alert.priority);

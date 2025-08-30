@@ -7,9 +7,9 @@
  */
 
 import { IKeyManagementService, KMSConfig, KMSServiceError, KMSErrorCodes } from './types';
-import { AWSKMSService } from './awsKMS';
-import { GCPKMSService } from './gcpKMS';
-import { VaultKMSService } from './vaultKMS';
+// import { AWSKMSService } from './awsKMS';
+// import { GCPKMSService } from './gcpKMS';
+// import { VaultKMSService } from './vaultKMS';
 import { EnvironmentKMSService } from './envKMS';
 
 export class KMSFactory {
@@ -19,13 +19,31 @@ export class KMSFactory {
   static createKMSService(config: KMSConfig): IKeyManagementService {
     switch (config.provider) {
       case 'aws':
-        return new AWSKMSService(config);
+        // return new AWSKMSService(config);
+        throw new KMSServiceError(
+          'AWS KMS not implemented',
+          KMSErrorCodes.INVALID_CONFIGURATION,
+          config.provider,
+          { retryable: false }
+        );
       
       case 'gcp':
-        return new GCPKMSService(config);
+        // return new GCPKMSService(config);
+        throw new KMSServiceError(
+          'GCP KMS not implemented',
+          KMSErrorCodes.INVALID_CONFIGURATION,
+          config.provider,
+          { retryable: false }
+        );
       
       case 'vault':
-        return new VaultKMSService(config);
+        // return new VaultKMSService(config);
+        throw new KMSServiceError(
+          'Vault KMS not implemented',
+          KMSErrorCodes.INVALID_CONFIGURATION,
+          config.provider,
+          { retryable: false }
+        );
       
       case 'env':
         return new EnvironmentKMSService(config);

@@ -55,20 +55,10 @@ class AlertService {
       }
     });
 
-    const response = await apiClient.get<{
-      alerts: Alert[];
-      pagination: {
-        page: number;
-        limit: number;
-        total: number;
-        totalPages: number;
-        hasNext: boolean;
-        hasPrev: boolean;
-      };
-    }>(`/alerts?${params.toString()}`);
+    const response = await apiClient.get<PaginatedResponse<Alert>>(`/alerts?${params.toString()}`);
 
     return {
-      data: response.data.alerts,
+      data: response.data.data,
       pagination: response.data.pagination
     };
   }

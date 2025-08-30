@@ -87,7 +87,7 @@ const AlertsPage: React.FC = () => {
 
   // Handle select all
   const handleSelectAll = (selected: boolean) => {
-    if (selected && alerts) {
+    if (selected && alerts && alerts.data) {
       setSelectedAlerts(alerts.data.map(alert => alert.id));
     } else {
       setSelectedAlerts([]);

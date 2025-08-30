@@ -4,7 +4,7 @@ import { Product } from '../models/Product';
 import { WatchMonitoringService } from '../services/watchMonitoringService';
 import { IWatch } from '../types/database';
 import { logger } from '../utils/logger';
-import { successResponse, errorResponse } from '../utils/responseHelpers';
+import { ResponseHelper } from '../utils/responseHelpers';
 import { validateUUID } from '../utils/validation';
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
@@ -18,7 +18,7 @@ export class WatchController {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        errorResponse(res, 401, 'Unauthorized');
+        ResponseHelper.error(res, 'UNAUTHORIZED', 'Unauthorized', 401);
         return;
       }
 
@@ -50,10 +50,14 @@ export class WatchController {
         });
       }
 
-      successResponse(res, watches, 'Watches retrieved successfully');
+      ResponseHelper.successWithPagination(res, watches.data, {
+        page: watches.page,
+        limit: watches.limit,
+        total: watches.total
+      });
     } catch (error) {
       logger.error('Error getting user watches:', error);
-      errorResponse(res, 500, 'Failed to retrieve watches');
+      ResponseHelper.internalError(res, 'Failed to retrieve watches');
     }
   }
 
@@ -64,31 +68,31 @@ export class WatchController {
       const { watchId } = req.params;
 
       if (!userId) {
-        errorResponse(res, 401, 'Unauthorized');
+        ResponseHelper.error(res, 'UNAUTHORIZED', 'Unauthorized', 401);
         return;
       }
 
       if (!watchId || !validateUUID(watchId)) {
-        errorResponse(res, 400, 'Invalid watch ID format');
+        ResponseHelper.badRequest(res, 'Invalid watch ID format');
         return;
       }
 
       const watch = await Watch.findById<IWatch>(watchId);
       if (!watch) {
-        errorResponse(res, 404, 'Watch not found');
+        ResponseHelper.notFound(res, 'Watch');
         return;
       }
 
       // Ensure user owns this watch
       if (watch.user_id !== userId) {
-        errorResponse(res, 403, 'Access denied');
+        ResponseHelper.error(res, 'ACCESS_DENIED', 'Access denied', 403);
         return;
       }
 
-      successResponse(res, watch, 'Watch retrieved successfully');
+      ResponseHelper.success(res, watch);
     } catch (error) {
       logger.error('Error getting watch:', error);
-      errorResponse(res, 500, 'Failed to retrieve watch');
+      ResponseHelper.internalError(res, 'Failed to retrieve watch');
     }
   }
 
@@ -97,7 +101,7 @@ export class WatchController {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        errorResponse(res, 401, 'Unauthorized');
+        ResponseHelper.error(res, 'UNAUTHORIZED', 'Unauthorized', 401);
         return;
       }
 
@@ -113,26 +117,26 @@ export class WatchController {
 
       // Validate required fields
       if (!product_id) {
-        errorResponse(res, 400, 'Product ID is required');
+        ResponseHelper.badRequest(res, 'Product ID is required');
         return;
       }
 
       if (!validateUUID(product_id)) {
-        errorResponse(res, 400, 'Invalid product ID format');
+        ResponseHelper.badRequest(res, 'Invalid product ID format');
         return;
       }
 
       // Check if product exists
       const product = await Product.findById<any>(product_id);
       if (!product) {
-        errorResponse(res, 404, 'Product not found');
+        ResponseHelper.notFound(res, 'Product');
         return;
       }
 
       // Check if user already has a watch for this product
       const existingWatch = await Watch.findUserProductWatch(userId, product_id);
       if (existingWatch) {
-        errorResponse(res, 409, 'Watch already exists for this product');
+        ResponseHelper.error(res, 'WATCH_EXISTS', 'Watch already exists for this product', 409);
         return;
       }
 
@@ -156,13 +160,13 @@ export class WatchController {
       }
 
       const watch = await Watch.createWatch(watchData);
-      successResponse(res, watch, 'Watch created successfully', 201);
+      ResponseHelper.success(res, watch);
     } catch (error) {
       logger.error('Error creating watch:', error);
       if (error instanceof Error && error.message.includes('Validation failed')) {
-        errorResponse(res, 400, error.message);
+        ResponseHelper.validationError(res, error.message);
       } else {
-        errorResponse(res, 500, 'Failed to create watch');
+        ResponseHelper.internalError(res, 'Failed to create watch');
       }
     }
   }
@@ -174,24 +178,24 @@ export class WatchController {
       const { watchId } = req.params;
 
       if (!userId) {
-        errorResponse(res, 401, 'Unauthorized');
+        ResponseHelper.error(res, 'UNAUTHORIZED', 'Unauthorized', 401);
         return;
       }
 
       if (!watchId || !validateUUID(watchId)) {
-        errorResponse(res, 400, 'Invalid watch ID format');
+        ResponseHelper.badRequest(res, 'Invalid watch ID format');
         return;
       }
 
       const existingWatch = await Watch.findById<IWatch>(watchId);
       if (!existingWatch) {
-        errorResponse(res, 404, 'Watch not found');
+        ResponseHelper.notFound(res, 'Watch');
         return;
       }
 
       // Ensure user owns this watch
       if (existingWatch.user_id !== userId) {
-        errorResponse(res, 403, 'Access denied');
+        ResponseHelper.error(res, 'ACCESS_DENIED', 'Access denied', 403);
         return;
       }
 
@@ -239,17 +243,17 @@ export class WatchController {
 
       const updatedWatch = await Watch.updateById<IWatch>(watchId, updateData);
       if (!updatedWatch) {
-        errorResponse(res, 500, 'Failed to update watch');
+        ResponseHelper.internalError(res, 'Failed to update watch');
         return;
       }
 
-      successResponse(res, updatedWatch, 'Watch updated successfully');
+      ResponseHelper.success(res, updatedWatch);
     } catch (error) {
       logger.error('Error updating watch:', error);
       if (error instanceof Error && error.message.includes('Validation failed')) {
-        errorResponse(res, 400, error.message);
+        ResponseHelper.badRequest(res, error.message);
       } else {
-        errorResponse(res, 500, 'Failed to update watch');
+        ResponseHelper.internalError(res, 'Failed to update watch');
       }
     }
   }
@@ -261,37 +265,37 @@ export class WatchController {
       const { watchId } = req.params;
 
       if (!userId) {
-        errorResponse(res, 401, 'Unauthorized');
+        ResponseHelper.error(res, 'UNAUTHORIZED', 'Unauthorized', 401);
         return;
       }
 
       if (!watchId || !validateUUID(watchId)) {
-        errorResponse(res, 400, 'Invalid watch ID format');
+        ResponseHelper.badRequest(res, 'Invalid watch ID format');
         return;
       }
 
       const watch = await Watch.findById<IWatch>(watchId);
       if (!watch) {
-        errorResponse(res, 404, 'Watch not found');
+        ResponseHelper.notFound(res, 'Watch');
         return;
       }
 
       // Ensure user owns this watch
       if (watch.user_id !== userId) {
-        errorResponse(res, 403, 'Access denied');
+        ResponseHelper.error(res, 'ACCESS_DENIED', 'Access denied', 403);
         return;
       }
 
       const deleted = await Watch.deleteById(watchId);
       if (!deleted) {
-        errorResponse(res, 500, 'Failed to delete watch');
+        ResponseHelper.internalError(res, 'Failed to delete watch');
         return;
       }
 
-      successResponse(res, null, 'Watch deleted successfully');
+      ResponseHelper.success(res, null);
     } catch (error) {
       logger.error('Error deleting watch:', error);
-      errorResponse(res, 500, 'Failed to delete watch');
+      ResponseHelper.internalError(res, 'Failed to delete watch');
     }
   }
 
@@ -302,38 +306,38 @@ export class WatchController {
       const { watchId } = req.params;
 
       if (!userId) {
-        errorResponse(res, 401, 'Unauthorized');
+        ResponseHelper.error(res, 'UNAUTHORIZED', 'Unauthorized', 401);
         return;
       }
 
       if (!watchId || !validateUUID(watchId)) {
-        errorResponse(res, 400, 'Invalid watch ID format');
+        ResponseHelper.badRequest(res, 'Invalid watch ID format');
         return;
       }
 
       const watch = await Watch.findById<IWatch>(watchId);
       if (!watch) {
-        errorResponse(res, 404, 'Watch not found');
+        ResponseHelper.notFound(res, 'Watch');
         return;
       }
 
       // Ensure user owns this watch
       if (watch.user_id !== userId) {
-        errorResponse(res, 403, 'Access denied');
+        ResponseHelper.error(res, 'ACCESS_DENIED', 'Access denied', 403);
         return;
       }
 
       const success = await Watch.toggleActive(watchId);
       if (!success) {
-        errorResponse(res, 500, 'Failed to toggle watch status');
+        ResponseHelper.internalError(res, 'Failed to toggle watch status');
         return;
       }
 
       const updatedWatch = await Watch.findById<IWatch>(watchId);
-      successResponse(res, updatedWatch, 'Watch status updated successfully');
+      ResponseHelper.success(res, updatedWatch);
     } catch (error) {
       logger.error('Error toggling watch:', error);
-      errorResponse(res, 500, 'Failed to toggle watch status');
+      ResponseHelper.internalError(res, 'Failed to toggle watch status');
     }
   }
 
@@ -342,15 +346,15 @@ export class WatchController {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        errorResponse(res, 401, 'Unauthorized');
+        ResponseHelper.error(res, 'UNAUTHORIZED', 'Unauthorized', 401);
         return;
       }
 
       const stats = await Watch.getUserWatchStats(userId);
-      successResponse(res, stats, 'Watch statistics retrieved successfully');
+      ResponseHelper.success(res, stats);
     } catch (error) {
       logger.error('Error getting watch stats:', error);
-      errorResponse(res, 500, 'Failed to retrieve watch statistics');
+      ResponseHelper.internalError(res, 'Failed to retrieve watch statistics');
     }
   }
 
@@ -359,12 +363,12 @@ export class WatchController {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        errorResponse(res, 401, 'Unauthorized');
+        ResponseHelper.error(res, 'UNAUTHORIZED', 'Unauthorized', 401);
         return;
       }
 
       if (!req.file) {
-        errorResponse(res, 400, 'CSV file is required');
+        ResponseHelper.badRequest(res, 'CSV file is required');
         return;
       }
 
@@ -386,7 +390,7 @@ export class WatchController {
       });
 
       if (records.length === 0) {
-        errorResponse(res, 400, 'No valid records found in CSV');
+        ResponseHelper.badRequest(res, 'No valid records found in CSV');
         return;
       }
 
@@ -447,7 +451,7 @@ export class WatchController {
       }
 
       if (watchesToCreate.length === 0) {
-        errorResponse(res, 400, `No valid watches to create. Errors: ${errors.join(', ')}`);
+        ResponseHelper.badRequest(res, `No valid watches to create. Errors: ${errors.join(', ')}`);
         return;
       }
 
@@ -460,10 +464,10 @@ export class WatchController {
         errorDetails: errors
       };
 
-      successResponse(res, result, `Bulk import completed. Created ${createdWatches.length} watches.`);
+      ResponseHelper.success(res, result);
     } catch (error) {
       logger.error('Error bulk importing watches:', error);
-      errorResponse(res, 500, 'Failed to import watches');
+      ResponseHelper.internalError(res, 'Failed to import watches');
     }
   }
 
@@ -472,7 +476,7 @@ export class WatchController {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        errorResponse(res, 401, 'Unauthorized');
+        ResponseHelper.error(res, 'UNAUTHORIZED', 'Unauthorized', 401);
         return;
       }
 
@@ -521,7 +525,7 @@ export class WatchController {
       res.send(csvOutput);
     } catch (error) {
       logger.error('Error exporting watches:', error);
-      errorResponse(res, 500, 'Failed to export watches');
+      ResponseHelper.internalError(res, 'Failed to export watches');
     }
   }
 
@@ -532,37 +536,37 @@ export class WatchController {
       const { watchId } = req.params;
 
       if (!userId) {
-        errorResponse(res, 401, 'Unauthorized');
+        ResponseHelper.error(res, 'UNAUTHORIZED', 'Unauthorized', 401);
         return;
       }
 
       if (!watchId || !validateUUID(watchId)) {
-        errorResponse(res, 400, 'Invalid watch ID format');
+        ResponseHelper.badRequest(res, 'Invalid watch ID format');
         return;
       }
 
       const watch = await Watch.findById<IWatch>(watchId);
       if (!watch) {
-        errorResponse(res, 404, 'Watch not found');
+        ResponseHelper.notFound(res, 'Watch');
         return;
       }
 
       // Ensure user owns this watch
       if (watch.user_id !== userId) {
-        errorResponse(res, 403, 'Access denied');
+        ResponseHelper.error(res, 'ACCESS_DENIED', 'Access denied', 403);
         return;
       }
 
       const health = await WatchMonitoringService.checkWatchHealth(watchId);
       if (!health) {
-        errorResponse(res, 500, 'Failed to check watch health');
+        ResponseHelper.internalError(res, 'Failed to check watch health');
         return;
       }
 
-      successResponse(res, health, 'Watch health status retrieved successfully');
+      ResponseHelper.success(res, health);
     } catch (error) {
       logger.error('Error getting watch health:', error);
-      errorResponse(res, 500, 'Failed to retrieve watch health status');
+      ResponseHelper.internalError(res, 'Failed to retrieve watch health status');
     }
   }
 
@@ -571,15 +575,15 @@ export class WatchController {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        errorResponse(res, 401, 'Unauthorized');
+        ResponseHelper.error(res, 'UNAUTHORIZED', 'Unauthorized', 401);
         return;
       }
 
       const healthStatuses = await WatchMonitoringService.checkUserWatchesHealth(userId);
-      successResponse(res, healthStatuses, 'User watches health status retrieved successfully');
+      ResponseHelper.success(res, healthStatuses);
     } catch (error) {
       logger.error('Error getting user watches health:', error);
-      errorResponse(res, 500, 'Failed to retrieve user watches health status');
+      ResponseHelper.internalError(res, 'Failed to retrieve user watches health status');
     }
   }
 
@@ -588,15 +592,15 @@ export class WatchController {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        errorResponse(res, 401, 'Unauthorized');
+        ResponseHelper.error(res, 'UNAUTHORIZED', 'Unauthorized', 401);
         return;
       }
 
       const metrics = await WatchMonitoringService.getWatchPerformanceMetrics(userId);
-      successResponse(res, metrics, 'Watch performance metrics retrieved successfully');
+      ResponseHelper.success(res, metrics);
     } catch (error) {
       logger.error('Error getting watch performance metrics:', error);
-      errorResponse(res, 500, 'Failed to retrieve watch performance metrics');
+      ResponseHelper.internalError(res, 'Failed to retrieve watch performance metrics');
     }
   }
 
@@ -604,10 +608,10 @@ export class WatchController {
   static async getSystemWatchHealth(req: Request, res: Response): Promise<void> {
     try {
       const systemHealth = await WatchMonitoringService.getSystemWatchHealth();
-      successResponse(res, systemHealth, 'System watch health retrieved successfully');
+      ResponseHelper.success(res, systemHealth);
     } catch (error) {
       logger.error('Error getting system watch health:', error);
-      errorResponse(res, 500, 'Failed to retrieve system watch health');
+      ResponseHelper.internalError(res, 'Failed to retrieve system watch health');
     }
   }
 
@@ -615,10 +619,10 @@ export class WatchController {
   static async cleanupWatches(req: Request, res: Response): Promise<void> {
     try {
       const cleanupResults = await WatchMonitoringService.cleanupWatches();
-      successResponse(res, cleanupResults, 'Watch cleanup completed successfully');
+      ResponseHelper.success(res, cleanupResults);
     } catch (error) {
       logger.error('Error cleaning up watches:', error);
-      errorResponse(res, 500, 'Failed to cleanup watches');
+      ResponseHelper.internalError(res, 'Failed to cleanup watches');
     }
   }
 }
