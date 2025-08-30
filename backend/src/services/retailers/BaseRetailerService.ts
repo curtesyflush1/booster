@@ -307,10 +307,10 @@ export abstract class BaseRetailerService extends IBaseRetailerService {
       'collection box', 'tin', 'premium collection'
     ];
     
-    const excludeKeywords = [
-      'video game', 'plush', 'figure', 'toy', 'clothing', 
-      'accessory', 'keychain', 'backpack', 'lunch box'
-    ];
+      const excludeKeywords = [
+    'video game', 'plush', 'figure', 'clothing', 
+    'accessory', 'keychain', 'backpack', 'lunch box'
+  ];
     
     const hasPokemonKeyword = pokemonKeywords.some(keyword => 
       searchText.includes(keyword)

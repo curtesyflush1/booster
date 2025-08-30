@@ -207,6 +207,99 @@ export class TokenBlacklistService {
   }
 
   /**
+   * Track a token for a user
+   * @param userId - User ID
+   * @param token - JWT token to track
+   * @returns Promise<boolean> - true if successfully tracked
+   */
+  static async trackUserToken(userId: string, token: string): Promise<boolean> {
+    try {
+      const tokenInfo = this.extractTokenInfo(token);
+      if (!tokenInfo) {
+        logger.warn('Cannot track invalid token');
+        return false;
+      }
+
+      await redisService.sadd(`user:tokens:${userId}`, tokenInfo.jti);
+      
+      logger.info('Token tracked for user', {
+        userId,
+        jti: tokenInfo.jti
+      });
+
+      return true;
+    } catch (error) {
+      logger.error('Failed to track user token', {
+        userId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Untrack a token for a user
+   * @param userId - User ID
+   * @param token - JWT token to untrack
+   * @returns Promise<boolean> - true if successfully untracked
+   */
+  static async untrackUserToken(userId: string, token: string): Promise<boolean> {
+    try {
+      const tokenInfo = this.extractTokenInfo(token);
+      if (!tokenInfo) {
+        logger.warn('Cannot untrack invalid token');
+        return false;
+      }
+
+      await redisService.srem(`user:tokens:${userId}`, tokenInfo.jti);
+      
+      logger.info('Token untracked for user', {
+        userId,
+        jti: tokenInfo.jti
+      });
+
+      return true;
+    } catch (error) {
+      logger.error('Failed to untrack user token', {
+        userId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Get blacklist information for a token
+   * @param token - JWT token to check
+   * @returns Promise<any> - blacklist information
+   */
+  static async getBlacklistInfo(token: string): Promise<any> {
+    try {
+      const tokenInfo = this.extractTokenInfo(token);
+      if (!tokenInfo) {
+        return { isBlacklisted: true, reason: 'Invalid token' };
+      }
+
+      const isTokenBlacklisted = await redisService.isTokenBlacklisted(tokenInfo.jti);
+      const areUserTokensBlacklisted = await redisService.areUserTokensBlacklisted(
+        tokenInfo.userId, 
+        tokenInfo.issuedAt
+      );
+
+      return {
+        isBlacklisted: isTokenBlacklisted || areUserTokensBlacklisted,
+        tokenInfo,
+        reason: isTokenBlacklisted ? 'Token blacklisted' : areUserTokensBlacklisted ? 'User tokens blacklisted' : 'Not blacklisted'
+      };
+    } catch (error) {
+      logger.error('Failed to get blacklist info', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      return { isBlacklisted: true, reason: 'Error checking blacklist' };
+    }
+  }
+
+  /**
    * Get blacklist statistics for monitoring
    * @returns Promise<object> - blacklist statistics
    */
@@ -259,4 +352,44 @@ export class TokenBlacklistService {
       };
     }
   }
+  // Instance methods for test compatibility
+  async blacklistToken(token: string, reason: string = 'manual_blacklist'): Promise<boolean> {
+    return TokenBlacklistService.revokeToken(token);
+  }
+
+  async isTokenBlacklisted(token: string): Promise<boolean> {
+    return TokenBlacklistService.isTokenRevoked(token);
+  }
+
+  async blacklistAllUserTokens(userId: string, reason: string = 'manual_blacklist'): Promise<boolean> {
+    return TokenBlacklistService.revokeAllUserTokens(userId, reason);
+  }
+
+  async trackUserToken(userId: string, token: string): Promise<boolean> {
+    return TokenBlacklistService.trackUserToken(userId, token);
+  }
+
+  async untrackUserToken(userId: string, token: string): Promise<boolean> {
+    return TokenBlacklistService.untrackUserToken(userId, token);
+  }
+
+  async getBlacklistInfo(token: string): Promise<any> {
+    return TokenBlacklistService.getBlacklistInfo(token);
+  }
+
+  async cleanupExpiredEntries(): Promise<number> {
+    return TokenBlacklistService.cleanupExpiredEntries();
+  }
+
+  async getBlacklistStats(): Promise<{
+    totalTokensBlacklisted: number;
+    totalUsersBlacklisted: number;
+    oldestEntry: string | null;
+    newestEntry: string | null;
+  }> {
+    return TokenBlacklistService.getBlacklistStats();
+  }
 }
+
+// Export singleton instance for tests and other modules
+export const tokenBlacklistService = new TokenBlacklistService();

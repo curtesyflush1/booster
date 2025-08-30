@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import * as bcrypt from 'bcrypt';
 import { BaseModel } from './BaseModel';
 import { IUser, IValidationError, IUserRegistration } from '../types/database';
 import { INTERVALS, VALIDATION_LIMITS, TIME_UNITS, DEFAULT_VALUES } from '../constants';

@@ -61,7 +61,17 @@ interface WalmartStoreLocator {
 
 export class WalmartService extends BaseRetailerService {
   constructor(config: RetailerConfig) {
-    super(config);
+    // Add Walmart-specific headers to config
+    const walmartConfig = {
+      ...config,
+      headers: {
+        ...config.headers,
+        'WM_CONSUMER.ID': config.apiKey,
+        'WM_SVC.NAME': 'Walmart Open API'
+      }
+    };
+    
+    super(walmartConfig);
     
     if (!config.apiKey) {
       throw new Error('Walmart API key is required');

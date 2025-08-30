@@ -74,9 +74,9 @@ module.exports = {
   // Add error handling for better debugging
   errorOnDeprecated: true,
   // Improve test isolation
-  isolatedModules: true,
+  // isolatedModules: true, // Commented out due to validation warning
   // Module name mapping for better imports
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@tests/(.*)$': '<rootDir>/tests/$1'
   },

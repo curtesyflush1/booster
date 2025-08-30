@@ -10,6 +10,7 @@ process.env.JWT_EXPIRES_IN = '15m';
 process.env.JWT_REFRESH_EXPIRES_IN = '7d';
 process.env.REDIS_URL = 'redis://localhost:6379';
 process.env.LOG_LEVEL = 'error';
+process.env.ENCRYPTION_KEY = 'test_encryption_key_must_be_32_characters_long';
 
 // Mock external services to prevent network calls
 jest.mock('axios');

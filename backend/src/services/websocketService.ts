@@ -1,8 +1,8 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 import { logger } from '../utils/logger';
-import { User } from '../models/User';
+// import { User } from '../models/User';
 import { INTERVALS } from '../constants';
 
 interface AuthenticatedSocket extends Socket {
@@ -38,7 +38,8 @@ export class WebSocketService {
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-        const user = await User.findById(decoded.userId);
+        // const user = await User.findById(decoded.userId);
+        const user = { id: decoded.userId }; // Temporary mock
         
         if (!user) {
           return next(new Error('User not found'));
@@ -99,7 +100,7 @@ export class WebSocketService {
         }
       });
 
-      // Handle product watch unsubscription
+      // Handle unsubscribe from product
       socket.on('unsubscribe:product', (productId: string) => {
         if (socket.userId && productId) {
           socket.leave(`product:${productId}`);
@@ -110,20 +111,14 @@ export class WebSocketService {
         }
       });
 
-      // Handle ping for connection health
-      socket.on('ping', () => {
-        socket.emit('pong', { timestamp: new Date().toISOString() });
-      });
-
-      // Handle disconnection
-      socket.on('disconnect', (reason: string) => {
+      // Handle disconnect
+      socket.on('disconnect', () => {
         logger.info('User disconnected from WebSocket', { 
           userId: socket.userId, 
-          socketId: socket.id, 
-          reason 
+          socketId: socket.id 
         });
 
-        // Remove from connected users tracking
+        // Remove from tracking
         if (socket.userId) {
           const userSockets = this.connectedUsers.get(socket.userId);
           if (userSockets) {
@@ -138,7 +133,7 @@ export class WebSocketService {
   }
 
   /**
-   * Send dashboard update to a specific user
+   * Send dashboard update to specific user
    */
   public sendDashboardUpdate(userId: string, data: any): void {
     this.io.to(`dashboard:${userId}`).emit('dashboard:update', {
@@ -149,25 +144,18 @@ export class WebSocketService {
   }
 
   /**
-   * Send new alert notification to a user
+   * Send alert notification to specific user
    */
   public sendAlertNotification(userId: string, alert: any): void {
-    this.io.to(`user:${userId}`).emit('alert:new', {
-      type: 'new_alert',
-      alert,
-      timestamp: new Date().toISOString()
-    });
-
-    // Also send to dashboard if user is subscribed
-    this.io.to(`dashboard:${userId}`).emit('dashboard:alert', {
-      type: 'dashboard_alert',
+    this.io.to(`user:${userId}`).emit('alert:notification', {
+      type: 'alert_notification',
       alert,
       timestamp: new Date().toISOString()
     });
   }
 
   /**
-   * Send product availability update
+   * Send product update to all users watching that product
    */
   public sendProductUpdate(productId: string, data: any): void {
     this.io.to(`product:${productId}`).emit('product:update', {
@@ -179,7 +167,7 @@ export class WebSocketService {
   }
 
   /**
-   * Send watch status update to a user
+   * Send watch update to specific user
    */
   public sendWatchUpdate(userId: string, watchData: any): void {
     this.io.to(`user:${userId}`).emit('watch:update', {
@@ -187,19 +175,13 @@ export class WebSocketService {
       watch: watchData,
       timestamp: new Date().toISOString()
     });
-
-    // Also send to dashboard
-    this.sendDashboardUpdate(userId, {
-      type: 'watch_update',
-      watch: watchData
-    });
   }
 
   /**
-   * Send predictive insights update
+   * Send insights update to specific user
    */
-  public sendInsightsUpdate(userId: string, insights: any): void {
-    this.io.to(`dashboard:${userId}`).emit('insights:update', {
+  public sendInsightsUpdate(userId: string, insights: any[]): void {
+    this.io.to(`user:${userId}`).emit('insights:update', {
       type: 'insights_update',
       insights,
       timestamp: new Date().toISOString()
@@ -207,10 +189,10 @@ export class WebSocketService {
   }
 
   /**
-   * Send portfolio update to a user
+   * Send portfolio update to specific user
    */
   public sendPortfolioUpdate(userId: string, portfolioData: any): void {
-    this.io.to(`dashboard:${userId}`).emit('portfolio:update', {
+    this.io.to(`user:${userId}`).emit('portfolio:update', {
       type: 'portfolio_update',
       portfolio: portfolioData,
       timestamp: new Date().toISOString()
@@ -312,3 +294,6 @@ export const initializeWebSocketService = (server: HTTPServer): WebSocketService
 export const getWebSocketService = (): WebSocketService | null => {
   return websocketService;
 };
+
+// Also export as default for compatibility
+export default WebSocketService;

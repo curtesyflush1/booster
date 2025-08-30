@@ -614,3 +614,48 @@ This checklist contains the final set of improvements for the BoosterBeacon appl
         3.  After this, make the API call to add the product to the watch list.
         4.  If the API call fails, call `setIsWatching(false)` in the `.catch()` block and show an error notification.
         5.  Update the button's appearance based on the `isWatching` state (e.g., change text to "Watching", change color, show a checkmark icon).
+
+# BoosterBeacon Backend: Final Test Suite Cleanup
+
+This checklist provides the final, targeted instructions to resolve all remaining test failures in the last 8 services, with the goal of achieving a 100% green test suite.
+
+---
+
+### **
+
+
+* [ ] **2. Align Mocks in `TokenBlacklistService`**
+    * **File:** `backend/tests/services/tokenBlacklistService.test.ts`
+    * **Task:** The tests for this service are failing due to mock expectation mismatches, likely with the Redis mock. Update the test mocks to align with the service's actual logic.
+    * **Instructions:**
+        1.  Run the `tokenBlacklistService.test.ts` file to isolate the failures.
+        2.  For each failing test, look at the mock Redis calls (e.g., `mockRedis.sAdd.mockResolvedValue(...)`).
+        3.  Compare the test's expectations with the actual implementation in `tokenBlacklistService.ts` and update the test to match the real logic.
+
+* [ ] **3. Fix Logic in `QuietHoursFiltering`**
+    * **File:** `backend/tests/services/quietHoursFiltering.test.ts`
+    * **Task:** These tests are failing due to business logic issues. Debug the `isQuietTime` method in `quietHoursService.ts` to ensure it correctly handles all test case scenarios.
+    * **Instructions:**
+        1.  Run the `quietHoursFiltering.test.ts` file to see the specific failures.
+        2.  For a failing test, use `console.log` or a debugger inside the `isQuietTime` method in `quietHoursService.ts` to trace the execution.
+        3.  Identify and correct the logical error in the time comparison or timezone handling that is causing the test to fail.
+
+### **Phase 2: Final Infrastructure and Import Fixes**
+
+* [ ] **4. Resolve `UserCredentialService` Encryption Issues**
+    * **File:** `backend/tests/services/userCredentialService.test.ts`
+    * **Task:** The tests for this service are failing due to encryption logic that depends on the `ENCRYPTION_KEY` environment variable. Ensure this is being handled correctly.
+    * **Instructions:**
+        1.  Confirm that the `backend/.env.test` file contains a valid 32-character string for `ENCRYPTION_KEY`.
+        2.  Ensure that the Jest setup (`jest.setup.js`) is correctly loading the environment variables from this file.
+        3.  Debug the `userCredentialService.test.ts` file to see if the encryption/decryption functions are throwing errors and fix the underlying logic if necessary.
+
+* [ ] **5. Fix `WebSocketService` Import/Constructor**
+    * **File:** `backend/tests/services/websocketService.test.ts`
+    * **Task:** Fix the final import or instantiation issue causing the `WebSocketService` tests to fail.
+    * **Instructions:**
+        1.  Open `backend/tests/services/websocketService.test.ts`.
+        2.  Ensure the `WebSocketService` class is properly exported from `backend/src/services/websocketService.ts`.
+        3.  The service's constructor likely requires an HTTP server instance. Ensure the test is creating a mock server and passing it during instantiation: `const mockServer = http.createServer(); const service = new WebSocketService(mockServer);`.
+
+---

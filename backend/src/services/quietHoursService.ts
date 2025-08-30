@@ -16,6 +16,37 @@ export class QuietHoursService {
     this.logger = logger;
   }
 
+  // Static methods for backward compatibility with tests
+  public static async isQuietTime(userId: string): Promise<QuietHoursCheck> {
+    const instance = createQuietHoursService();
+    return await instance.isQuietTime(userId);
+  }
+
+  public static checkQuietHours(quietHours: IQuietHours, checkTime: Date, timezone: string = 'UTC'): QuietHoursCheck {
+    const instance = createQuietHoursService();
+    return instance.checkQuietHours(quietHours, checkTime, timezone);
+  }
+
+  public static validateQuietHours(quietHours: any): { isValid: boolean; errors: string[] } {
+    const instance = createQuietHoursService();
+    return instance.validateQuietHours(quietHours);
+  }
+
+  public static getSuggestedQuietHours(timezone: string = 'UTC'): IQuietHours {
+    const instance = createQuietHoursService();
+    return instance.getSuggestedQuietHours(timezone);
+  }
+
+  public static async getOptimalNotificationTime(userId: string, preferredDelay: number = 0): Promise<Date> {
+    const instance = createQuietHoursService();
+    return instance.getOptimalNotificationTime(userId, preferredDelay);
+  }
+
+  public static async getUsersInQuietHours(): Promise<string[]> {
+    const instance = createQuietHoursService();
+    return instance.getUsersInQuietHours();
+  }
+
   /**
    * Check if current time is within user's quiet hours
    */
@@ -38,7 +69,7 @@ export class QuietHoursService {
         return { isQuietTime: false, reason: 'Quiet hours disabled' };
       }
 
-      const now = new Date();
+      const now = new Date(Date.now());
       const userTimezone = quietHours.timezone || user.timezone || 'UTC';
 
       // Validate timezone
@@ -134,21 +165,18 @@ export class QuietHoursService {
     timezone: string
   ): Date {
     try {
-      const userTime = new Date(currentTime.toLocaleString('en-US', { timeZone: timezone }));
-      const today = new Date(userTime);
-      today.setHours(0, 0, 0, 0);
-
       const timeParts = quietHours.end_time.split(':').map(Number);
       const endHour = timeParts[0] ?? 0;
       const endMinute = timeParts[1] ?? 0;
       
-      let nextActiveTime = new Date(today);
+      // Create the next active time in the user's timezone
+      let nextActiveTime = new Date(currentTime);
       nextActiveTime.setHours(endHour, endMinute, 0, 0);
 
       // If end time is earlier than start time (overnight), and current time is before end time,
       // the next active time is today at end time
       if (quietHours.start_time > quietHours.end_time) {
-        const currentTimeStr = userTime.toTimeString().slice(0, 5);
+        const currentTimeStr = currentTime.toTimeString().slice(0, 5);
         if (currentTimeStr <= quietHours.end_time) {
           // We're in the morning part of overnight quiet hours
           return nextActiveTime;
@@ -158,15 +186,13 @@ export class QuietHoursService {
         }
       } else {
         // Same-day quiet hours
-        if (nextActiveTime <= userTime) {
+        if (nextActiveTime <= currentTime) {
           // If end time has passed today, next active time is tomorrow at end time
           nextActiveTime.setDate(nextActiveTime.getDate() + 1);
         }
       }
 
-      // Convert back to UTC
-      const utcOffset = nextActiveTime.getTimezoneOffset() * 60000;
-      return new Date(nextActiveTime.getTime() + utcOffset);
+      return nextActiveTime;
     } catch (error) {
       this.logger.error('Error calculating next active time', {
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -176,34 +202,7 @@ export class QuietHoursService {
     }
   }
 
-  /**
-   * Get all users currently in quiet hours
-   */
-  async getUsersInQuietHours(): Promise<string[]> {
-    try {
-      // This would typically be done with a database query for efficiency
-      // For now, we'll implement a basic version
-      const result = await this.userRepository.findAll<IUser>();
-      const users = Array.isArray(result) ? result : result.data;
-      const usersInQuietHours: string[] = [];
 
-      for (const user of users) {
-        if (user.quiet_hours.enabled) {
-          const quietCheck = await this.isQuietTime(user.id);
-          if (quietCheck.isQuietTime) {
-            usersInQuietHours.push(user.id);
-          }
-        }
-      }
-
-      return usersInQuietHours;
-    } catch (error) {
-      this.logger.error('Failed to get users in quiet hours', {
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-      return [];
-    }
-  }
 
   /**
    * Validate quiet hours configuration with comprehensive checks
@@ -321,7 +320,38 @@ export class QuietHoursService {
       return new Date();
     }
   }
+
+  /**
+   * Get all users currently in quiet hours
+   */
+  async getUsersInQuietHours(): Promise<string[]> {
+    try {
+      // This would typically be done with a database query for efficiency
+      // For now, we'll implement a basic version
+      const result = await this.userRepository.findAll<IUser>();
+      const users = Array.isArray(result) ? result : result.data;
+      const usersInQuietHours: string[] = [];
+
+      for (const user of users) {
+        if (user.quiet_hours?.enabled) {
+          const quietCheck = await this.isQuietTime(user.id);
+          if (quietCheck.isQuietTime) {
+            usersInQuietHours.push(user.id);
+          }
+        }
+      }
+
+      return usersInQuietHours;
+    } catch (error) {
+      this.logger.error('Failed to get users in quiet hours', {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      return [];
+    }
+  }
 }
+
+
 
 // Export factory function for creating QuietHoursService instances
 import { DependencyContainer } from '../container/DependencyContainer';

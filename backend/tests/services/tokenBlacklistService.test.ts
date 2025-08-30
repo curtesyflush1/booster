@@ -3,8 +3,25 @@ import { tokenBlacklistService } from '../../src/services/tokenBlacklistService'
 import { redisService } from '../../src/services/redisService';
 
 // Mock Redis service
-jest.mock('../../src/services/redisService');
-const mockRedisService = redisService as jest.Mocked<typeof redisService>;
+jest.mock('../../src/services/redisService', () => ({
+  redisService: {
+    blacklistToken: jest.fn(),
+    isTokenBlacklisted: jest.fn(),
+    blacklistAllUserTokens: jest.fn(),
+    areUserTokensBlacklisted: jest.fn(),
+    smembers: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+    sadd: jest.fn(),
+    srem: jest.fn(),
+    expire: jest.fn(),
+    keys: jest.fn(),
+    get: jest.fn(),
+    exists: jest.fn()
+  }
+}));
+
+const mockRedisService = require('../../src/services/redisService').redisService;
 
 describe('TokenBlacklistService', () => {
   const mockUserId = 'user-123';
@@ -15,21 +32,32 @@ describe('TokenBlacklistService', () => {
   });
 
   const createMockToken = (userId: string, expiresIn: string = '1h'): string => {
-    return jwt.sign({ userId }, mockJwtSecret, { expiresIn } as jwt.SignOptions);
+    const now = Math.floor(Date.now() / 1000);
+    const exp = expiresIn === '1h' ? now + 3600 : now - 3600;
+    
+    return jwt.sign(
+      { 
+        userId,
+        jti: `jti-${userId}-${Date.now()}`,
+        sub: userId,
+        iat: now,
+        exp: exp
+      }, 
+      mockJwtSecret
+    );
   };
 
   describe('blacklistToken', () => {
     it('should blacklist a valid token', async () => {
       const token = createMockToken(mockUserId);
-      mockRedisService.set.mockResolvedValue();
-      mockRedisService.exists.mockResolvedValue(false);
+      mockRedisService.blacklistToken.mockResolvedValue();
 
-      await tokenBlacklistService.blacklistToken(token, 'test_reason');
+      const result = await tokenBlacklistService.blacklistToken(token, 'test_reason');
 
-      expect(mockRedisService.set).toHaveBeenCalledWith(
-        expect.stringContaining('blacklist:token:'),
-        expect.stringContaining(mockUserId),
-        expect.any(Number)
+      expect(result).toBe(true);
+      expect(mockRedisService.blacklistToken).toHaveBeenCalledWith(
+        expect.any(String), // jti
+        expect.any(Number)  // expiration
       );
     });
 
@@ -38,33 +66,34 @@ describe('TokenBlacklistService', () => {
       
       await tokenBlacklistService.blacklistToken(expiredToken, 'test_reason');
 
-      expect(mockRedisService.set).not.toHaveBeenCalled();
+      expect(mockRedisService.blacklistToken).not.toHaveBeenCalled();
     });
 
     it('should handle invalid tokens gracefully', async () => {
       const invalidToken = 'invalid.token.here';
 
-      await expect(tokenBlacklistService.blacklistToken(invalidToken))
-        .rejects.toThrow('Invalid token format');
+      const result = await tokenBlacklistService.blacklistToken(invalidToken);
+      expect(result).toBe(false); // Should return false for invalid tokens
     });
   });
 
   describe('isTokenBlacklisted', () => {
     it('should return true for blacklisted tokens', async () => {
       const token = createMockToken(mockUserId);
-      mockRedisService.exists.mockResolvedValue(true);
+      mockRedisService.isTokenBlacklisted.mockResolvedValue(true);
 
       const result = await tokenBlacklistService.isTokenBlacklisted(token);
 
       expect(result).toBe(true);
-      expect(mockRedisService.exists).toHaveBeenCalledWith(
-        expect.stringContaining('blacklist:token:')
+      expect(mockRedisService.isTokenBlacklisted).toHaveBeenCalledWith(
+        expect.any(String) // jti
       );
     });
 
     it('should return false for non-blacklisted tokens', async () => {
       const token = createMockToken(mockUserId);
-      mockRedisService.exists.mockResolvedValue(false);
+      mockRedisService.isTokenBlacklisted.mockResolvedValue(false);
+      mockRedisService.areUserTokensBlacklisted.mockResolvedValue(false);
 
       const result = await tokenBlacklistService.isTokenBlacklisted(token);
 
@@ -73,7 +102,7 @@ describe('TokenBlacklistService', () => {
 
     it('should return true on Redis errors (fail secure)', async () => {
       const token = createMockToken(mockUserId);
-      mockRedisService.exists.mockRejectedValue(new Error('Redis error'));
+      mockRedisService.isTokenBlacklisted.mockRejectedValue(new Error('Redis error'));
 
       const result = await tokenBlacklistService.isTokenBlacklisted(token);
 

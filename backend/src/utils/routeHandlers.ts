@@ -37,7 +37,7 @@ export const authenticatedHandler = (
         );
       }
       
-      await handler(req, res, next);
+      return await handler(req, res, next);
     } catch (error) {
       logger.error('Authenticated route handler error', {
         path: req.path,
@@ -46,7 +46,7 @@ export const authenticatedHandler = (
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined
       });
-      next(error);
+      return next(error);
     }
   };
 };
@@ -72,7 +72,7 @@ export const adminHandler = (
         );
       }
 
-      await handler(req, res, next);
+      return await handler(req, res, next);
     } catch (error) {
       logger.error('Admin route handler error', {
         path: req.path,
@@ -82,7 +82,7 @@ export const adminHandler = (
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined
       });
-      next(error);
+      return next(error);
     }
   };
 };
@@ -96,7 +96,7 @@ export const optionalAuthHandler = (
 ) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await handler(req as OptionalAuthRequest, res, next);
+      return await handler(req as OptionalAuthRequest, res, next);
     } catch (error) {
       logger.error('Optional auth route handler error', {
         path: req.path,
@@ -105,7 +105,7 @@ export const optionalAuthHandler = (
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined
       });
-      next(error);
+      return next(error);
     }
   };
 };
@@ -119,7 +119,7 @@ export const asyncHandler = (
 ) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await handler(req, res, next);
+      return await handler(req, res, next);
     } catch (error) {
       logger.error('Route handler error', {
         path: req.path,
@@ -127,7 +127,7 @@ export const asyncHandler = (
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined
       });
-      next(error);
+      return next(error);
     }
   };
 };
@@ -144,14 +144,14 @@ export const withValidation = <T>(
     try {
       const validated = validator({ ...req.body, ...req.query, ...req.params });
       (req as any).validated = validated;
-      await handler(req as Request & { validated: T }, res, next);
+      return await handler(req as Request & { validated: T }, res, next);
     } catch (error) {
       if (error instanceof Error && error.name === 'ValidationError') {
         return res.status(400).json(
           createErrorResponse('Validation failed', 'VALIDATION_ERROR', error.message)
         );
       }
-      next(error);
+      return next(error);
     }
   };
 };

@@ -42,6 +42,8 @@ describe('Quiet Hours Filtering Tests', () => {
     },
     timezone: 'UTC',
     preferences: {},
+    role: 'user',
+    admin_permissions: [],
     created_at: new Date(),
     updated_at: new Date()
   };
@@ -61,7 +63,12 @@ describe('Quiet Hours Filtering Tests', () => {
     jest.clearAllMocks();
     MockedUser.findById.mockResolvedValue(baseUser);
     MockedProduct.findById.mockResolvedValue(mockProduct);
-    MockedAlert.findBy.mockResolvedValue([]);
+    MockedAlert.findBy.mockResolvedValue({
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 10
+    });
   });
 
   describe('QuietHoursService.isQuietTime', () => {

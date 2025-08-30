@@ -1,4 +1,4 @@
-import { AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { RetailerConfig, ProductAvailabilityRequest, ProductAvailabilityResponse, StoreLocation, RetailerError } from '../../types/retailer';
 import { BaseRetailerService } from './BaseRetailerService';
 import { logger } from '../../utils/logger';
@@ -42,6 +42,20 @@ export class BestBuyService extends BaseRetailerService {
     if (!config.apiKey) {
       throw new Error('Best Buy API key is required');
     }
+  }
+
+  /**
+   * Override header creation to match Best Buy's requirements
+   */
+  protected override createHttpClient(): AxiosInstance {
+    return axios.create({
+      baseURL: this.config.baseUrl,
+      timeout: this.config.timeout,
+      headers: {
+        'User-Agent': 'BoosterBeacon/1.0',
+        ...this.config.headers
+      }
+    });
   }
 
   async checkAvailability(request: ProductAvailabilityRequest): Promise<ProductAvailabilityResponse> {
@@ -135,6 +149,7 @@ export class BestBuyService extends BaseRetailerService {
       
       const response = await this.makeRequest('/products', {
         params: {
+          apikey: this.config.apiKey,
           q: query,
           format: 'json',
           show: 'sku,name,regularPrice,salePrice,onSale,url,addToCartUrl,inStoreAvailability,onlineAvailability,image,categoryPath',
@@ -172,6 +187,7 @@ export class BestBuyService extends BaseRetailerService {
   protected override async performHealthCheck(): Promise<void> {
     await this.makeRequest('/products', {
       params: {
+        apikey: this.config.apiKey,
         format: 'json',
         pageSize: 1
       }
@@ -214,6 +230,7 @@ export class BestBuyService extends BaseRetailerService {
     try {
       const response = await this.makeRequest(`/products/${sku}`, {
         params: {
+          apikey: this.config.apiKey,
           format: 'json',
           show: 'sku,name,regularPrice,salePrice,onSale,url,addToCartUrl,inStoreAvailability,onlineAvailability,image,categoryPath'
         }
@@ -232,6 +249,7 @@ export class BestBuyService extends BaseRetailerService {
     try {
       const response = await this.makeRequest('/products', {
         params: {
+          apikey: this.config.apiKey,
           format: 'json',
           upc: upc,
           show: 'sku,name,regularPrice,salePrice,onSale,url,addToCartUrl,inStoreAvailability,onlineAvailability,image,categoryPath',
@@ -260,6 +278,7 @@ export class BestBuyService extends BaseRetailerService {
     try {
       const response = await this.makeRequest(`/products/${sku}/stores`, {
         params: {
+          apikey: this.config.apiKey,
           format: 'json',
           area: `${zipCode},${radiusMiles}`,
           show: 'storeId,storeName,address,city,region,postalCode,phone,distance,lowStock,inStoreAvailability'
