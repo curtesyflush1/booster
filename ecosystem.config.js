@@ -1,67 +1,38 @@
+// Docker-optimized PM2 configuration
+// For non-Docker deployments, use ecosystem.pm2.config.js instead
 module.exports = {
   apps: [{
     name: 'booster-beacon-api',
     script: './backend/dist/index.js',
-    instances: 'max',
-    exec_mode: 'cluster',
+    instances: 1, // Single instance for Docker containers
+    exec_mode: 'fork', // Fork mode for containerized environments
+    
+    // Use env_file for cleaner configuration management
+    env_file: '.env',
     env: {
       NODE_ENV: 'production',
-      PORT: 3000,
-      // Email service configuration
-      SMTP_HOST: process.env.SMTP_HOST,
-      SMTP_PORT: process.env.SMTP_PORT,
-      SMTP_SECURE: process.env.SMTP_SECURE,
-      SMTP_USER: process.env.SMTP_USER,
-      SMTP_PASS: process.env.SMTP_PASS,
-      FROM_EMAIL: process.env.FROM_EMAIL,
-      FROM_NAME: process.env.FROM_NAME,
-      // Notification services
-      TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
-      TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
-      TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER,
-      DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN,
-      // Web Push VAPID keys
-      VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
-      VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
-      VAPID_SUBJECT: process.env.VAPID_SUBJECT,
-      // Retailer API keys
-      BESTBUY_API_KEY: process.env.BESTBUY_API_KEY,
-      WALMART_API_KEY: process.env.WALMART_API_KEY,
-      // Database and Redis
-      DATABASE_URL: process.env.DATABASE_URL,
-      REDIS_URL: process.env.REDIS_URL,
-      // JWT configuration
-      JWT_SECRET: process.env.JWT_SECRET,
-      JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN,
-      JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN,
-      // Frontend URL for CORS and links
-      FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost'
+      PORT: 3000
     },
-    // Logging configuration
-    error_file: './logs/backend/err.log',
-    out_file: './logs/backend/out.log',
-    log_file: './logs/backend/combined.log',
-    time: true,
-    log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
     
-    // Performance and reliability settings
-    max_memory_restart: '1G',
-    node_args: '--max-old-space-size=1024',
-    watch: false,
-    ignore_watch: ['node_modules', 'logs', 'frontend'],
-    
-    // Restart configuration
-    restart_delay: 4000,
-    max_restarts: 10,
-    min_uptime: '10s',
-    exp_backoff_restart_delay: 100,
-    
-    // Health monitoring
-    kill_timeout: 5000,
-    listen_timeout: 3000,
-    
-    // Advanced PM2 features
+    // Simplified logging for Docker (let Docker handle log aggregation)
+    log_type: 'json',
     merge_logs: true,
+    time: true,
+    
+    // Container-optimized settings
+    max_memory_restart: '800M', // Lower limit for containers
+    node_args: '--max-old-space-size=768',
+    watch: false,
+    
+    // Faster restart for containers
+    restart_delay: 2000,
+    max_restarts: 5,
+    min_uptime: '5s',
+    
+    // Container health settings
+    kill_timeout: 3000,
+    listen_timeout: 2000,
+    
     autorestart: true,
     
     // Environment-specific overrides
@@ -72,20 +43,12 @@ module.exports = {
     env_staging: {
       NODE_ENV: 'staging',
       LOG_LEVEL: 'debug'
+    },
+    env_development: {
+      NODE_ENV: 'development',
+      LOG_LEVEL: 'debug'
     }
-  }],
+  }]
   
-  // PM2 deployment configuration
-  deploy: {
-    production: {
-      user: 'derek',
-      host: '82.180.162.48',
-      ref: 'origin/main',
-      repo: 'https://github.com/curtesyflush1/booster.git',
-      path: '/opt/booster',
-      'pre-deploy-local': '',
-      'post-deploy': 'npm install && npm run build && pm2 reload ecosystem.config.js --env production',
-      'pre-setup': ''
-    }
-  }
+  // No deployment config - handled by Docker/Kubernetes
 };

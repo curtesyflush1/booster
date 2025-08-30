@@ -1,17 +1,17 @@
 #!/bin/bash
 
 # BoosterBeacon Deployment Script
-# Supports deployment to VPS with automated backup and rollback capabilities
+# Streamlined deployment for Docker-based production environment
 
 set -e  # Exit on any error
 
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-DEPLOY_USER="${DEPLOY_USER:-deploy}"
-DEPLOY_HOST="${DEPLOY_HOST:-your-vps-host.com}"
-DEPLOY_PATH="${DEPLOY_PATH:-/opt/booster-beacon}"
-BACKUP_PATH="${BACKUP_PATH:-/opt/booster-beacon/backups}"
+DEPLOY_USER="${DEPLOY_USER:-derek}"
+DEPLOY_HOST="${DEPLOY_HOST:-82.180.162.48}"
+DEPLOY_PATH="${DEPLOY_PATH:-/opt/booster}"
+BACKUP_PATH="${BACKUP_PATH:-/opt/booster/backups}"
 SERVICE_NAME="booster-beacon"
 HEALTH_CHECK_URL="http://localhost:3000/health"
 MAX_HEALTH_RETRIES=30
@@ -209,25 +209,47 @@ build_application() {
     
     cd "$PROJECT_ROOT"
     
-    # Install dependencies
-    npm ci
+    # Install root dependencies
+    log_info "Installing root dependencies..."
+    npm ci --production=false
     
     # Build backend
+    log_info "Building backend..."
     cd backend
-    npm ci
+    npm ci --production=false
     npm run build
+    
+    # Verify backend build
+    if [[ ! -f "dist/index.js" ]]; then
+        log_error "Backend build failed - main entry point not found"
+        exit 1
+    fi
     cd ..
     
     # Build frontend
+    log_info "Building frontend..."
     cd frontend
-    npm ci
+    npm ci --production=false
     npm run build
+    
+    # Verify frontend build
+    if [[ ! -f "dist/index.html" ]]; then
+        log_error "Frontend build failed - index.html not found"
+        exit 1
+    fi
     cd ..
     
     # Build extension
+    log_info "Building extension..."
     cd extension
-    npm ci
+    npm ci --production=false
     npm run build
+    
+    # Verify extension build
+    if [[ ! -d "dist" ]]; then
+        log_error "Extension build failed - dist directory not found"
+        exit 1
+    fi
     cd ..
     
     log_success "Application built successfully"
@@ -250,7 +272,7 @@ deploy_application() {
     # Create backup
     create_backup
     
-    # Build application
+    # Build application locally
     build_application
     
     # Sync files to server
@@ -261,33 +283,58 @@ deploy_application() {
         --exclude=logs \
         --exclude=backups \
         --exclude=coverage \
+        --exclude=.env.development \
+        --exclude=.env.test \
+        --exclude=tmp \
+        --exclude=*.log \
         "$PROJECT_ROOT/" "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
     
     # Deploy on server
     ssh "$DEPLOY_USER@$DEPLOY_HOST" << EOF
         cd "$DEPLOY_PATH"
         
-        # Load environment variables
-        if [[ -f .env.$ENVIRONMENT ]]; then
-            cp .env.$ENVIRONMENT .env
+        # Ensure production environment file exists
+        if [[ ! -f .env.production ]]; then
+            log_error "Production environment file not found!"
+            exit 1
         fi
         
-        # Stop existing services
-        docker-compose -f docker-compose.prod.yml down || true
+        # Copy production environment
+        cp .env.production .env
         
-        # Pull latest images
-        docker-compose -f docker-compose.prod.yml pull
+        # Stop existing services gracefully
+        log_info "Stopping existing services..."
+        docker-compose -f docker-compose.prod.yml down --timeout 30 || true
         
-        # Start services
-        docker-compose -f docker-compose.prod.yml up -d
+        # Clean up unused Docker resources
+        docker system prune -f || true
         
-        # Wait for services to be ready
-        sleep 30
+        # Build and start services
+        log_info "Building and starting services..."
+        docker-compose -f docker-compose.prod.yml up -d --build
+        
+        # Wait for services to initialize
+        log_info "Waiting for services to initialize..."
+        sleep 45
+        
+        # Run database migrations
+        log_info "Running database migrations..."
+        docker-compose -f docker-compose.prod.yml exec -T app sh -c "cd backend && npm run migrate:up" || true
 EOF
     
     # Health check
     if check_health; then
         log_success "Deployment completed successfully"
+        
+        # Show deployment status
+        ssh "$DEPLOY_USER@$DEPLOY_HOST" << 'EOF'
+            cd /opt/booster
+            echo "=== Deployment Status ==="
+            docker-compose -f docker-compose.prod.yml ps
+            echo ""
+            echo "=== Application Health ==="
+            curl -s http://localhost:3000/health | jq '.' 2>/dev/null || echo "Health endpoint not responding"
+EOF
     else
         log_error "Deployment failed health check"
         rollback_deployment
