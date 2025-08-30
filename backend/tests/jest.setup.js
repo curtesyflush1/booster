@@ -100,6 +100,25 @@ jest.mock('knex', () => {
     first: jest.fn().mockResolvedValue(null),
     then: jest.fn().mockResolvedValue([]),
     catch: jest.fn().mockReturnThis(),
+    transaction: jest.fn().mockImplementation(async (callback) => {
+      const mockTransaction = {
+        commit: jest.fn().mockResolvedValue(undefined),
+        rollback: jest.fn().mockResolvedValue(undefined),
+        select: jest.fn().mockReturnThis(),
+        from: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        insert: jest.fn().mockReturnThis(),
+        update: jest.fn().mockReturnThis(),
+        delete: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        offset: jest.fn().mockReturnThis(),
+        first: jest.fn().mockResolvedValue(null),
+        then: jest.fn().mockResolvedValue([]),
+        catch: jest.fn().mockReturnThis()
+      };
+      return await callback(mockTransaction);
+    }),
     migrate: {
       latest: jest.fn().mockResolvedValue([]),
       rollback: jest.fn().mockResolvedValue([])

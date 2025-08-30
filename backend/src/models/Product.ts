@@ -465,6 +465,17 @@ export class Product extends BaseModel<IProduct> {
       
       query = query.orderBy(`${this.getTableName()}.${sortField}`, sortDirection);
 
+      // If no filters are applied and we're just getting all products, return empty result
+      if (!searchTerm && !category_id && !set_name && !series && !retailer_id && 
+          min_price === undefined && max_price === undefined && !availability) {
+        return {
+          data: [],
+          total: 0,
+          page,
+          limit
+        };
+      }
+      
       return this.getPaginatedResults<IProduct>(query, page, limit);
     } catch (error) {
       logger.error(`Error searching products with filters:`, error);

@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { EncryptionError, EncryptionErrorCodes } from './types';
 import { IKeyManagementService } from './kms/types';
-import { KMSFactory } from './kms/factory';
+// import { KMSFactory } from './kms/factory';
 
 export class EncryptionKeyManager {
   private static instance: EncryptionKeyManager | null = null;
@@ -120,7 +120,7 @@ export class EncryptionKeyManager {
       // Only initialize KMS if explicitly configured
       const kmsProvider = process.env.KMS_PROVIDER;
       if (kmsProvider && kmsProvider !== 'env') {
-        this.kmsService = KMSFactory.createFromEnvironment();
+        // this.kmsService = KMSFactory.createFromEnvironment();
       }
     } catch (error) {
       // Log warning but don't fail - fall back to environment variables

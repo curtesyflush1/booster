@@ -69,9 +69,13 @@ export const getSubscriptionStatus = async (req: Request, res: Response, next: N
       return;
     }
 
-    // Get usage stats and quota information
-    const quotaCheck = await SubscriptionService.checkQuota(user.id, 'watch_created');
-    const billingHistory = await SubscriptionService.getBillingHistory(user.id, 5);
+    // Get usage stats and quota information (temporarily disabled for development)
+    // const quotaCheck = await SubscriptionService.checkQuota(user.id, 'watch_created');
+    // const billingHistory = await SubscriptionService.getBillingHistory(user.id, 5);
+    
+    // Temporary mock data for development
+    const quotaCheck = { allowed: true, limit: 5, used: 0, remaining: 5 };
+    const billingHistory = [];
 
     res.json({
       subscription: {

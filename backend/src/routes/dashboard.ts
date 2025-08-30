@@ -16,14 +16,14 @@ const router = Router();
 // Apply authentication to all dashboard routes
 router.use(authenticate);
 
-// Apply rate limiting to dashboard routes
-const dashboardLimiter = createRateLimit({
-  windowMs: INTERVALS.RATE_LIMIT_WINDOW_SHORT,
-  maxRequests: RATE_LIMITS.DASHBOARD_MAX_REQUESTS,
-  message: 'Too many dashboard requests, please try again later'
-});
+// Apply rate limiting to dashboard routes (temporarily disabled for development)
+// const dashboardLimiter = createRateLimit({
+//   windowMs: INTERVALS.RATE_LIMIT_WINDOW_SHORT,
+//   maxRequests: RATE_LIMITS.DASHBOARD_MAX_REQUESTS,
+//   message: 'Too many dashboard requests, please try again later'
+// });
 
-router.use(dashboardLimiter);
+// router.use(dashboardLimiter);
 
 /**
  * @route GET /api/dashboard

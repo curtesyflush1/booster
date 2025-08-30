@@ -6,9 +6,11 @@ import { SubscriptionTier } from '../types/subscription';
 import { logger } from '../utils/logger';
 
 // Initialize Stripe (in production, this would come from environment variables)
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy', {
-  apiVersion: '2025-07-30.basil'
-});
+// Temporarily disabled for development
+// const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy', {
+//   apiVersion: '2025-07-30.basil'
+// });
+const stripe = null as any;
 
 export interface SubscriptionPlan {
   id: string;

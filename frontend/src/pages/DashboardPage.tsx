@@ -34,7 +34,7 @@ interface PortfolioData {
 }
 
 const DashboardPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(null);
   const [predictiveInsights, setPredictiveInsights] = useState<MLPrediction[]>([]);
@@ -86,12 +86,17 @@ const DashboardPage: React.FC = () => {
     }
   }, [dashboardData]);
 
-  // Load initial dashboard data
+  // Load initial dashboard data only when user is authenticated
   useEffect(() => {
+    if (isLoading || !user || !apiClient.isAuthenticated()) {
+      setLoading(false);
+      return;
+    }
+
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const response = await apiClient.get('/api/dashboard', { params: filters });
+        const response = await apiClient.get('/dashboard', { params: filters });
         setDashboardData(response.data.dashboard);
       } catch (err) {
         console.error('Error loading dashboard data:', err);
@@ -101,13 +106,15 @@ const DashboardPage: React.FC = () => {
       }
     };
     fetchDashboardData();
-  }, [filters]);
+  }, [filters, user, isLoading]);
 
   // Load portfolio data (runs only once)
   useEffect(() => {
+    if (isLoading || !user || !apiClient.isAuthenticated()) return;
+
     const fetchPortfolioData = async () => {
       try {
-        const response = await apiClient.get('/api/dashboard/portfolio');
+        const response = await apiClient.get('/dashboard/portfolio');
         setPortfolioData(response.data.portfolio);
       } catch (err) {
         console.error('Error loading portfolio data:', err);
@@ -115,13 +122,15 @@ const DashboardPage: React.FC = () => {
       }
     };
     fetchPortfolioData();
-  }, []);
+  }, [user, isLoading]);
 
   // Load predictive insights (runs only once)
   useEffect(() => {
+    if (isLoading || !user || !apiClient.isAuthenticated()) return;
+
     const fetchPredictiveInsights = async () => {
       try {
-        const response = await apiClient.get('/api/dashboard/insights');
+        const response = await apiClient.get('/dashboard/insights');
         setPredictiveInsights(response.data.insights);
       } catch (err) {
         console.error('Error loading predictive insights:', err);
@@ -129,7 +138,7 @@ const DashboardPage: React.FC = () => {
       }
     };
     fetchPredictiveInsights();
-  }, []);
+  }, [user, isLoading]);
 
   // Handle WebSocket messages
   useEffect(() => {

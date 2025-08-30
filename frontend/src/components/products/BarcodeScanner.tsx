@@ -36,7 +36,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
     return () => {
       stopCamera();
     };
-  }, [isOpen, currentCameraIndex, initializeCamera, stopCamera]);
+  }, [isOpen, currentCameraIndex]);
 
   const initializeCamera = useCallback(async () => {
     try {
@@ -81,7 +81,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
       setError(errorMessage);
       console.error('Camera initialization error:', err);
     }
-  }, [currentCameraIndex, startScanning]);
+  }, [currentCameraIndex]);
 
   const stopCamera = useCallback(() => {
     if (stream) {
@@ -140,7 +140,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
       // In a real implementation, you would use a library like QuaggaJS or ZXing
       detectBarcode(imageData);
     }, 500); // Scan every 500ms
-  }, [isScanning, detectBarcode]);
+  }, [isScanning]);
 
   const detectBarcode = async (_imageData: ImageData) => {
     // This is a simplified barcode detection

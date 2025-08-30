@@ -170,7 +170,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Check authentication status on mount
   useEffect(() => {
-    checkAuthStatus();
+    // Only check auth status if we have a stored token
+    const storedToken = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+    if (storedToken) {
+      checkAuthStatus();
+    } else {
+      // No token stored, set loading to false
+      dispatch({ type: 'AUTH_SET_LOADING', payload: false });
+    }
   }, []);
 
   /**
@@ -180,22 +187,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       dispatch({ type: 'AUTH_SET_LOADING', payload: true });
 
-      // Check if we have a stored token
-      if (!apiClient.isAuthenticated()) {
-        dispatch({ type: 'AUTH_LOGOUT' });
-        return;
-      }
-
-      // Verify token with server and get user data
-      const response = await apiClient.get('/auth/me');
-      const user = response.data.user;
-
-      // Get token from storage (this is a simplified approach)
+      // Get token from storage first
       const storedToken = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
       if (!storedToken) {
         dispatch({ type: 'AUTH_LOGOUT' });
         return;
       }
+
+      // Verify token with server and get user data
+      const response = await apiClient.get('/auth/profile');
+      const user = response.data.data.user;
 
       // Create token object (in real app, you'd parse the JWT)
       const token: AuthToken = {
@@ -223,14 +224,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       dispatch({ type: 'AUTH_START' });
 
       const response = await apiClient.post('/auth/login', credentials);
-      const { user, token } = response.data;
+      const { user, tokens } = response.data.data;
 
       // Store token
-      apiClient.setAuthToken(token.accessToken, credentials.rememberMe);
+      apiClient.setAuthToken(tokens.access_token, credentials.rememberMe);
 
       dispatch({
         type: 'AUTH_SUCCESS',
-        payload: { user, token },
+        payload: { user, tokens },
       });
     } catch (error: any) {
       const errorMessage = error.message || 'Login failed. Please try again.';
@@ -246,15 +247,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       dispatch({ type: 'AUTH_START' });
 
-      const response = await apiClient.post('/auth/register', data);
-      const { user, token } = response.data;
+      // Map frontend field names to backend API field names
+      const apiData = {
+        email: data.email,
+        password: data.password,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        terms_accepted: data.acceptTerms,
+        newsletter_subscription: data.subscribeNewsletter
+      };
+
+      const response = await apiClient.post('/auth/register', apiData);
+      const { user, tokens } = response.data.data;
 
       // Store token
-      apiClient.setAuthToken(token.accessToken, false);
+      apiClient.setAuthToken(tokens.access_token, false);
 
       dispatch({
         type: 'AUTH_SUCCESS',
-        payload: { user, token },
+        payload: { user, tokens },
       });
     } catch (error: any) {
       const errorMessage = error.message || 'Registration failed. Please try again.';
@@ -277,33 +288,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Clear local storage
       apiClient.clearAuthToken();
       dispatch({ type: 'AUTH_LOGOUT' });
-    }
-  };
-
-  /**
-   * Refresh authentication token
-   */
-  const refreshToken = async (): Promise<void> => {
-    try {
-      if (!state.token?.refreshToken) {
-        throw new Error('No refresh token available');
-      }
-
-      const response = await apiClient.post('/auth/refresh', {
-        refreshToken: state.token.refreshToken,
-      });
-
-      const { token } = response.data;
-      apiClient.setAuthToken(token.accessToken, true);
-
-      dispatch({
-        type: 'AUTH_SUCCESS',
-        payload: { user: state.user!, token },
-      });
-    } catch (error: any) {
-      console.error('Token refresh failed:', error);
-      dispatch({ type: 'AUTH_LOGOUT' });
-      throw error;
     }
   };
 

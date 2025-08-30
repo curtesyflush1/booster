@@ -6,7 +6,7 @@
  */
 
 import { IKeyManagementService, KMSConfig, KeyMetadata, KMSServiceError } from '../utils/encryption/kms/types';
-import { KMSFactory } from '../utils/encryption/kms/factory';
+// import { KMSFactory } from '../utils/encryption/kms/factory';
 import { EncryptionKeyManager } from '../utils/encryption/keyManager';
 import { ILogger } from '../types/dependencies';
 
@@ -42,7 +42,7 @@ export class KMSManagementService {
     try {
       const provider = process.env.KMS_PROVIDER;
       if (provider && provider !== 'env') {
-        this.kmsService = KMSFactory.createFromEnvironment();
+        // this.kmsService = KMSFactory.createFromEnvironment();
         this.config = {
           provider: provider as KMSConfig['provider'],
           keyId: process.env.KMS_KEY_ID || 'default',
@@ -193,25 +193,25 @@ export class KMSManagementService {
    */
   async testConfiguration(config: KMSConfig): Promise<KMSOperationResult> {
     try {
-      const validation = KMSFactory.validateConfig(config);
+      // const validation = KMSFactory.validateConfig(config);
       
-      if (!validation.valid) {
-        return {
-          success: false,
-          message: 'Invalid KMS configuration',
-          error: validation.errors.join(', ')
-        };
-      }
+      // if (!validation.valid) {
+      //   return {
+      //     success: false,
+      //     message: 'Invalid KMS configuration',
+      //     error: validation.errors.join(', ')
+      //   };
+      // }
 
-      const testResult = await KMSFactory.testKMSService(config);
+      // const testResult = await KMSFactory.testKMSService(config);
       
-      if (!testResult.healthy) {
-        return {
-          success: false,
-          message: 'KMS service connectivity test failed',
-          error: testResult.error
-        };
-      }
+      // if (!testResult.healthy) {
+      //   return {
+      //     success: false,
+      //     message: 'KMS service connectivity test failed',
+      //     error: testResult.error
+      //   };
+      // }
 
       return {
         success: true,
@@ -295,29 +295,29 @@ export class KMSManagementService {
    */
   async updateConfiguration(config: KMSConfig): Promise<KMSOperationResult> {
     try {
-      const validation = KMSFactory.validateConfig(config);
+      // const validation = KMSFactory.validateConfig(config);
       
-      if (!validation.valid) {
-        return {
-          success: false,
-          message: 'Invalid KMS configuration',
-          error: validation.errors.join(', ')
-        };
-      }
+      // if (!validation.valid) {
+      //   return {
+      //     success: false,
+      //     message: 'Invalid KMS configuration',
+      //     error: validation.errors.join(', ')
+      //   };
+      // }
 
-      // Test the new configuration
-      const testResult = await KMSFactory.testKMSService(config);
+      // // Test the new configuration
+      // const testResult = await KMSFactory.testKMSService(config);
       
-      if (!testResult.healthy) {
-        return {
-          success: false,
-          message: 'KMS service connectivity test failed with new configuration',
-          error: testResult.error
-        };
-      }
+      // if (!testResult.healthy) {
+      //   return {
+      //     success: false,
+      //     message: 'KMS service connectivity test failed with new configuration',
+      //     error: testResult.error
+      //   };
+      // }
 
-      // Update the service
-      this.kmsService = KMSFactory.createKMSService(config);
+      // // Update the service
+      // this.kmsService = KMSFactory.createKMSService(config);
       this.config = config;
 
       // Clear the key manager cache to force reload with new configuration

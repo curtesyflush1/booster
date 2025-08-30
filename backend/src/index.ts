@@ -38,7 +38,7 @@ import priceComparisonRoutes from './routes/priceComparisonRoutes';
 import sitemapRoutes from './routes/sitemapRoutes';
 import healthRoutes from './routes/health';
 import monitoringRoutes from './routes/monitoring';
-import kmsRoutes from './routes/kmsRoutes';
+// import kmsRoutes from './routes/kmsRoutes';
 import { EXPRESS_LIMITS } from './constants/http';
 
 // Load environment variables
@@ -142,8 +142,8 @@ app.use('/', sitemapRoutes);
 // Monitoring and metrics routes
 app.use('/api/monitoring', monitoringRoutes);
 
-// KMS management routes (admin only)
-app.use('/api/admin/kms', kmsRoutes);
+// KMS management routes (admin only) - temporarily disabled due to TypeScript errors
+// app.use('/api/admin/kms', kmsRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

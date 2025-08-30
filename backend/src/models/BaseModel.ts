@@ -382,8 +382,9 @@ export abstract class BaseModel<T = any> {
     try {
       const offset = (page - 1) * limit;
 
-      // Get total count using cloned query
-      const countResult = await query.clone().count('* as count');
+      // Get total count using a separate query to avoid GROUP BY issues
+      const countQuery = query.clone().clearSelect().clearOrder();
+      const countResult = await countQuery.countDistinct(`${this.getTableName()}.id as count`);
       const total = safeCount(countResult);
 
       // Get paginated data with ordering

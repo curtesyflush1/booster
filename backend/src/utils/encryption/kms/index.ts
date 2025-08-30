@@ -7,8 +7,8 @@
  */
 
 export * from './types';
-export * from './factory';
-export { AWSKMSService } from './awsKMS';
-export { GCPKMSService } from './gcpKMS';
-export { VaultKMSService } from './vaultKMS';
+// export * from './factory';
+// export { AWSKMSService } from './awsKMS';
+// export { GCPKMSService } from './gcpKMS';
+// export { VaultKMSService } from './vaultKMS';
 export { EnvironmentKMSService } from './envKMS';

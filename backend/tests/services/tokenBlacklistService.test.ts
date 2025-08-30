@@ -112,31 +112,27 @@ describe('TokenBlacklistService', () => {
 
   describe('blacklistAllUserTokens', () => {
     it('should blacklist all tokens for a user', async () => {
-      const tokens = [
-        createMockToken(mockUserId),
-        createMockToken(mockUserId),
-        createMockToken(mockUserId)
-      ];
-      
-      mockRedisService.smembers.mockResolvedValue(tokens);
-      mockRedisService.set.mockResolvedValue();
-      mockRedisService.del.mockResolvedValue(1);
+      mockRedisService.blacklistAllUserTokens.mockResolvedValue(true);
 
-      await tokenBlacklistService.blacklistAllUserTokens(mockUserId, 'test_reason');
+      const result = await tokenBlacklistService.blacklistAllUserTokens(mockUserId, 'test_reason');
 
-      expect(mockRedisService.smembers).toHaveBeenCalledWith(`user:tokens:${mockUserId}`);
-      expect(mockRedisService.set).toHaveBeenCalledTimes(tokens.length);
-      expect(mockRedisService.del).toHaveBeenCalledWith(`user:tokens:${mockUserId}`);
+      expect(result).toBe(true);
+      expect(mockRedisService.blacklistAllUserTokens).toHaveBeenCalledWith(
+        mockUserId,
+        expect.any(Number) // 24 hours in seconds
+      );
     });
 
     it('should handle empty token list', async () => {
-      mockRedisService.smembers.mockResolvedValue([]);
-      mockRedisService.del.mockResolvedValue(0);
+      mockRedisService.blacklistAllUserTokens.mockResolvedValue(true);
 
-      await tokenBlacklistService.blacklistAllUserTokens(mockUserId);
+      const result = await tokenBlacklistService.blacklistAllUserTokens(mockUserId);
 
-      expect(mockRedisService.set).not.toHaveBeenCalled();
-      expect(mockRedisService.del).toHaveBeenCalledWith(`user:tokens:${mockUserId}`);
+      expect(result).toBe(true);
+      expect(mockRedisService.blacklistAllUserTokens).toHaveBeenCalledWith(
+        mockUserId,
+        expect.any(Number) // 24 hours in seconds
+      );
     });
   });
 
@@ -144,17 +140,13 @@ describe('TokenBlacklistService', () => {
     it('should track a token for a user', async () => {
       const token = createMockToken(mockUserId);
       mockRedisService.sadd.mockResolvedValue(1);
-      mockRedisService.expire.mockResolvedValue(true);
 
-      await tokenBlacklistService.trackUserToken(mockUserId, token);
+      const result = await tokenBlacklistService.trackUserToken(mockUserId, token);
 
+      expect(result).toBe(true);
       expect(mockRedisService.sadd).toHaveBeenCalledWith(
         `user:tokens:${mockUserId}`,
-        token
-      );
-      expect(mockRedisService.expire).toHaveBeenCalledWith(
-        `user:tokens:${mockUserId}`,
-        expect.any(Number)
+        expect.stringContaining('jti-') // JTI from the token
       );
     });
 
@@ -173,11 +165,12 @@ describe('TokenBlacklistService', () => {
       const token = createMockToken(mockUserId);
       mockRedisService.srem.mockResolvedValue(1);
 
-      await tokenBlacklistService.untrackUserToken(mockUserId, token);
+      const result = await tokenBlacklistService.untrackUserToken(mockUserId, token);
 
+      expect(result).toBe(true);
       expect(mockRedisService.srem).toHaveBeenCalledWith(
         `user:tokens:${mockUserId}`,
-        token
+        expect.stringContaining('jti-') // JTI from the token
       );
     });
 
@@ -194,83 +187,77 @@ describe('TokenBlacklistService', () => {
   describe('getBlacklistInfo', () => {
     it('should return blacklist information for a token', async () => {
       const token = createMockToken(mockUserId);
-      const blacklistInfo = {
-        userId: mockUserId,
-        blacklistedAt: Math.floor(Date.now() / 1000),
-        reason: 'test_reason'
-      };
-      
-      mockRedisService.get.mockResolvedValue(JSON.stringify(blacklistInfo));
+      mockRedisService.isTokenBlacklisted.mockResolvedValue(true);
+      mockRedisService.areUserTokensBlacklisted.mockResolvedValue(false);
 
       const result = await tokenBlacklistService.getBlacklistInfo(token);
 
-      expect(result).toEqual(blacklistInfo);
+      expect(result.isBlacklisted).toBe(true);
+      expect(result.reason).toBe('Token blacklisted');
+      expect(result.tokenInfo).toBeDefined();
     });
 
-    it('should return null for non-blacklisted tokens', async () => {
+    it('should return false for non-blacklisted tokens', async () => {
       const token = createMockToken(mockUserId);
-      mockRedisService.get.mockResolvedValue(null);
+      mockRedisService.isTokenBlacklisted.mockResolvedValue(false);
+      mockRedisService.areUserTokensBlacklisted.mockResolvedValue(false);
 
       const result = await tokenBlacklistService.getBlacklistInfo(token);
 
-      expect(result).toBeNull();
+      expect(result.isBlacklisted).toBe(false);
+      expect(result.reason).toBe('Not blacklisted');
     });
 
-    it('should return null on errors', async () => {
+    it('should return true on errors (fail secure)', async () => {
       const token = createMockToken(mockUserId);
-      mockRedisService.get.mockRejectedValue(new Error('Redis error'));
+      mockRedisService.isTokenBlacklisted.mockRejectedValue(new Error('Redis error'));
 
       const result = await tokenBlacklistService.getBlacklistInfo(token);
 
-      expect(result).toBeNull();
+      expect(result.isBlacklisted).toBe(true);
+      expect(result.reason).toBe('Error checking blacklist');
     });
   });
 
   describe('cleanupExpiredEntries', () => {
     it('should clean up expired blacklist entries', async () => {
-      const expiredEntry = {
-        userId: mockUserId,
-        blacklistedAt: Math.floor(Date.now() / 1000) - 3600,
-        expiresAt: Math.floor(Date.now() / 1000) - 1800
+      // Mock Redis client with TTL method
+      const mockClient = {
+        ttl: jest.fn()
       };
+      mockRedisService.getClient = jest.fn().mockReturnValue(mockClient);
       
-      const activeEntry = {
-        userId: mockUserId,
-        blacklistedAt: Math.floor(Date.now() / 1000),
-        expiresAt: Math.floor(Date.now() / 1000) + 3600
-      };
-
-      mockRedisService.keys.mockResolvedValue(['key1', 'key2']);
-      mockRedisService.get
-        .mockResolvedValueOnce(JSON.stringify(expiredEntry))
-        .mockResolvedValueOnce(JSON.stringify(activeEntry));
-      mockRedisService.del.mockResolvedValue(1);
+      // Mock keys to return some blacklist entries
+      mockRedisService.keys
+        .mockResolvedValueOnce(['blacklist:token1', 'blacklist:token2']) // token keys
+        .mockResolvedValueOnce(['blacklist:user1']); // user keys
+      
+      // Mock TTL to return -2 for expired keys, positive for active keys
+      mockClient.ttl
+        .mockResolvedValueOnce(-2) // expired
+        .mockResolvedValueOnce(3600) // active
+        .mockResolvedValueOnce(1800); // active
 
       const cleanedCount = await tokenBlacklistService.cleanupExpiredEntries();
 
-      expect(cleanedCount).toBe(1);
-      expect(mockRedisService.del).toHaveBeenCalledTimes(1);
+      expect(cleanedCount).toBe(1); // Only one expired entry
     });
   });
 
   describe('getBlacklistStats', () => {
     it('should return blacklist statistics', async () => {
-      const activeEntry = {
-        userId: mockUserId,
-        blacklistedAt: Math.floor(Date.now() / 1000),
-        expiresAt: Math.floor(Date.now() / 1000) + 3600
-      };
-
-      mockRedisService.keys.mockResolvedValue(['key1', 'key2']);
-      mockRedisService.get
-        .mockResolvedValueOnce(JSON.stringify(activeEntry))
-        .mockResolvedValueOnce(JSON.stringify(activeEntry));
+      mockRedisService.keys
+        .mockResolvedValueOnce(['blacklist:token1', 'blacklist:token2']) // token keys
+        .mockResolvedValueOnce(['blacklist:user1']); // user keys
+      mockRedisService.get.mockResolvedValue('1234567890'); // timestamp
 
       const stats = await tokenBlacklistService.getBlacklistStats();
 
       expect(stats).toEqual({
-        totalBlacklistedTokens: 2,
-        activeBlacklistedTokens: 2
+        totalTokensBlacklisted: 2,
+        totalUsersBlacklisted: 1,
+        oldestEntry: expect.any(String),
+        newestEntry: expect.any(String)
       });
     });
 
@@ -280,8 +267,10 @@ describe('TokenBlacklistService', () => {
       const stats = await tokenBlacklistService.getBlacklistStats();
 
       expect(stats).toEqual({
-        totalBlacklistedTokens: 0,
-        activeBlacklistedTokens: 0
+        totalTokensBlacklisted: 0,
+        totalUsersBlacklisted: 0,
+        oldestEntry: null,
+        newestEntry: null
       });
     });
   });

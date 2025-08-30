@@ -253,7 +253,7 @@ export class AuthService {
   /**
    * Common token validation and decoding logic
    */
-  private async validateAndDecodeToken(token: string, secret: string): Promise<{ decoded: { userId: string }, user: IUser }> {
+  private async validateAndDecodeToken(token: string, secret: string): Promise<{ decoded: { sub: string }, user: IUser }> {
     this.validateToken(token);
     
     // Check if token is blacklisted
@@ -263,10 +263,10 @@ export class AuthService {
     }
     
     // Verify token
-    const decoded = jwt.verify(token, secret) as { userId: string };
+    const decoded = jwt.verify(token, secret) as { sub: string };
     
     // Get user from database
-    const user = await this.userRepository.findById<IUser>(decoded.userId);
+    const user = await this.userRepository.findById<IUser>(decoded.sub);
     if (!user) {
       throw new UserNotFoundError('User associated with token not found');
     }
@@ -444,7 +444,10 @@ export class AuthService {
    * Generate JWT tokens for user
    */
   private async generateTokens(userId: string): Promise<IAuthToken> {
-    const payload = { userId };
+    const payload = { 
+      sub: userId,  // Standard JWT subject field
+      jti: crypto.randomBytes(16).toString('hex')  // JWT ID for blacklisting
+    };
 
     const accessToken = jwt.sign(payload, this.config.jwtSecret, {
       expiresIn: this.config.accessTokenExpiry
