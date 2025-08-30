@@ -195,7 +195,7 @@ export class SubscriptionPlan extends BaseModel<ISubscriptionPlan> {
   /**
    * Create a new subscription plan
    */
-  static async create(planData: ISubscriptionPlanInput): Promise<ISubscriptionPlan> {
+  static override async create<T>(planData: Partial<T>): Promise<T> {
     try {
       const plan = new SubscriptionPlan();
       const sanitized = plan.sanitize(planData as Partial<ISubscriptionPlan>);
@@ -230,7 +230,7 @@ export class SubscriptionPlan extends BaseModel<ISubscriptionPlan> {
         ...created,
         features: JSON.parse(created.features),
         limits: JSON.parse(created.limits)
-      };
+      } as T;
     } catch (error) {
       logger.error('Error creating subscription plan:', error);
       throw error;
@@ -240,7 +240,7 @@ export class SubscriptionPlan extends BaseModel<ISubscriptionPlan> {
   /**
    * Update subscription plan
    */
-  static async updateById(id: string, updateData: Partial<ISubscriptionPlanInput>): Promise<ISubscriptionPlan | null> {
+  static override async updateById<T>(id: string, updateData: Partial<T>): Promise<T | null> {
     try {
       const plan = new SubscriptionPlan();
       const sanitized = plan.sanitize(updateData as Partial<ISubscriptionPlan>);
@@ -283,7 +283,7 @@ export class SubscriptionPlan extends BaseModel<ISubscriptionPlan> {
         ...updated,
         features: JSON.parse(updated.features),
         limits: JSON.parse(updated.limits)
-      };
+      } as T;
     } catch (error) {
       logger.error('Error updating subscription plan:', error);
       throw error;

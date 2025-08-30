@@ -5,14 +5,7 @@ import { logger } from '../utils/logger';
 import { validateRequest } from '../middleware/validation';
 import { body, query } from 'express-validator';
 import { FILE_LIMITS } from '../constants';
-
-interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
-  };
-}
+import { AuthenticatedRequest } from '../types/express';
 
 // Configure multer for file uploads
 const upload = multer({

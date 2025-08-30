@@ -1,5 +1,6 @@
 import { Response } from 'express';
-import { AUTH_ERROR_CODES, AUTH_ERROR_MESSAGES, HTTP_STATUS } from '../constants/auth';
+import { AUTH_ERROR_CODES, AUTH_ERROR_MESSAGES } from '../constants/auth';
+import { HTTP_STATUS } from '../constants/http';
 import { SubscriptionTier } from '../types/subscription';
 
 export interface AuthErrorResponse {

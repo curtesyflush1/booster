@@ -199,19 +199,6 @@ export const OptimizedAuthProvider: React.FC<AuthProviderProps> = ({ children })
     }
   }, [refreshToken]);
 
-  // Use custom hooks
-  useAuthErrorListener(handleAuthError);
-  useTokenRefresh({
-    token: state.token,
-    onRefresh: handleTokenRefresh,
-    refreshBufferMinutes: 5
-  });
-
-  // Check authentication status on mount
-  useEffect(() => {
-    checkAuthStatus();
-  }, [checkAuthStatus]);
-
   /**
    * Check current authentication status
    */
@@ -273,6 +260,19 @@ export const OptimizedAuthProvider: React.FC<AuthProviderProps> = ({ children })
       dispatch({ type: 'AUTH_SET_LOADING', payload: false });
     }
   }, []);
+
+  // Use custom hooks
+  useAuthErrorListener(handleAuthError);
+  useTokenRefresh({
+    token: state.token,
+    onRefresh: handleTokenRefresh,
+    refreshBufferMinutes: 5
+  });
+
+  // Check authentication status on mount
+  useEffect(() => {
+    checkAuthStatus();
+  }, [checkAuthStatus]);
 
   /**
    * Login user
@@ -445,7 +445,7 @@ export const withAuth = <P extends object>(
   });
 
   WrappedComponent.displayName = `withAuth(${Component.displayName || Component.name})`;
-  return WrappedComponent;
+  return WrappedComponent as unknown as React.ComponentType<P>;
 };
 
 export default OptimizedAuthProvider;

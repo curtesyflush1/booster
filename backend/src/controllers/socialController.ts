@@ -6,14 +6,8 @@ import { logger } from '../utils/logger';
 import { validateRequest } from '../middleware/validation';
 import { body, param, query } from 'express-validator';
 import { SOCIAL_MEDIA_LIMITS } from '../constants';
-
-interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
-  };
-}
+import { AuthenticatedRequest } from '../types/express';
+import { IAlert, IProduct } from '../types/database';
 
 export class SocialController {
   // Validation middleware
@@ -71,20 +65,20 @@ export class SocialController {
       const userId = req.user?.id;
 
       // Get alert details
-      const alert = await Alert.findById(alertId);
+      const alert = await Alert.findById<IAlert>(alertId);
       if (!alert) {
         res.status(404).json({ error: 'Alert not found' });
         return;
       }
 
-      // Check if user owns the alert or if it's a public alert
-      if (alert.user_id !== userId && !alert.is_public) {
+      // Check if user owns the alert
+      if (alert.user_id !== userId) {
         res.status(403).json({ error: 'Access denied' });
         return;
       }
 
       // Get product details
-      const product = await Product.findById(alert.product_id);
+      const product = await Product.findById<IProduct>(alert.product_id);
       if (!product) {
         res.status(404).json({ error: 'Product not found' });
         return;
@@ -104,9 +98,9 @@ export class SocialController {
           alert: {
             id: alert.id,
             productName: product.name,
-            retailerName: alert.retailer_name,
-            price: alert.price,
-            originalPrice: alert.original_price
+            retailerName: alert.data.retailer_name,
+            price: alert.data.price,
+            originalPrice: alert.data.original_price
           },
           shareLinks,
           socialPosts,

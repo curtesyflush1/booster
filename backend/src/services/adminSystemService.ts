@@ -114,11 +114,11 @@ export class AdminSystemService {
       const uptime = process.uptime();
 
       return {
-        cpu_usage: cpuMetric?.value || this.getCurrentCPUUsage(),
-        memory_usage: memoryMetric?.value || this.getCurrentMemoryUsage(),
-        disk_usage: diskMetric?.value || await this.getCurrentDiskUsage(),
-        api_response_time: parseFloat(responseTimeMetric?.avg_value) || 0,
-        error_rate: parseFloat(errorRateMetric?.avg_value) || 0,
+        cpu_usage: cpuMetric?.usage || this.getCurrentCPUUsage(),
+        memory_usage: memoryMetric?.percentage || this.getCurrentMemoryUsage(),
+        disk_usage: diskMetric?.percentage || await this.getCurrentDiskUsage(),
+        api_response_time: responseTimeMetric?.average || 0,
+        error_rate: errorRateMetric?.rate || 0,
         uptime: uptime
       };
     } catch (error) {

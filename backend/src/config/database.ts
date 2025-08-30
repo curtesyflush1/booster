@@ -87,6 +87,9 @@ function getDatabaseConfig(): IDatabaseConfig {
 const config = getDatabaseConfig();
 export const db: Knex = knex(config);
 
+// Export config as default for test database harness
+export default config;
+
 // Database connection health check
 export async function checkDatabaseHealth(): Promise<boolean> {
   try {

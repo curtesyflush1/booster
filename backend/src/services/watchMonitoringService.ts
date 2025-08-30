@@ -194,7 +194,7 @@ export class WatchMonitoringService {
       const sampleWatches = await Watch.findBy<IWatch>({ is_active: true });
 
       let healthyWatches = 0;
-      for (const watch of sampleWatches) {
+      for (const watch of sampleWatches.data) {
         const health = await this.checkWatchHealth(watch.id);
         if (health?.isHealthy) {
           healthyWatches++;
@@ -202,8 +202,8 @@ export class WatchMonitoringService {
       }
 
       // Estimate healthy watches based on sample
-      const healthyWatchesEstimate = sampleWatches.length > 0 
-        ? Math.round((healthyWatches / sampleWatches.length) * watchStats.activeWatches)
+      const healthyWatchesEstimate = sampleWatches.data.length > 0 
+        ? Math.round((healthyWatches / sampleWatches.data.length) * watchStats.activeWatches)
         : watchStats.activeWatches;
 
       return {
@@ -274,7 +274,7 @@ export class WatchMonitoringService {
       const packs = await WatchPack.findBy<IWatchPack>({ is_active: true });
       let updatedCount = 0;
 
-      for (const pack of packs) {
+      for (const pack of packs.data) {
         const actualSubscribers = await UserWatchPack.getActiveSubscribers(pack.id);
         if (actualSubscribers.length !== pack.subscriber_count) {
           await WatchPack.updateById<IWatchPack>(pack.id, {
@@ -349,7 +349,7 @@ export class WatchMonitoringService {
 
       const watches = await Watch.findBy<IWatch>(filters);
 
-      if (watches.length === 0) {
+      if (watches.data.length === 0) {
         return {
           avgAlertsPerWatch: 0,
           avgTimeBetweenAlerts: 0,
@@ -359,11 +359,11 @@ export class WatchMonitoringService {
       }
 
       // Calculate average alerts per watch
-      const totalAlerts = watches.reduce((sum, watch) => sum + watch.alert_count, 0);
-      const avgAlertsPerWatch = totalAlerts / watches.length;
+      const totalAlerts = watches.data.reduce((sum, watch) => sum + watch.alert_count, 0);
+      const avgAlertsPerWatch = totalAlerts / watches.data.length;
 
       // Calculate average time between alerts (simplified)
-      const watchesWithAlerts = watches.filter(w => w.last_alerted && w.alert_count > 0);
+      const watchesWithAlerts = watches.data.filter(w => w.last_alerted && w.alert_count > 0);
       let avgTimeBetweenAlerts = 0;
       
       if (watchesWithAlerts.length > 0) {
@@ -375,7 +375,7 @@ export class WatchMonitoringService {
       }
 
       // Get most and least active watches
-      const sortedByAlerts = watches.sort((a, b) => b.alert_count - a.alert_count);
+      const sortedByAlerts = watches.data.sort((a, b) => b.alert_count - a.alert_count);
       const mostActiveWatches = sortedByAlerts.slice(0, 5).map(w => ({
         watchId: w.id,
         productId: w.product_id,

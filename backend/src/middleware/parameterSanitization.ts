@@ -161,7 +161,7 @@ export const sanitizeProductParameters = (req: Request, _res: Response, next: Ne
     }
     
     // Apply general parameter sanitization
-    sanitizeParameters(req, res, next);
+    sanitizeParameters(req, _res, next);
   } catch (error) {
     logger.error('Error in product parameter sanitization middleware', {
       error: error instanceof Error ? error.message : 'Unknown error',

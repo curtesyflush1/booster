@@ -7,7 +7,7 @@ interface PredictiveInsightsProps {
   watchedProducts: any[];
 }
 
-const PredictiveInsights: React.FC<PredictiveInsightsProps> = ({ insights }) => {
+const PredictiveInsights: React.FC<PredictiveInsightsProps> = ({ insights, watchedProducts }) => {
   const [sortBy, setSortBy] = useState<'hype' | 'roi' | 'sellout'>('hype');
   const [filterBy, setFilterBy] = useState<'all' | 'high_confidence' | 'urgent'>('all');
 
@@ -85,9 +85,14 @@ const PredictiveInsights: React.FC<PredictiveInsightsProps> = ({ insights }) => 
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredInsights.map((insight) => (
-            <InsightCard key={insight.productId} insight={insight} />
-          ))}
+          {filteredInsights.map((insight) => {
+            const productName = insight.productName 
+              || (watchedProducts.find((p: any) => p.id === insight.productId)?.name)
+              || 'Product';
+            return (
+              <InsightCard key={insight.productId} insight={insight} productName={productName} />
+            );
+          })}
         </div>
       )}
 
@@ -124,9 +129,10 @@ const PredictiveInsights: React.FC<PredictiveInsightsProps> = ({ insights }) => 
 // Individual Insight Card Component
 interface InsightCardProps {
   insight: MLPrediction;
+  productName: string;
 }
 
-const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
+const InsightCard: React.FC<InsightCardProps> = ({ insight, productName }) => {
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 0.8) return 'text-green-400';
     if (confidence >= 0.6) return 'text-yellow-400';
@@ -151,7 +157,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       <div className="flex items-start justify-between mb-4">
         <div>
           <h4 className="text-lg font-semibold text-white truncate">
-            {insight.productName}
+            {productName}
           </h4>
           <p className="text-sm text-gray-400">
             Updated {new Date(insight.updatedAt).toLocaleDateString()}

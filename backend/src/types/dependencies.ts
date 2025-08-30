@@ -181,29 +181,48 @@ export interface IAlertRepository {
   getAlertsByUser(userId: string, options?: IPaginationOptions): Promise<IPaginatedResult<IAlert>>;
   getAlertsByType(type: string, options?: IPaginationOptions): Promise<IPaginatedResult<IAlert>>;
   deleteExpiredAlerts(olderThan: Date): Promise<number>;
+  // Additional methods from AlertRepository implementation
+  findByUserId(userId: string, limit?: number): Promise<IAlert[]>;
+  getStats(): Promise<{
+    pending: number;
+    failed: number;
+    sent: number;
+    total: number;
+  }>;
+  bulkCreate(alerts: Partial<IAlert>[]): Promise<IAlert[]>;
+  deleteOldAlerts(olderThanDays: number): Promise<number>;
 }
 
 export interface IAlert {
   id: string;
   user_id: string;
   product_id: string;
+  retailer_id: string;
+  watch_id?: string;
   type: 'restock' | 'price_drop' | 'low_stock' | 'pre_order';
-  status: 'pending' | 'sent' | 'failed' | 'cancelled';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
   data: Record<string, any>;
-  channels: string[];
-  created_at: Date;
+  status: 'pending' | 'sent' | 'failed' | 'read';
+  delivery_channels: string[];
+  scheduled_for?: Date;
   sent_at?: Date;
-  failed_at?: Date;
+  read_at?: Date;
+  clicked_at?: Date;
+  failure_reason?: string;
   retry_count: number;
-  error_message?: string;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface IAlertCreationData {
   user_id: string;
   product_id: string;
+  retailer_id: string;
+  watch_id?: string;
   type: IAlert['type'];
+  priority?: IAlert['priority'];
   data: Record<string, any>;
-  channels: string[];
+  delivery_channels: string[];
 }
 
 export interface IProductRepository {

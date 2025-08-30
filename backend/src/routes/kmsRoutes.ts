@@ -7,19 +7,19 @@
 
 import { Router } from 'express';
 import { KMSController } from '../controllers/kmsController';
-import { adminAuth } from '../middleware/adminAuth';
-import { rateLimiter } from '../middleware/rateLimiter';
+import { requireAdmin } from '../middleware/adminAuth';
+import { createRateLimit } from '../middleware/rateLimiter';
 
 const router = Router();
 const kmsController = new KMSController();
 
 // Apply admin authentication to all KMS routes
-router.use(adminAuth);
+router.use(requireAdmin);
 
 // Apply rate limiting to prevent abuse
-router.use(rateLimiter({
+router.use(createRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // Limit each IP to 50 requests per windowMs
+  maxRequests: 50, // Limit each IP to 50 requests per windowMs
   message: 'Too many KMS requests from this IP, please try again later.'
 }));
 

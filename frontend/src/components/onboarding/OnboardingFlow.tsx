@@ -3,7 +3,7 @@
  * Guides new users through BoosterBeacon setup
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { CheckCircle, ArrowRight, ArrowLeft, Star, Bell, Search, Zap } from 'lucide-react';
@@ -32,18 +32,7 @@ interface OnboardingData {
     location: string;
     timezone: string;
   };
-  preferences: {
-    notificationChannels: string[];
-    quietHours: {
-      enabled: boolean;
-      startTime: string;
-      endTime: string;
-    };
-    alertFilters: {
-      maxPrice: number;
-      retailers: string[];
-    };
-  };
+  preferences: import('../../types').UserPreferences;
   interests: {
     sets: string[];
     productTypes: string[];
@@ -56,7 +45,7 @@ interface OnboardingData {
 }
 
 const OnboardingFlow: React.FC = () => {
-  const { user, updateProfile } = useAuth();
+  const { user, updateUser } = useAuth();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({
@@ -67,16 +56,34 @@ const OnboardingFlow: React.FC = () => {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
     },
     preferences: {
-      notificationChannels: ['web_push'],
+      notificationChannels: [
+        { type: 'web_push', enabled: true, settings: {} },
+        { type: 'email', enabled: false, settings: {} },
+        { type: 'sms', enabled: false, settings: {} },
+        { type: 'discord', enabled: false, settings: {} }
+      ],
       quietHours: {
         enabled: false,
         startTime: '22:00',
-        endTime: '08:00'
+        endTime: '08:00',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        days: []
       },
       alertFilters: {
         maxPrice: 100,
-        retailers: ['bestbuy', 'walmart']
-      }
+        retailers: [],
+        categories: [],
+        inStockOnly: true,
+        preOrderEnabled: true
+      },
+      locationSettings: {
+        zipCode: '',
+        radius: 25,
+        storeIds: [],
+        onlineOnly: true
+      },
+      theme: 'system',
+      language: 'en'
     },
     interests: {
       sets: [],
@@ -176,11 +183,13 @@ const OnboardingFlow: React.FC = () => {
   const handleCompleteOnboarding = async () => {
     try {
       // Save all onboarding data
-      await updateProfile({
-        ...onboardingData.profile,
+      await updateUser({
+        profile: {
+          firstName: onboardingData.profile.firstName,
+          lastName: onboardingData.profile.lastName,
+        },
         preferences: onboardingData.preferences,
-        onboardingCompleted: true
-      });
+      } as any);
 
       // Navigate to dashboard
       navigate('/dashboard');

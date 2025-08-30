@@ -7,7 +7,7 @@
  */
 
 import crypto from 'crypto';
-import { IKeyManagementService, KeyMetadata, KMSConfig, KMSServiceError, KMSErrorCodes } from './types';
+import { IKeyManagementService, KeyMetadata, KMSConfig, KMSServiceError, KMSErrorCodes, KeyState } from './types';
 
 export class EnvironmentKMSService implements IKeyManagementService {
   private config: KMSConfig;
@@ -35,8 +35,7 @@ export class EnvironmentKMSService implements IKeyManagementService {
           `${envVarName} environment variable is required`,
           KMSErrorCodes.KEY_NOT_FOUND,
           'env',
-          false,
-          keyId
+          { retryable: false, keyId }
         );
       }
 
@@ -56,8 +55,7 @@ export class EnvironmentKMSService implements IKeyManagementService {
           `Invalid key length: expected 32 bytes, got ${keyBuffer.length}`,
           KMSErrorCodes.INVALID_KEY_FORMAT,
           'env',
-          false,
-          keyId
+          { retryable: false, keyId }
         );
       }
 
@@ -77,8 +75,7 @@ export class EnvironmentKMSService implements IKeyManagementService {
         `Failed to retrieve key from environment: ${error instanceof Error ? error.message : 'Unknown error'}`,
         KMSErrorCodes.INVALID_CONFIGURATION,
         'env',
-        false,
-        keyId
+        { retryable: false, keyId, cause: error as Error }
       );
     }
   }
@@ -137,8 +134,7 @@ Note: You'll need to restart the application after updating the environment vari
         `Key not found in environment: ${envVarName}`,
         KMSErrorCodes.KEY_NOT_FOUND,
         'env',
-        false,
-        keyId
+        { retryable: false, keyId }
       );
     }
 
@@ -148,7 +144,9 @@ Note: You'll need to restart the application after updating the environment vari
       createdAt: new Date(), // We can't know the actual creation time
       enabled: true,
       keyUsage: 'ENCRYPT_DECRYPT',
-      keySpec: 'AES-256'
+      keySpec: 'AES_256', // Corrected from 'AES-256'
+      keyState: KeyState.ENABLED, // Added
+      origin: 'ENV' // Added
     };
   }
 

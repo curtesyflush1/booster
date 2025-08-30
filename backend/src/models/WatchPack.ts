@@ -244,10 +244,11 @@ export class WatchPack extends BaseModel<IWatchPack> {
 
   // Get watch packs that need auto-updates
   static async getPacksForAutoUpdate(): Promise<IWatchPack[]> {
-    return this.findBy<IWatchPack>({
+    const result = await this.findBy<IWatchPack>({
       is_active: true,
       auto_update: true
     });
+    return result.data;
   }
 
   // Update watch pack with new products based on criteria

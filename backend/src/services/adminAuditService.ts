@@ -26,7 +26,7 @@ export class AdminAuditService {
         user_agent: userAgent
       };
 
-      await BaseModel.create<IAdminAuditLog>(auditData, 'admin_audit_log');
+      await BaseModel.create<IAdminAuditLog>(auditData);
 
       logger.info('Admin action logged', {
         adminUserId,

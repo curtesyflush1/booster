@@ -1,14 +1,7 @@
 import { Request, Response } from 'express';
 import { communityService } from '../services/communityService';
 import { logger } from '../utils/logger';
-
-interface AuthenticatedRequest extends Request {
-    user?: {
-        id: string;
-        email: string;
-        role: string;
-    };
-}
+import { AuthenticatedRequest } from '../types/express';
 
 export class CommunityController {
 
@@ -30,7 +23,7 @@ export class CommunityController {
                 userName: req.user?.email?.split('@')[0] || 'Anonymous',
                 content,
                 rating,
-                isVerified: req.user?.role === 'pro' || req.user?.role === 'admin',
+                isVerified: req.user?.role === 'admin' || req.user?.role === 'super_admin',
                 isPublic,
                 isFeatured: false,
                 tags,

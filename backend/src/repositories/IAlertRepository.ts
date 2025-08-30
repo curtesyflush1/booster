@@ -1,4 +1,6 @@
 import { IAlert } from '../types/database';
+import { IPaginatedResult, IPaginationOptions } from '../types/dependencies';
+import { IAlertCreationData } from '../types/dependencies';
 
 /**
  * Alert repository interface
@@ -17,35 +19,50 @@ export interface IAlertRepository {
   /**
    * Create a new alert
    */
-  createAlert(data: Partial<IAlert>): Promise<IAlert>;
+  createAlert<T = any>(alertData: IAlertCreationData): Promise<T>;
 
   /**
    * Mark alert as sent
    */
-  markAsSent(id: string, channels: string[]): Promise<void>;
+  markAsSent(alertId: string, channels: string[]): Promise<boolean>;
 
   /**
    * Mark alert as failed
    */
-  markAsFailed(id: string, reason: string): Promise<void>;
+  markAsFailed(alertId: string, reason: string): Promise<boolean>;
 
   /**
    * Find alert by ID
    */
-  findById(id: string): Promise<IAlert | null>;
+  findById<T = any>(id: string): Promise<T | null>;
 
   /**
    * Find alerts by criteria
    */
-  findBy(criteria: Partial<IAlert>): Promise<IAlert[]>;
+  findBy<T = any>(criteria: Partial<T>): Promise<T[]>;
 
   /**
    * Update alert by ID
    */
-  updateById(id: string, data: Partial<IAlert>): Promise<IAlert | null>;
+  updateById<T = any>(id: string, data: Partial<T>): Promise<T | null>;
 
   /**
    * Get alerts for a specific user
+   */
+  getAlertsByUser(userId: string, options?: IPaginationOptions): Promise<IPaginatedResult<IAlert>>;
+
+  /**
+   * Get alerts by type
+   */
+  getAlertsByType(type: string, options?: IPaginationOptions): Promise<IPaginatedResult<IAlert>>;
+
+  /**
+   * Delete expired alerts
+   */
+  deleteExpiredAlerts(olderThan: Date): Promise<number>;
+
+  /**
+   * Get alerts for a specific user (legacy method)
    */
   findByUserId(userId: string, limit?: number): Promise<IAlert[]>;
 

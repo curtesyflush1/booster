@@ -138,7 +138,9 @@ describe('EnvironmentKMSService', () => {
         createdAt: expect.any(Date),
         enabled: true,
         keyUsage: 'ENCRYPT_DECRYPT',
-        keySpec: 'AES-256'
+        keySpec: 'AES_256',
+        keyState: 'Enabled',
+        origin: 'ENV'
       });
     });
 

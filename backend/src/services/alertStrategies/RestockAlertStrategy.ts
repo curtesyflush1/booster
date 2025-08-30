@@ -4,16 +4,16 @@ import { BaseAlertStrategy, AlertGenerationData, AlertPriority, AlertType } from
  * Strategy for processing restock alerts
  */
 export class RestockAlertStrategy extends BaseAlertStrategy {
-  getAlertType(): AlertType {
+  override getAlertType(): AlertType {
     return 'restock';
   }
 
-  async calculatePriority(alertData: AlertGenerationData): Promise<AlertPriority> {
+  override async calculatePriority(alertData: AlertGenerationData): Promise<AlertPriority> {
     const urgencyScore = await this.calculateUrgencyScore(alertData);
     return this.urgencyToPriority(urgencyScore);
   }
 
-  async calculateUrgencyScore(alertData: AlertGenerationData): Promise<number> {
+  override async calculateUrgencyScore(alertData: AlertGenerationData): Promise<number> {
     let urgencyScore = 0;
 
     // Base urgency from product popularity
@@ -39,7 +39,7 @@ export class RestockAlertStrategy extends BaseAlertStrategy {
     return Math.min(urgencyScore, 100);
   }
 
-  async validateSpecificRequirements(alertData: AlertGenerationData): Promise<boolean> {
+  override async validateSpecificRequirements(alertData: AlertGenerationData): Promise<boolean> {
     // Call base validation first
     const baseValid = await super.validateSpecificRequirements(alertData);
     if (!baseValid) return false;

@@ -49,7 +49,7 @@ export class UserWatchPack extends BaseModel<IUserWatchPack> {
             nameValidation.errors.forEach(error => {
               errors.push({
                 field: 'customizations.custom_name',
-                message: error,
+                message: error.message,
                 value: customizations.custom_name
               });
             });
@@ -69,7 +69,7 @@ export class UserWatchPack extends BaseModel<IUserWatchPack> {
             descValidation.errors.forEach(error => {
               errors.push({
                 field: 'customizations.custom_description',
-                message: error,
+                message: error.message,
                 value: customizations.custom_description
               });
             });

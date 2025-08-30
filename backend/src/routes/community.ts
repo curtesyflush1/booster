@@ -4,6 +4,7 @@ import { authenticate } from '../middleware/auth';
 import { generalRateLimit } from '../middleware/rateLimiter';
 import { sanitizeParameters } from '../middleware/parameterSanitization';
 import { validateJoiBody, validateJoiQuery, validateJoiParams, validateJoi, communitySchemas } from '../validators';
+import { authenticatedHandler } from '../utils/routeHandlers';
 
 const router = Router();
 
@@ -21,7 +22,7 @@ router.use(generalRateLimit);
  */
 router.post('/testimonials', 
   validateJoiBody(communitySchemas.createTestimonial), 
-  CommunityController.createTestimonial
+  authenticatedHandler(CommunityController.createTestimonial)
 );
 
 /**
@@ -31,7 +32,7 @@ router.post('/testimonials',
  */
 router.get('/testimonials', 
   validateJoiQuery(communitySchemas.getTestimonials.query), 
-  CommunityController.getTestimonials
+  authenticatedHandler(CommunityController.getTestimonials)
 );
 
 /**
@@ -42,7 +43,7 @@ router.get('/testimonials',
 router.put('/testimonials/:id', 
   sanitizeParameters,
   validateJoi(communitySchemas.updateTestimonial), 
-  CommunityController.updateTestimonial
+  authenticatedHandler(CommunityController.updateTestimonial)
 );
 
 /**
@@ -53,7 +54,7 @@ router.put('/testimonials/:id',
 router.delete('/testimonials/:id', 
   sanitizeParameters,
   validateJoi(communitySchemas.deleteTestimonial), 
-  CommunityController.deleteTestimonial
+  authenticatedHandler(CommunityController.deleteTestimonial)
 );
 
 // Community post routes
@@ -64,7 +65,7 @@ router.delete('/testimonials/:id',
  */
 router.post('/posts', 
   validateJoiBody(communitySchemas.createPost), 
-  CommunityController.createPost
+  authenticatedHandler(CommunityController.createPost)
 );
 
 /**
@@ -74,7 +75,7 @@ router.post('/posts',
  */
 router.get('/posts', 
   validateJoiQuery(communitySchemas.getPosts.query), 
-  CommunityController.getPosts
+  authenticatedHandler(CommunityController.getPosts)
 );
 
 /**
@@ -85,7 +86,7 @@ router.get('/posts',
 router.post('/posts/:id/like', 
   sanitizeParameters,
   validateJoi(communitySchemas.togglePostLike), 
-  CommunityController.togglePostLike
+  authenticatedHandler(CommunityController.togglePostLike)
 );
 
 /**
@@ -96,7 +97,7 @@ router.post('/posts/:id/like',
 router.post('/posts/:id/comments', 
   sanitizeParameters,
   validateJoi(communitySchemas.addComment), 
-  CommunityController.addComment
+  authenticatedHandler(CommunityController.addComment)
 );
 
 /**
@@ -107,7 +108,7 @@ router.post('/posts/:id/comments',
 router.get('/posts/:id/comments', 
   sanitizeParameters,
   validateJoi(communitySchemas.getPostComments), 
-  CommunityController.getPostComments
+  authenticatedHandler(CommunityController.getPostComments)
 );
 
 // Community statistics and featured content
@@ -116,14 +117,14 @@ router.get('/posts/:id/comments',
  * @desc Get community statistics
  * @access Private
  */
-router.get('/stats', CommunityController.getCommunityStats);
+router.get('/stats', authenticatedHandler(CommunityController.getCommunityStats));
 
 /**
  * @route GET /api/community/featured
  * @desc Get featured community content
  * @access Private
  */
-router.get('/featured', CommunityController.getFeaturedContent);
+router.get('/featured', authenticatedHandler(CommunityController.getFeaturedContent));
 
 // Moderation routes (admin only)
 /**
@@ -133,7 +134,7 @@ router.get('/featured', CommunityController.getFeaturedContent);
  */
 router.post('/moderate', 
   validateJoiBody(communitySchemas.moderateContent), 
-  CommunityController.moderateContent
+  authenticatedHandler(CommunityController.moderateContent)
 );
 
 export default router;

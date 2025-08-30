@@ -31,35 +31,35 @@ export interface IKeyManagementService {
   rotateKey(keyId: string): Promise<string>;
 
   /**
-   * Enable or disable a key
+   * Enable or disable a key (optional for lightweight providers)
    * @param keyId - The identifier for the key
    * @param enabled - Whether to enable or disable the key
    * @returns Promise<void>
    */
-  setKeyEnabled(keyId: string, enabled: boolean): Promise<void>;
+  setKeyEnabled?(keyId: string, enabled: boolean): Promise<void>;
 
   /**
-   * Delete a key (schedule for deletion)
+   * Delete a key (schedule for deletion) - optional
    * @param keyId - The identifier for the key to delete
    * @param pendingWindowInDays - Days to wait before deletion (7-30)
    * @returns Promise<Date> - The scheduled deletion date
    */
-  scheduleKeyDeletion(keyId: string, pendingWindowInDays?: number): Promise<Date>;
+  scheduleKeyDeletion?(keyId: string, pendingWindowInDays?: number): Promise<Date>;
 
   /**
-   * Cancel a scheduled key deletion
+   * Cancel a scheduled key deletion - optional
    * @param keyId - The identifier for the key
    * @returns Promise<void>
    */
-  cancelKeyDeletion(keyId: string): Promise<void>;
+  cancelKeyDeletion?(keyId: string): Promise<void>;
 
   /**
-   * List all keys accessible to the service
+   * List all keys accessible to the service - optional
    * @param limit - Maximum number of keys to return
    * @param marker - Pagination marker for large result sets
    * @returns Promise<KeyListResult> - List of keys with pagination info
    */
-  listKeys(limit?: number, marker?: string): Promise<KeyListResult>;
+  listKeys?(limit?: number, marker?: string): Promise<KeyListResult>;
 
   /**
    * Check if the KMS service is available and accessible

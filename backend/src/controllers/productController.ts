@@ -358,7 +358,8 @@ export const getProductsBySet = async (req: Request, res: Response, next: NextFu
 
     logger.info('Products retrieved by set', { 
       setName, 
-      productCount: products.length,
+      productCount: products.data.length,
+      totalProducts: products.total,
       correlationId: req.correlationId 
     });
 

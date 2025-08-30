@@ -7,16 +7,16 @@ export class PriceDropAlertStrategy extends BaseAlertStrategy {
   private static readonly SIGNIFICANT_DROP_THRESHOLD = 20; // 20% price drop
   private static readonly MAJOR_DROP_THRESHOLD = 40; // 40% price drop
 
-  getAlertType(): AlertType {
+  override getAlertType(): AlertType {
     return 'price_drop';
   }
 
-  async calculatePriority(alertData: AlertGenerationData): Promise<AlertPriority> {
+  override async calculatePriority(alertData: AlertGenerationData): Promise<AlertPriority> {
     const urgencyScore = await this.calculateUrgencyScore(alertData);
     return this.urgencyToPriority(urgencyScore);
   }
 
-  async calculateUrgencyScore(alertData: AlertGenerationData): Promise<number> {
+  override async calculateUrgencyScore(alertData: AlertGenerationData): Promise<number> {
     let urgencyScore = 0;
 
     // Base urgency from product popularity
@@ -46,7 +46,7 @@ export class PriceDropAlertStrategy extends BaseAlertStrategy {
     return Math.min(urgencyScore, 100);
   }
 
-  async validateSpecificRequirements(alertData: AlertGenerationData): Promise<boolean> {
+  override async validateSpecificRequirements(alertData: AlertGenerationData): Promise<boolean> {
     const baseValid = await super.validateSpecificRequirements(alertData);
     if (!baseValid) return false;
 

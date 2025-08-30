@@ -98,7 +98,7 @@ export const withErrorHandling = <T extends any[]>(
   handler: (...args: T) => Promise<void>
 ) => {
   return async (...args: T): Promise<void> => {
-    const [req, res, next] = args as [Request, Response, NextFunction];
+    const [req, res, next] = args as unknown as [Request, Response, NextFunction];
     try {
       await handler(...args);
     } catch (error) {

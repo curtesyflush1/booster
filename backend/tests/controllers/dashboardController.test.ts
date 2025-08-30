@@ -1,4 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
+import { IUser } from '../../src/types/database';
+import { AuthenticatedRequest as ApiAuthenticatedRequest } from '../../src/types/express';
 import { 
   getDashboardData, 
   getConsolidatedDashboardData,
@@ -7,12 +9,7 @@ import {
   getDashboardUpdates 
 } from '../../src/controllers/dashboardController';
 
-interface AuthenticatedRequest extends Request {
-  user: {
-    id: string;
-    subscription_tier?: string;
-  };
-}
+type AuthenticatedRequest = ApiAuthenticatedRequest;
 import { User } from '../../src/models/User';
 import { Watch } from '../../src/models/Watch';
 import { Alert } from '../../src/models/Alert';
@@ -41,7 +38,7 @@ const MockedProduct = Product as jest.Mocked<typeof Product>;
 
 describe('Dashboard Controller', () => {
   const mockUserId = 'test-user-id';
-  let mockReq: Partial<Request>;
+  let mockReq: Partial<AuthenticatedRequest>;
   let mockRes: Partial<Response>;
   let mockNext: NextFunction;
 
@@ -50,10 +47,24 @@ describe('Dashboard Controller', () => {
     jest.clearAllMocks();
 
     // Setup mock request/response
-    mockReq = {
-      user: { id: mockUserId } as any,
-      query: {}
-    };
+    mockReq = {} as Partial<AuthenticatedRequest>;
+    (mockReq as any).user = {
+      id: mockUserId,
+      email: 'test@example.com',
+      role: 'user',
+      subscription_tier: 'free',
+      notification_settings: { web_push: true, email: true, sms: false, discord: false },
+      shipping_addresses: [],
+      payment_methods: [],
+      retailer_credentials: {},
+      quiet_hours: { enabled: false, start_time: '00:00', end_time: '00:00', timezone: 'UTC', days: [] },
+      preferences: {},
+      created_at: new Date(),
+      updated_at: new Date(),
+      failed_login_attempts: 0,
+      admin_permissions: []
+    } as any;
+    mockReq.query = {} as any;
     
     mockRes = {
       status: jest.fn().mockReturnThis(),
@@ -425,35 +436,40 @@ describe('Dashboard Controller', () => {
     it('should return consolidated dashboard data with all components', async () => {
       // Mock all the required data
       MockedUser.getUserStats.mockResolvedValue({
-        totalUsers: 100,
-        activeUsers: 80
-      });
+        watchCount: 0,
+        alertCount: 0,
+        accountAge: 0
+      } as any);
 
       MockedWatch.getUserWatchStats.mockResolvedValue({
+        total: 5,
         active: 5,
+        totalAlerts: 0,
+        recentAlerts: 0,
         topProducts: [
           { product_id: 'prod1', alert_count: 10 },
           { product_id: 'prod2', alert_count: 8 }
         ]
-      });
+      } as any);
 
       MockedAlert.getUserAlertStats.mockResolvedValue({
         total: 25,
         unread: 3,
+        byType: { restock: 15, price_drop: 10 },
+        byStatus: { sent: 20, pending: 5 },
         clickThroughRate: 75,
-        recentAlerts: 5,
-        byType: { restock: 15, price_drop: 10 }
-      });
+        recentAlerts: 5
+      } as any);
 
       MockedAlert.findByUserId.mockResolvedValue({
         data: [
-          { id: 'alert1', product_id: 'prod1', created_at: new Date() },
-          { id: 'alert2', product_id: 'prod2', created_at: new Date() }
+          { id: 'alert1', user_id: mockUserId, product_id: 'prod1', retailer_id: 'r1', type: 'restock', priority: 'low', data: {}, status: 'sent', delivery_channels: [], retry_count: 0, created_at: new Date(), updated_at: new Date() },
+          { id: 'alert2', user_id: mockUserId, product_id: 'prod2', retailer_id: 'r1', type: 'restock', priority: 'low', data: {}, status: 'sent', delivery_channels: [], retry_count: 0, created_at: new Date(), updated_at: new Date() }
         ],
         total: 2,
         page: 1,
         limit: 10
-      });
+      } as any);
 
       MockedAlert.findByProductId.mockResolvedValue([]);
       MockedProduct.findById.mockResolvedValue({
@@ -493,18 +509,26 @@ describe('Dashboard Controller', () => {
       mockReq.query = { productIds: 'prod1,prod2' };
 
       // Mock required data
-      MockedUser.getUserStats.mockResolvedValue({});
+      MockedUser.getUserStats.mockResolvedValue({
+        watchCount: 0,
+        alertCount: 0,
+        accountAge: 0
+      } as any);
       MockedWatch.getUserWatchStats.mockResolvedValue({
+        total: 0,
         active: 0,
+        totalAlerts: 0,
+        recentAlerts: 0,
         topProducts: []
-      });
+      } as any);
       MockedAlert.getUserAlertStats.mockResolvedValue({
         total: 0,
         unread: 0,
+        byType: {},
+        byStatus: {},
         clickThroughRate: 0,
-        recentAlerts: 0,
-        byType: {}
-      });
+        recentAlerts: 0
+      } as any);
       MockedAlert.findByUserId.mockResolvedValue({
         data: [],
         total: 0,

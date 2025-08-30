@@ -8,7 +8,7 @@
 import { Request, Response } from 'express';
 import { KMSManagementService, createKMSManagementService } from '../services/kmsManagementService';
 import { KMSConfig } from '../utils/encryption/kms/types';
-import { responseHelpers } from '../utils/responseHelpers';
+import { ResponseHelper, successResponse, errorResponse } from '../utils/responseHelpers';
 import { ILogger } from '../types/dependencies';
 import { DependencyContainer } from '../container/DependencyContainer';
 
@@ -36,14 +36,14 @@ export class KMSController {
         healthy: healthStatus.healthy
       });
 
-      responseHelpers.success(res, healthStatus, 'KMS health status retrieved successfully');
+      successResponse(res, healthStatus, 'KMS health status retrieved successfully');
     } catch (error) {
       this.logger.error('Failed to get KMS health status', {
         userId: req.user?.id,
         error: error instanceof Error ? error.message : 'Unknown error'
       });
 
-      responseHelpers.error(res, 'Failed to get KMS health status', 500);
+      errorResponse(res, 500, 'Failed to get KMS health status');
     }
   }
 
@@ -61,7 +61,7 @@ export class KMSController {
           error: result.error
         });
         
-        responseHelpers.error(res, result.message, 500, result.error);
+        errorResponse(res, 500, result.message);
         return;
       }
 
@@ -70,14 +70,14 @@ export class KMSController {
         keyId: result.data?.keyId
       });
 
-      responseHelpers.success(res, result.data, result.message);
+      successResponse(res, result.data, result.message);
     } catch (error) {
       this.logger.error('Failed to get key metadata', {
         userId: req.user?.id,
         error: error instanceof Error ? error.message : 'Unknown error'
       });
 
-      responseHelpers.error(res, 'Failed to get key metadata', 500);
+      errorResponse(res, 500, 'Failed to get key metadata');
     }
   }
 
@@ -95,7 +95,7 @@ export class KMSController {
           error: result.error
         });
         
-        responseHelpers.error(res, result.message, 500, result.error);
+        errorResponse(res, 500, result.message);
         return;
       }
 
@@ -104,14 +104,14 @@ export class KMSController {
         newKeyVersion: result.data?.newKeyVersion
       });
 
-      responseHelpers.success(res, result.data, result.message);
+      successResponse(res, result.data, result.message);
     } catch (error) {
       this.logger.error('Failed to rotate encryption key', {
         userId: req.user?.id,
         error: error instanceof Error ? error.message : 'Unknown error'
       });
 
-      responseHelpers.error(res, 'Failed to rotate encryption key', 500);
+      errorResponse(res, 500, 'Failed to rotate encryption key');
     }
   }
 
@@ -128,14 +128,14 @@ export class KMSController {
         provider: config?.provider
       });
 
-      responseHelpers.success(res, config, 'KMS configuration retrieved successfully');
+      successResponse(res, config, 'KMS configuration retrieved successfully');
     } catch (error) {
       this.logger.error('Failed to get KMS configuration', {
         userId: req.user?.id,
         error: error instanceof Error ? error.message : 'Unknown error'
       });
 
-      responseHelpers.error(res, 'Failed to get KMS configuration', 500);
+      errorResponse(res, 500, 'Failed to get KMS configuration');
     }
   }
 
@@ -148,7 +148,7 @@ export class KMSController {
       const config: KMSConfig = req.body;
       
       if (!config || !config.provider || !config.keyId) {
-        responseHelpers.error(res, 'Invalid KMS configuration provided', 400);
+        errorResponse(res, 400, 'Invalid KMS configuration provided');
         return;
       }
 
@@ -161,18 +161,18 @@ export class KMSController {
       });
 
       if (!result.success) {
-        responseHelpers.error(res, result.message, 400, result.error);
+        errorResponse(res, 400, result.message);
         return;
       }
 
-      responseHelpers.success(res, result.data, result.message);
+      successResponse(res, result.data, result.message);
     } catch (error) {
       this.logger.error('Failed to test KMS configuration', {
         userId: req.user?.id,
         error: error instanceof Error ? error.message : 'Unknown error'
       });
 
-      responseHelpers.error(res, 'Failed to test KMS configuration', 500);
+      errorResponse(res, 500, 'Failed to test KMS configuration');
     }
   }
 
@@ -185,7 +185,7 @@ export class KMSController {
       const config: KMSConfig = req.body;
       
       if (!config || !config.provider || !config.keyId) {
-        responseHelpers.error(res, 'Invalid KMS configuration provided', 400);
+        errorResponse(res, 400, 'Invalid KMS configuration provided');
         return;
       }
 
@@ -198,18 +198,18 @@ export class KMSController {
       });
 
       if (!result.success) {
-        responseHelpers.error(res, result.message, 400, result.error);
+        errorResponse(res, 400, result.message);
         return;
       }
 
-      responseHelpers.success(res, result.data, result.message);
+      successResponse(res, result.data, result.message);
     } catch (error) {
       this.logger.error('Failed to update KMS configuration', {
         userId: req.user?.id,
         error: error instanceof Error ? error.message : 'Unknown error'
       });
 
-      responseHelpers.error(res, 'Failed to update KMS configuration', 500);
+      errorResponse(res, 500, 'Failed to update KMS configuration');
     }
   }
 
@@ -222,7 +222,7 @@ export class KMSController {
       const { keyId, description } = req.body;
       
       if (!keyId || typeof keyId !== 'string') {
-        responseHelpers.error(res, 'Valid keyId is required', 400);
+        errorResponse(res, 400, 'Valid keyId is required');
         return;
       }
 
@@ -235,18 +235,18 @@ export class KMSController {
       });
 
       if (!result.success) {
-        responseHelpers.error(res, result.message, 500, result.error);
+        errorResponse(res, 500, result.message);
         return;
       }
 
-      responseHelpers.success(res, result.data, result.message);
+      successResponse(res, result.data, result.message);
     } catch (error) {
       this.logger.error('Failed to create encryption key', {
         userId: req.user?.id,
         error: error instanceof Error ? error.message : 'Unknown error'
       });
 
-      responseHelpers.error(res, 'Failed to create encryption key', 500);
+      errorResponse(res, 500, 'Failed to create encryption key');
     }
   }
 }

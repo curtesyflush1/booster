@@ -145,10 +145,11 @@ export class Watch extends BaseModel<IWatch> {
 
   // Find watches by product ID
   static async findByProductId(productId: string, isActive: boolean = true): Promise<IWatch[]> {
-    return this.findBy<IWatch>({
+    const result = await this.findBy<IWatch>({
       product_id: productId,
       is_active: isActive
     });
+    return result.data;
   }
 
   // Find user's watch for a specific product

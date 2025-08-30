@@ -2,7 +2,7 @@ import axios, { AxiosResponse } from 'axios';
 import crypto from 'crypto';
 import { logger } from '../utils/logger';
 import { Alert } from '../models/Alert';
-import { HTTP_TIMEOUTS, RETRY_CONFIG, DEFAULT_VALUES } from '../constants';
+import { HTTP_TIMEOUTS, RETRY_CONFIG, DEFAULT_VALUES, INTERVALS } from '../constants';
 
 interface WebhookConfig {
   id: string;

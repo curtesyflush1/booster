@@ -504,9 +504,9 @@ export class MLPredictionService {
 
       const engagementMetrics = {
         watchCount: parseInt(String(watchCount?.count || '0')),
-        alertCount: parseInt(String(alertStats?.alert_count || '0')),
-        clickThroughRate: alertStats?.alert_count > 0 ? 
-          (parseInt(String(alertStats.clicked_count || '0')) / parseInt(String(alertStats.alert_count))) * 100 : 0,
+        alertCount: parseInt(String((alertStats as any)?.alert_count || '0')),
+        clickThroughRate: (alertStats as any)?.alert_count > 0 ? 
+          (parseInt(String((alertStats as any).clicked_count || '0')) / parseInt(String((alertStats as any).alert_count))) * 100 : 0,
         searchVolume
       };
 
@@ -621,7 +621,7 @@ export class MLPredictionService {
     ]);
 
     const watches = parseInt(String(watchCount?.count || '0'));
-    const alerts = parseInt(String(recentAlerts?.alert_count || '0'));
+    const alerts = parseInt(String((recentAlerts as any)?.alert_count || '0'));
 
     return Math.min(100, (watches * 2) + (alerts * 5));
   }

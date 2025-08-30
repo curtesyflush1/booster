@@ -4,6 +4,8 @@ import { logger } from '../utils/logger';
 import { validateRequest } from '../middleware/validation';
 import { body, param } from 'express-validator';
 import { WEBHOOK_CONFIG, HTTP_STATUS } from '../constants';
+import { AuthenticatedRequest } from '../types/express';
+import { IUser } from '../types/database';
 
 // Define proper webhook interfaces
 interface WebhookData {
@@ -24,20 +26,9 @@ interface WebhookData {
   totalCalls?: number;
   successfulCalls?: number;
   failedCalls?: number;
-  lastTriggered?: string;
-  createdAt: string;
-  updatedAt?: string;
-}
-
-interface AuthenticatedUser {
-  id: string;
-  email: string;
-  role: string;
-}
-
-interface AuthenticatedRequest extends Request {
-  user?: AuthenticatedUser;
-  correlationId?: string;
+  lastTriggered?: Date;
+  createdAt: Date;
+  updatedAt?: Date;
 }
 
 export class WebhookController {
@@ -46,7 +37,7 @@ export class WebhookController {
    */
   private static async checkWebhookAccess(
     webhookId: string, 
-    user: AuthenticatedUser | undefined,
+    user: Omit<IUser, 'password_hash'> | undefined,
     res: Response
   ): Promise<WebhookData | null> {
     const webhook = await webhookService.getWebhook(webhookId);
@@ -144,7 +135,7 @@ export class WebhookController {
       logger.error('Failed to create webhook:', {
         error: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
-        userId,
+        userId: req.user?.id,
         correlationId: req.correlationId
       });
       res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({

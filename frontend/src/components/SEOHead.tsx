@@ -68,8 +68,8 @@ const SEOHead = React.memo(SEOHeadComponent, (prevProps, nextProps) => {
     prevProps.title === nextProps.title &&
     prevProps.description === nextProps.description &&
     prevProps.keywords === nextProps.keywords &&
-    prevProps.image === nextProps.image &&
-    prevProps.url === nextProps.url
+    prevProps.ogImage === nextProps.ogImage &&
+    prevProps.canonical === nextProps.canonical
   );
 });
 

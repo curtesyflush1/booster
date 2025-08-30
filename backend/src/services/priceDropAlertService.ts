@@ -344,7 +344,22 @@ export class PriceDropAlertService extends BaseModel<any> {
    */
   private static async sendPriceDropAlert(alert: PriceDropAlert): Promise<void> {
     try {
+      // Enrich alert data with required fields
+      const product = await this.db('products').select('name').where('id', alert.productId).first();
+      const retailer = await this.db('retailers').select('name').where('id', alert.retailerId).first();
+      const availability = await this.db('product_availability')
+        .select('url')
+        .where('product_id', alert.productId)
+        .andWhere('retailer_id', alert.retailerId)
+        .orderBy('last_checked', 'desc')
+        .first();
+
       const alertData = {
+        product_name: product?.name || 'Unknown Product',
+        retailer_name: retailer?.name || 'Unknown Retailer',
+        product_url: availability?.url || '',
+        price: alert.currentPrice,
+        original_price: alert.previousPrice,
         alertType: alert.alertType,
         currentPrice: alert.currentPrice,
         previousPrice: alert.previousPrice,
@@ -352,7 +367,7 @@ export class PriceDropAlertService extends BaseModel<any> {
         savingsPercentage: alert.savingsPercentage,
         dealScore: alert.dealScore,
         timestamp: new Date().toISOString()
-      };
+      } as const;
 
       await AlertProcessingService.generateAlert({
         userId: alert.userId,
@@ -449,7 +464,7 @@ export class PriceDropAlertService extends BaseModel<any> {
         .where('created_at', '>=', startDate)
         .first();
 
-      const totalAlerts = parseInt(totalAlertsResult?.count || '0', 10);
+      const totalAlerts = parseInt(String(totalAlertsResult?.count ?? '0'), 10);
 
       // Get alerts by type
       const alertsByTypeResult = await this.db('alerts')
@@ -484,7 +499,7 @@ export class PriceDropAlertService extends BaseModel<any> {
         .leftJoin('retailers', 'alerts.retailer_id', 'retailers.id')
         .where('alerts.type', 'price_drop')
         .where('alerts.created_at', '>=', startDate)
-        .orderBy(this.db.raw('(alerts.data->\'dealScore\')::decimal'), 'desc')
+        .orderByRaw("(alerts.data->>'dealScore')::decimal DESC")
         .limit(10);
 
       return {

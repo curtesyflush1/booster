@@ -113,6 +113,29 @@ jest.mock('knex', () => {
   return mockKnex;
 });
 
+// Mock KMS providers for test environment - only use EnvironmentKMSService
+jest.mock('../src/utils/encryption/kms/factory', () => {
+  const { EnvironmentKMSService } = require('../src/utils/encryption/kms/envKMS');
+  
+  return {
+    KMSFactory: {
+      createKMSService: jest.fn((config) => {
+        // Always return EnvironmentKMSService for tests
+        return new EnvironmentKMSService(config);
+      }),
+      createFromEnvironment: jest.fn(() => {
+        const config = {
+          provider: 'env',
+          keyId: process.env.KMS_KEY_ID || 'default'
+        };
+        return new EnvironmentKMSService(config);
+      }),
+      validateConfig: jest.fn(() => ({ valid: true, errors: [] })),
+      testKMSService: jest.fn(async () => ({ healthy: true }))
+    }
+  };
+});
+
 // Global test timeout
 jest.setTimeout(15000);
 
@@ -123,6 +146,20 @@ console.warn = jest.fn();
 console.log = jest.fn();
 console.info = jest.fn();
 console.debug = jest.fn();
+
+// Test database harness
+const { initializeDatabase, closeDatabaseConnection } = require('./helpers/testDatabase');
+
+// Global test setup and teardown
+if (typeof beforeAll === 'function' && typeof afterAll === 'function') {
+  beforeAll(async () => {
+    await initializeDatabase();
+  });
+
+  afterAll(async () => {
+    await closeDatabaseConnection();
+  });
+}
 
 // Restore console after tests if needed
 global.restoreConsole = () => {

@@ -9,11 +9,12 @@ export class AdminMLService {
    */
   static async getMLModels(): Promise<IMLModel[]> {
     try {
-      const models = await BaseModel.findAll<IMLModel>('ml_models', {
-        orderBy: [{ column: 'created_at', order: 'desc' }]
+      const models = await BaseModel.findAll<IMLModel>({
+        orderBy: 'created_at',
+        orderDirection: 'desc'
       });
 
-      return models;
+      return models.data;
     } catch (error) {
       logger.error('Failed to get ML models', {
         error: error instanceof Error ? error.message : String(error)
@@ -27,7 +28,7 @@ export class AdminMLService {
    */
   static async getMLModel(modelId: string): Promise<IMLModel | null> {
     try {
-      return await BaseModel.findById<IMLModel>(modelId, 'ml_models');
+      return await BaseModel.findById<IMLModel>(modelId);
     } catch (error) {
       logger.error('Failed to get ML model', {
         error: error instanceof Error ? error.message : String(error),
@@ -57,7 +58,7 @@ export class AdminMLService {
         status: 'training',
         trained_by: adminUserId,
         training_started_at: new Date()
-      }, 'ml_models');
+      });
 
       await AdminAuditService.logAction(
         adminUserId,
@@ -113,7 +114,7 @@ export class AdminMLService {
         }
       }
 
-      const updated = await BaseModel.updateById<IMLModel>(modelId, updateData, 'ml_models');
+      const updated = await BaseModel.updateById<IMLModel>(modelId, updateData);
 
       if (updated) {
         await AdminAuditService.logAction(
@@ -284,7 +285,7 @@ export class AdminMLService {
         reviewed_by: adminUserId,
         reviewed_at: new Date(),
         review_notes: reviewNotes
-      }, 'ml_training_data');
+      });
 
       if (updated) {
         await AdminAuditService.logAction(

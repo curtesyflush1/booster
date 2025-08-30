@@ -6,6 +6,7 @@ export interface User {
   firstName?: string;
   lastName?: string;
   subscriptionTier: 'free' | 'pro';
+  role: 'user' | 'admin' | 'super_admin';
   profile: UserProfile;
   preferences: UserPreferences;
   createdAt: string;
@@ -327,6 +328,7 @@ export interface DashboardStats {
 
 export interface MLPrediction {
   productId: string;
+  productName?: string;
   priceForcast: {
     nextWeek: number;
     nextMonth: number;

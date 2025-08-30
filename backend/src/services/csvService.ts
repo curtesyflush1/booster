@@ -4,6 +4,7 @@ import { Readable } from 'stream';
 import { logger } from '../utils/logger';
 import { Watch } from '../models/Watch';
 import { Product } from '../models/Product';
+import { IWatch, IProduct } from '../types/database';
 import { User } from '../models/User';
 
 interface CSVWatchRecord {
@@ -137,15 +138,22 @@ export class CSVService {
         };
       }
 
-      // Get watches with product information
-      const watches = await Watch.findWithFilters(filters);
+      // Get watches for user (unpaginated, bounded) and apply optional date filtering
+      const watches = await Watch.findByUnpaginated<IWatch>(
+        { user_id: userId, ...(options.includeInactive ? {} : { is_active: true }) },
+        { maxRecords: 1000, orderBy: 'created_at', orderDirection: 'desc', reason: 'CSV export' }
+      );
+
+      const watchesInRange = options.dateRange
+        ? watches.filter(w => w.created_at >= options.dateRange!.start && w.created_at <= options.dateRange!.end)
+        : watches;
       
       // Filter by retailers if specified
-      let filteredWatches = watches;
+      let filteredWatches = watchesInRange;
       if (options.retailers && options.retailers.length > 0) {
-        filteredWatches = watches.filter(watch => 
-          watch.retailers.some(retailer => 
-            options.retailers!.includes(retailer.toLowerCase())
+        filteredWatches = watchesInRange.filter(watch =>
+          Array.isArray(watch.retailer_ids) && watch.retailer_ids.some(retailerId =>
+            options.retailers!.includes(String(retailerId).toLowerCase())
           )
         );
       }
@@ -153,18 +161,17 @@ export class CSVService {
       // Convert to CSV format
       const csvRecords = await Promise.all(
         filteredWatches.map(async (watch) => {
-          const product = await Product.findById(watch.product_id);
-          
+          const product = await Product.findById<IProduct>(watch.product_id);
+
           return {
             productName: product?.name || 'Unknown Product',
             productSku: product?.sku || '',
             productUpc: product?.upc || '',
-            retailers: watch.retailers.join(', '),
+            retailers: Array.isArray(watch.retailer_ids) ? watch.retailer_ids.join(', ') : '',
             maxPrice: watch.max_price || '',
             isActive: watch.is_active,
-            notes: watch.notes || '',
             createdAt: watch.created_at?.toISOString().split('T')[0] || '',
-            lastTriggered: watch.last_triggered?.toISOString().split('T')[0] || ''
+            lastTriggered: watch.last_alerted?.toISOString().split('T')[0] || ''
           };
         })
       );
@@ -335,16 +342,16 @@ export class CSVService {
     }
 
     // Find or create product
-    let product = await Product.findByName(record.productName);
+    let product = await Product.findOneBy<IProduct>({ name: record.productName });
     
     if (!product) {
       // Try to find by SKU or UPC if provided
       if (record.productSku) {
-        product = await Product.findBySku(record.productSku);
+        product = await Product.findBySKU(record.productSku);
       }
       
       if (!product && record.productUpc) {
-        product = await Product.findByUpc(record.productUpc);
+        product = await Product.findByUPC(record.productUpc);
       }
       
       if (!product) {
@@ -363,26 +370,25 @@ export class CSVService {
     }
 
     // Check if watch already exists
-    const existingWatch = await Watch.findByUserAndProduct(userId, product.id);
+    const existingWatch = await Watch.findOneBy<IWatch>({ user_id: userId, product_id: product.id });
     
     if (existingWatch) {
       // Update existing watch
-      await Watch.update(existingWatch.id, {
-        retailers,
+      await Watch.updateById<IWatch>(existingWatch.id, {
+        retailer_ids: retailers,
         max_price: record.maxPrice,
         is_active: record.isActive,
-        notes: record.notes,
-        updated_at: new Date()
+        alert_preferences: { ...existingWatch.alert_preferences },
       });
     } else {
       // Create new watch
-      await Watch.create({
+      await Watch.create<IWatch>({
         user_id: userId,
         product_id: product.id,
-        retailers,
+        retailer_ids: retailers,
         max_price: record.maxPrice,
         is_active: record.isActive,
-        notes: record.notes
+        alert_preferences: {},
       });
     }
   }

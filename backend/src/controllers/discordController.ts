@@ -3,14 +3,7 @@ import { discordBotService } from '../services/discordBotService';
 import { logger } from '../utils/logger';
 import { validateRequest } from '../middleware/validation';
 import { body, param } from 'express-validator';
-
-interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
-  };
-}
+import { AuthenticatedRequest } from '../types/express';
 
 export class DiscordController {
   // Validation middleware

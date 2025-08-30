@@ -1,4 +1,4 @@
-import { IUser, IAlert } from '../../types/database';
+import { IUser, IAlert, IProduct } from '../../types/database';
 
 export type AlertPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type AlertType = 'restock' | 'price_drop' | 'low_stock' | 'pre_order';
@@ -134,7 +134,7 @@ export abstract class BaseAlertStrategy implements AlertProcessingStrategy {
   protected async getPopularityUrgency(productId: string): Promise<number> {
     try {
       const { Product } = await import('../../models/Product');
-      const product = await Product.findById(productId);
+      const product = await Product.findById<IProduct>(productId);
       const popularityScore = product?.popularity_score || 0;
 
       if (popularityScore > BaseAlertStrategy.POPULARITY_THRESHOLD_URGENT) return 80;

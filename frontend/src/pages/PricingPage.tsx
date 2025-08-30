@@ -72,19 +72,20 @@ const PricingPage: React.FC = memo(() => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
                     {allPlans.map((plan) => {
-                        const isCurrent = isCurrentPlan(plan.slug);
-                        const isUpgrading = upgrading === plan.slug;
+                        const planSlug = 'slug' in plan ? plan.slug : plan.id;
+                        const isCurrent = isCurrentPlan(planSlug);
+                        const isUpgrading = upgrading === planSlug;
                         
                         return (
                             <div
-                                key={plan.id || plan.slug}
+                                key={plan.id || planSlug}
                                 className={`relative bg-background-secondary rounded-2xl p-6 border transition-all duration-300 ${
                                     isCurrent 
                                         ? 'border-pokemon-electric shadow-lg shadow-pokemon-electric/20' 
                                         : 'border-gray-700 hover:border-gray-600'
-                                } ${plan.slug === 'pro' ? 'lg:scale-105' : ''}`}
+                                } ${planSlug === 'pro' ? 'lg:scale-105' : ''}`}
                             >
-                                {plan.slug === 'pro' && (
+                                {planSlug === 'pro' && (
                                     <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                                         <span className="bg-pokemon-electric text-background-primary px-3 py-1 rounded-full text-sm font-medium">
                                             Most Popular
@@ -105,14 +106,18 @@ const PricingPage: React.FC = memo(() => {
                                     <p className="text-gray-300 mb-4">{plan.description}</p>
                                     <div className="mb-4">
                                         <span className="text-4xl font-bold text-pokemon-electric">
-                                            {subscriptionService.formatPrice(plan.price || 0)}
+                                            {subscriptionService.formatPrice(typeof plan.price === 'string' ? parseFloat(plan.price.replace('$', '')) : plan.price || 0)}
                                         </span>
                                         <span className="text-gray-400 ml-2">
-                                            {plan.billing_period === 'yearly' ? '/year' : plan.price > 0 ? '/month' : ''}
+                                            {'billing_period' in plan && plan.billing_period === 'yearly' ? '/year' : (typeof plan.price === 'number' ? plan.price > 0 : parseFloat(plan.price.replace('$', '')) > 0) ? '/month' : ''}
                                         </span>
                                     </div>
                                     
-                                    {plan.billing_period === 'yearly' && plan.price > 0 && (
+                                    {'billing_period' in plan && plan.billing_period === 'yearly' && (() => {
+                                        if (typeof plan.price === 'number') return plan.price > 0;
+                                        if (typeof plan.price === 'string') return parseFloat((plan.price as string).replace('$', '')) > 0;
+                                        return false;
+                                    })() && (
                                         <div className="text-sm text-pokemon-electric">
                                             Save 20% vs monthly billing
                                         </div>
@@ -136,7 +141,7 @@ const PricingPage: React.FC = memo(() => {
                                         >
                                             Current Plan
                                         </button>
-                                    ) : plan.slug === 'free' ? (
+                                    ) : planSlug === 'free' ? (
                                         <button
                                             disabled
                                             className="w-full py-3 px-4 bg-gray-600 text-gray-400 rounded-lg font-medium cursor-not-allowed"
@@ -145,7 +150,7 @@ const PricingPage: React.FC = memo(() => {
                                         </button>
                                     ) : (
                                         <button
-                                            onClick={() => handleUpgrade(plan.slug)}
+                                            onClick={() => handleUpgrade(planSlug)}
                                             disabled={isUpgrading}
                                             className="w-full py-3 px-4 bg-pokemon-electric text-background-primary rounded-lg font-medium hover:bg-yellow-400 transition-colors disabled:opacity-50"
                                         >

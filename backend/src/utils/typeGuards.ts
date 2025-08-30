@@ -27,6 +27,7 @@ export function isValidUser(user: any): user is IUser {
 export function isOperationalError(error: any): error is Error & { isOperational: boolean } {
   return error && 
          error instanceof Error && 
+         'isOperational' in error &&
          typeof error.isOperational === 'boolean';
 }
 

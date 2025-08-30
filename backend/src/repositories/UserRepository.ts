@@ -1,5 +1,5 @@
 import { User } from '../models/User';
-import { IUserRepository } from '../types/dependencies';
+import { IUserRepository, IUserCreationData } from '../types/dependencies';
 import { IUser } from '../types/database';
 
 /**
@@ -11,8 +11,8 @@ export class UserRepository implements IUserRepository {
     return User.findById<T>(id);
   }
 
-  async findByEmail(email: string): Promise<IUser | null> {
-    return User.findByEmail(email);
+  async findByEmail<T = IUser>(email: string): Promise<T | null> {
+    return User.findByEmail(email) as Promise<T | null>;
   }
 
   async findOneBy<T>(criteria: Partial<T>): Promise<T | null> {
@@ -23,8 +23,8 @@ export class UserRepository implements IUserRepository {
     return User.findAll<T>(options);
   }
 
-  async createUser(userData: any): Promise<IUser> {
-    return User.createUser(userData);
+  async createUser<T = IUser>(userData: IUserCreationData): Promise<T> {
+    return User.createUser(userData) as Promise<T>;
   }
 
   async updateById<T>(id: string, data: Partial<T>): Promise<T | null> {

@@ -72,6 +72,7 @@ export const CACHE_CONTROL = {
   SITEMAP_CATEGORIES: 86400, // 24 hours
   SITEMAP_LOCATIONS: 604800, // 1 week (locations change rarely)
   SITEMAP_PAGES: 86400,     // 24 hours
+  SITEMAP_DEFAULT: 86400,   // 24 hours (default for sitemaps)
   ROBOTS_TXT: 86400,        // 24 hours
   
   // API response caching

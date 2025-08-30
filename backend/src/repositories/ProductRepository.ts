@@ -11,6 +11,7 @@ export class ProductRepository implements IProductRepository {
   }
 
   async findBy<T>(criteria: Partial<T>): Promise<T[]> {
-    return Product.findBy<T>(criteria);
+    const result = await Product.findBy<T>(criteria);
+    return result.data;
   }
 }
