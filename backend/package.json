@@ -28,14 +28,18 @@
     "lint:fix": "echo 'Fixing backend code...'",
     "migrate:up": "knex migrate:latest",
     "migrate:down": "knex migrate:rollback",
+    "migrate": "npm run migrate:up",
     "rbac:init": "ts-node scripts/initialize-rbac.ts",
     "rbac:validate": "ts-node scripts/initialize-rbac.ts -- --validate",
     "rbac:repair": "ts-node scripts/initialize-rbac.ts -- --repair",
     "rbac:test": "ts-node scripts/test-rbac.ts",
     "seed:dev": "knex seed:run",
+    "seed": "npm run seed:dev",
     "db:backup": "pg_dump $DATABASE_URL > backups/backup-$(date +%Y%m%d-%H%M%S).sql",
     "kms:test": "ts-node scripts/simple-kms-test.ts",
     "kms:test-integration": "ts-node scripts/test-kms-integration.ts",
+    "alerts:generate-test": "ts-node scripts/generate-test-alerts.ts",
+    "alerts": "npm run alerts:generate-test",
     "ts-node": "ts-node"
   },
   "keywords": [

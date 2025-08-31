@@ -24,11 +24,6 @@ export const WatchPacks: React.FC = () => {
     hasPrev: false
   });
 
-  useEffect(() => {
-    loadWatchPacks();
-    loadUserSubscriptions();
-  }, [activeTab, searchQuery, loadWatchPacks]);
-
   const loadWatchPacks = useCallback(async (page = 1) => {
     try {
       setLoading(true);
@@ -50,14 +45,31 @@ export const WatchPacks: React.FC = () => {
         `${endpoint}?${params}`
       );
 
-      if (Array.isArray(response.data)) {
-        const watchPacksArray = response.data as WatchPack[];
+      // API responses are wrapped as { data, pagination? }
+      const payload: any = response.data;
+      if (Array.isArray(payload.data)) {
+        const watchPacksArray = payload.data as WatchPack[];
         setWatchPacks(watchPacksArray);
         setPagination(prev => ({ ...prev, total: watchPacksArray.length, totalPages: 1 }));
       } else {
-        const paginatedResponse = response.data as PaginatedResponse<WatchPack>;
-        setWatchPacks(paginatedResponse.data);
-        setPagination(paginatedResponse.pagination);
+        const paginatedResponse = payload as PaginatedResponse<WatchPack>;
+        setWatchPacks(paginatedResponse.data || []);
+        if (paginatedResponse.pagination) {
+          setPagination(paginatedResponse.pagination);
+        } else if (paginatedResponse.data) {
+          // Fallback: compute minimal pagination from page/limit/total if present
+          const p: any = paginatedResponse as any;
+          if (typeof p.page === 'number' && typeof p.limit === 'number' && typeof p.total === 'number') {
+            setPagination({
+              page: p.page,
+              limit: p.limit,
+              total: p.total,
+              totalPages: Math.max(1, Math.ceil(p.total / p.limit)),
+              hasNext: p.page * p.limit < p.total,
+              hasPrev: p.page > 1
+            });
+          }
+        }
       }
     } catch (err: unknown) {
       const errorMessage = err && typeof err === 'object' && 'message' in err ? err.message as string : 'Failed to load watch packs';
@@ -77,6 +89,11 @@ export const WatchPacks: React.FC = () => {
       console.error('Failed to load user subscriptions:', err);
     }
   };
+
+  useEffect(() => {
+    loadWatchPacks();
+    loadUserSubscriptions();
+  }, [activeTab, searchQuery, loadWatchPacks]);
 
   const handleSubscribe = async (packId: string) => {
     try {

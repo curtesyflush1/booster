@@ -1,0 +1,13 @@
+[mcp_servers.Context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp@latest"]
+
+[mcp_servers.brightData]
+command = "npx"
+args = ["-y", "@brightdata/mcp"]
+env = {"API_TOKEN" = "b029b04d9695bee1ac7aa94b2a827b0ae24e1eeafa9133c181d4bb54924e7a9d"}
+
+[mcp_servers.openmemory]
+command = "npx"
+args = ["-y", "openmemory"]
+env = {"OPENMEMORY_API_KEY" = "om-tczrqlm1fq8pi1tweh6rtlrpdigish3g", "CLIENT_NAME" = "cursor", "OPENMEMORY_PROJECT_ID"="booster-beacon-proj-001"}

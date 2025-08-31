@@ -45,11 +45,13 @@ const AlertInbox: React.FC<AlertInboxProps> = ({
     // Track click
     await onAlertAction(alert.id, 'click');
     
-    // Open product URL
-    if (alert.data.cartUrl) {
-      window.open(alert.data.cartUrl, '_blank');
-    } else if (alert.data.productUrl) {
-      window.open(alert.data.productUrl, '_blank');
+    // Open product URL (support both camelCase and snake_case)
+    const cartUrl = (alert.data as any).cartUrl || (alert.data as any).cart_url;
+    const productUrl = (alert.data as any).productUrl || (alert.data as any).product_url;
+    if (cartUrl) {
+      window.open(cartUrl, '_blank');
+    } else if (productUrl) {
+      window.open(productUrl, '_blank');
     }
   };
 
@@ -240,27 +242,33 @@ const AlertInbox: React.FC<AlertInboxProps> = ({
                             </div>
                           )}
                           
-                          {alert.data.priceChange && (
+                          {((alert.data as any).priceChange || (alert.data as any).price_change) && (
                             <span className={`text-sm font-medium ${
-                              alert.data.priceChange.percentChange < 0 ? 'text-green-400' : 'text-red-400'
+                              (((alert.data as any).priceChange?.percentChange) ?? (alert.data as any).price_change?.percent_change) < 0 ? 'text-green-400' : 'text-red-400'
                             }`}>
-                              {alert.data.priceChange.percentChange > 0 ? '+' : ''}
-                              {alert.data.priceChange.percentChange.toFixed(1)}%
+                              {((((alert.data as any).priceChange?.percentChange) ?? (alert.data as any).price_change?.percent_change) > 0) ? '+' : ''}
+                              {((((alert.data as any).priceChange?.percentChange) ?? (alert.data as any).price_change?.percent_change) || 0).toFixed(1)}%
                             </span>
                           )}
                         </div>
 
                         {/* Availability Status */}
                         <div className="flex items-center space-x-2 mb-3">
-                          <div className={`w-2 h-2 rounded-full ${
-                            alert.data.availability === 'in_stock' ? 'bg-green-400' :
-                            alert.data.availability === 'low_stock' ? 'bg-yellow-400' :
-                            alert.data.availability === 'pre_order' ? 'bg-blue-400' :
-                            'bg-gray-400'
-                          }`} />
-                          <span className="text-sm text-gray-400 capitalize">
-                            {alert.data.availability.replace('_', ' ')}
-                          </span>
+                          {(() => {
+                            const availability = (alert.data as any).availability || (alert.data as any).availability_status || '';
+                            const color = availability === 'in_stock' ? 'bg-green-400'
+                              : availability === 'low_stock' ? 'bg-yellow-400'
+                              : availability === 'pre_order' ? 'bg-blue-400'
+                              : 'bg-gray-400';
+                            return (
+                              <>
+                                <div className={`w-2 h-2 rounded-full ${color}`} />
+                                <span className="text-sm text-gray-400 capitalize">
+                                  {String(availability).replace('_', ' ') || 'unknown'}
+                                </span>
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
 
@@ -292,7 +300,7 @@ const AlertInbox: React.FC<AlertInboxProps> = ({
                         onClick={() => handleAlertClick(alert)}
                         className="flex items-center space-x-2 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors"
                       >
-                        {alert.data.cartUrl ? (
+                        {(((alert.data as any).cartUrl) || ((alert.data as any).cart_url)) ? (
                           <>
                             <ShoppingCart className="w-4 h-4" />
                             <span>Add to Cart</span>
@@ -305,9 +313,12 @@ const AlertInbox: React.FC<AlertInboxProps> = ({
                         )}
                       </button>
 
-                      {alert.data.cartUrl && alert.data.productUrl && (
+                      {(((alert.data as any).cartUrl || (alert.data as any).cart_url) && ((alert.data as any).productUrl || (alert.data as any).product_url)) && (
                         <button
-                          onClick={() => window.open(alert.data.productUrl, '_blank')}
+                          onClick={() => {
+                            const productUrl = (alert.data as any).productUrl || (alert.data as any).product_url;
+                            if (productUrl) window.open(productUrl, '_blank');
+                          }}
                           className="flex items-center space-x-2 px-4 py-2 bg-background-tertiary text-gray-300 rounded-md hover:text-white hover:bg-gray-600 transition-colors"
                         >
                           <ExternalLink className="w-4 h-4" />

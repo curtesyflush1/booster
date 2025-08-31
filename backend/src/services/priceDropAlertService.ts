@@ -357,7 +357,7 @@ export class PriceDropAlertService extends BaseModel<any> {
       const alertData = {
         product_name: product?.name || 'Unknown Product',
         retailer_name: retailer?.name || 'Unknown Retailer',
-        product_url: availability?.url || '',
+        product_url: availability?.product_url || '',
         price: alert.currentPrice,
         original_price: alert.previousPrice,
         alertType: alert.alertType,

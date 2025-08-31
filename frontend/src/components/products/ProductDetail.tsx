@@ -4,9 +4,11 @@ import {
   Package, MapPin, TrendingUp, AlertCircle, Clock, Star
 } from 'lucide-react';
 import { Product, ProductAvailability } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 import { apiClient } from '../../services/apiClient';
 import LoadingSpinner from '../LoadingSpinner';
 import { PriceHistoryChart } from './PriceHistoryChart';
+import { toast } from 'react-hot-toast';
 
 interface ProductDetailProps {
   productId: string;
@@ -24,6 +26,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   productId,
   onClose
 }) => {
+  const { isAuthenticated } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
   const [priceHistory, setPriceHistory] = useState<PriceHistoryData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,11 +35,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   const [isWatched, setIsWatched] = useState(false);
   const [watchLoading, setWatchLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'availability' | 'history'>('overview');
-
-  useEffect(() => {
-    loadProduct();
-    checkWatchStatus();
-  }, [productId, loadProduct, checkWatchStatus]);
 
   const loadProduct = useCallback(async () => {
     try {
@@ -57,7 +55,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
     try {
       setPriceHistoryLoading(true);
       const response = await apiClient.get<PriceHistoryData[]>(`/products/${productId}/price-history`);
-      setPriceHistory(response.data);
+      setPriceHistory((response.data as any) || []);
     } catch (err) {
       console.error('Failed to load price history:', err);
     } finally {
@@ -66,34 +64,76 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   }, [product, productId]);
 
   const checkWatchStatus = useCallback(async () => {
+    if (!isAuthenticated) {
+      setIsWatched(false);
+      return;
+    }
+
     try {
-      const response = await apiClient.get(`/watches?product_id=${productId}`);
-      setIsWatched(response.data.data.length > 0);
+      const response = await apiClient.get(`/watches?product_id=${productId}&is_active=true`);
+      setIsWatched((response.data as any)?.data?.length > 0);
     } catch (err) {
       // User might not be authenticated
       console.error('Failed to check watch status:', err);
+      setIsWatched(false);
     }
-  }, [productId]);
+  }, [productId, isAuthenticated]);
+
+  useEffect(() => {
+    loadProduct();
+    checkWatchStatus();
+  }, [productId, loadProduct, checkWatchStatus]);
 
   const handleWatchToggle = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to manage your watchlist');
+      return;
+    }
+
     setWatchLoading(true);
     try {
       if (isWatched) {
-        const watchesRes = await apiClient.get(`/watches?product_id=${productId}`);
-        const watches = watchesRes.data.data;
-        if (watches.length > 0) {
+        // Try to find an active watch first, then inactive
+        let watches: any[] = [];
+        try {
+          const res1 = await apiClient.get(`/watches?product_id=${productId}&is_active=true`);
+          watches = (res1.data as any)?.data || [];
+        } catch {}
+        if (!watches || watches.length === 0) {
+          try {
+            const res2 = await apiClient.get(`/watches?product_id=${productId}&is_active=false`);
+            watches = (res2.data as any)?.data || [];
+          } catch {}
+        }
+        if (watches && watches.length > 0) {
           await apiClient.delete(`/watches/${watches[0].id}`);
+          toast.success(`${product?.name || 'Product'} removed from watchlist`);
         }
       } else {
         await apiClient.post('/watches', {
           product_id: productId,
-          retailer_ids: [],
           availability_type: 'both'
         });
+        toast.success(`${product?.name || 'Product'} added to watchlist!`);
       }
       setIsWatched(!isWatched);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to toggle watch:', error);
+      const errorObj = error as any;
+      
+      if (errorObj?.code === 'MISSING_TOKEN' || errorObj?.statusCode === 401) {
+        toast.error('Please log in to manage your watchlist');
+      } else if (errorObj?.code === 'WATCH_EXISTS' || errorObj?.statusCode === 409) {
+        // Refresh status and set watched
+        try {
+          const response = await apiClient.get(`/watches?product_id=${productId}&is_active=true`);
+          const exists = (response.data as any)?.data?.length > 0;
+          setIsWatched(exists);
+          if (exists) toast.success('Already in your watchlist');
+        } catch {}
+      } else {
+        toast.error('Failed to update watchlist. Please try again.');
+      }
     } finally {
       setWatchLoading(false);
     }

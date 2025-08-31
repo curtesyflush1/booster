@@ -3,11 +3,12 @@ import {
   Eye, Download, Upload, 
   Filter, Search, AlertCircle, CheckCircle, Clock
 } from 'lucide-react';
-import { Watch, PaginatedResponse } from '../../types';
+import { Watch, PaginatedResponse, Product } from '../../types';
 import { apiClient } from '../../services/apiClient';
 import LoadingSpinner from '../LoadingSpinner';
 import { WatchCard } from './WatchCard';
 import { WatchFilters } from './WatchFilters';
+import { transformBackendProduct } from '../../utils/fieldMapping';
 
 interface WatchListProps {
   onWatchSelect?: (watch: Watch) => void;
@@ -50,8 +51,70 @@ export const WatchList: React.FC<WatchListProps> = ({ onWatchSelect }) => {
         ...(searchQuery && { search: searchQuery })
       });
 
-      const response = await apiClient.get<PaginatedResponse<Watch>>(`/watches?${params}`);
-      setWatches(response.data.data || []);
+      // Fetch raw watches from backend (snake_case)
+      const response = await apiClient.get<any>(`/watches?${params}`);
+      const rawWatches: any[] = response.data?.data || [];
+
+      // Fetch product details for each watch to build frontend Watch type
+      const uniqueProductIds = Array.from(new Set(rawWatches.map(w => w.product_id).filter(Boolean)));
+      const productMap = new Map<string, Product>();
+      await Promise.all(uniqueProductIds.map(async (pid) => {
+        try {
+          const pr = await apiClient.get<{ data: { product: any } }>(`/products/${pid}`);
+          const backendProduct = pr.data?.data?.product;
+          if (backendProduct) {
+            productMap.set(pid, transformBackendProduct(backendProduct));
+          }
+        } catch {
+          // ignore failures per product
+        }
+      }));
+
+      const mapped: Watch[] = rawWatches.map(w => {
+        let product = productMap.get(w.product_id);
+        if (!product) {
+          // Minimal placeholder to render card even if product fetch failed
+          product = {
+            id: w.product_id,
+            name: 'Product',
+            sku: '',
+            upc: '',
+            category: { id: '' },
+            set: '',
+            series: '',
+            releaseDate: '',
+            msrp: 0,
+            imageUrl: '',
+            thumbnailUrl: '',
+            description: '',
+            metadata: {},
+            availability: [],
+            createdAt: '',
+            updatedAt: ''
+          } as Product;
+        }
+        return {
+          id: w.id,
+          userId: w.user_id,
+          productId: w.product_id,
+          product: product as Product,
+          filters: {
+            maxPrice: w.max_price ?? undefined,
+            retailers: Array.isArray(w.retailer_ids) ? w.retailer_ids : [],
+            onlineOnly: w.availability_type === 'online',
+            storeIds: [],
+            notifyOnPreOrder: Boolean(w?.alert_preferences?.pre_order),
+            notifyOnPriceChange: Boolean(w?.alert_preferences?.price_change)
+          },
+          isActive: Boolean(w.is_active),
+          createdAt: w.created_at,
+          updatedAt: w.updated_at,
+          alertCount: w.alert_count || 0,
+          lastAlertSent: w.last_alerted || undefined
+        } as Watch;
+      });
+
+      setWatches(mapped);
       
       // Safety check for pagination response
       if (response.data.pagination) {
@@ -68,7 +131,7 @@ export const WatchList: React.FC<WatchListProps> = ({ onWatchSelect }) => {
         setPagination({
           page: 1,
           limit: 20,
-          total: response.data.data?.length || 0,
+          total: mapped.length,
           totalPages: 1,
           hasNext: false,
           hasPrev: false

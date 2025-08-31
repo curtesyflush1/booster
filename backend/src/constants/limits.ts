@@ -48,7 +48,7 @@ export const PAGINATION = {
 // Rate limiting
 export const RATE_LIMITS = {
   // General API limits
-  GENERAL_MAX_REQUESTS: 100,
+  GENERAL_MAX_REQUESTS: 110, // +10% to reduce accidental throttling during browsing
   
   // Authentication limits
   AUTH_MAX_ATTEMPTS: 5,

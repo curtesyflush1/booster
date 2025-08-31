@@ -112,7 +112,7 @@ export interface Product {
   thumbnailUrl: string;
   description?: string;
   metadata: ProductMetadata;
-  availability: ProductAvailability[];
+  availability?: ProductAvailability[];
   createdAt: string;
   updatedAt: string;
 }

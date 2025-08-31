@@ -465,16 +465,8 @@ export class Product extends BaseModel<IProduct> {
       
       query = query.orderBy(`${this.getTableName()}.${sortField}`, sortDirection);
 
-      // If no filters are applied and we're just getting all products, return empty result
-      if (!searchTerm && !category_id && !set_name && !series && !retailer_id && 
-          min_price === undefined && max_price === undefined && !availability) {
-        return {
-          data: [],
-          total: 0,
-          page,
-          limit
-        };
-      }
+      // Remove the condition that prevents showing all products when no filters are applied
+      // This allows the product catalog to display all products by default
       
       return this.getPaginatedResults<IProduct>(query, page, limit);
     } catch (error) {
@@ -499,7 +491,7 @@ export class Product extends BaseModel<IProduct> {
         `${PRODUCT_AVAILABILITY_TABLE}.price`,
         `${PRODUCT_AVAILABILITY_TABLE}.in_stock`,
         `${PRODUCT_AVAILABILITY_TABLE}.availability_status`,
-        `${PRODUCT_AVAILABILITY_TABLE}.url`,
+        `${PRODUCT_AVAILABILITY_TABLE}.product_url`,
         `${PRODUCT_AVAILABILITY_TABLE}.cart_url`,
         `${PRODUCT_AVAILABILITY_TABLE}.last_checked`,
         `${PRODUCT_AVAILABILITY_TABLE}.store_locations`,
@@ -554,7 +546,7 @@ export class Product extends BaseModel<IProduct> {
         price: row.price,
         in_stock: row.in_stock,
         availability_status: row.availability_status,
-        url: row.url,
+        url: row.product_url,
         cart_url: row.cart_url,
         last_checked: row.last_checked,
         store_locations: row.store_locations,

@@ -64,6 +64,41 @@ router.get('/',
 );
 
 // Get specific alert by ID
+// Bulk mark alerts as read - place BEFORE parameterized routes to avoid shadowing
+router.patch('/bulk/read',
+  authenticate,
+  validate(alertSchemas.bulkMarkAsRead),
+  async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const { alertIds } = req.body;
+
+      // Verify all alerts belong to user - more efficient query
+      const userAlertCount = await Alert['db'](Alert.getTableName())
+        .whereIn('id', alertIds)
+        .where('user_id', userId)
+        .count('* as count');
+
+      const userOwnedCount = parseInt((userAlertCount[0] as any)?.count as string || '0');
+      
+      if (userOwnedCount !== alertIds.length) {
+        ResponseHelper.error(res, 'INVALID_ALERTS', 'Some alerts do not exist or access is denied', 403);
+        return;
+      }
+
+      const updatedCount = await Alert.bulkMarkAsRead(alertIds);
+
+      ResponseHelper.success(res, {
+        message: `${updatedCount} alerts marked as read`,
+        updatedCount
+      });
+    } catch (error) {
+      logger.error('Error bulk marking alerts as read:', error);
+      ResponseHelper.internalError(res, 'Failed to mark alerts as read');
+    }
+  }
+);
+
 router.get('/:id',
   authenticate,
   sanitizeParameters,
@@ -131,39 +166,7 @@ router.patch('/:id/clicked',
 );
 
 // Bulk mark alerts as read
-router.patch('/bulk/read',
-  authenticate,
-  validate(alertSchemas.bulkMarkAsRead),
-  async (req: Request, res: Response) => {
-    try {
-      const userId = req.user!.id;
-      const { alertIds } = req.body;
-
-      // Verify all alerts belong to user - more efficient query
-      const userAlertCount = await Alert['db'](Alert.getTableName())
-        .whereIn('id', alertIds)
-        .where('user_id', userId)
-        .count('* as count');
-
-      const userOwnedCount = parseInt((userAlertCount[0] as any)?.count as string || '0');
-      
-      if (userOwnedCount !== alertIds.length) {
-        ResponseHelper.error(res, 'INVALID_ALERTS', 'Some alerts do not exist or access is denied', 403);
-        return;
-      }
-
-      const updatedCount = await Alert.bulkMarkAsRead(alertIds);
-
-      ResponseHelper.success(res, {
-        message: `${updatedCount} alerts marked as read`,
-        updatedCount
-      });
-    } catch (error) {
-      logger.error('Error bulk marking alerts as read:', error);
-      ResponseHelper.internalError(res, 'Failed to mark alerts as read');
-    }
-  }
-);
+// (moved bulk route above)
 
 // Delete alert
 router.delete('/:id',

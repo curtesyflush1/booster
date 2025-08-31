@@ -127,6 +127,8 @@ exports.seed = async function(knex) {
 
   // Insert some sample training data
   const existingTrainingData = await knex('ml_training_data').first();
+  // Resolve admin user id for reviewed_by fields
+  const adminUser = existingAdmin || await knex('users').where('email', 'admin@boosterbeacon.com').first();
   
   if (!existingTrainingData) {
     await knex('ml_training_data').insert([
@@ -153,6 +155,8 @@ exports.seed = async function(knex) {
           seasonal_factor: 'holiday_rush'
         }),
         status: 'approved',
+        reviewed_by: adminUser && adminUser.id ? adminUser.id : null,
+        reviewed_at: knex.fn.now(),
         created_at: knex.fn.now(),
         updated_at: knex.fn.now()
       }

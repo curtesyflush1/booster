@@ -30,6 +30,13 @@ export class WebSocketService {
   private setupMiddleware(): void {
     // Authentication middleware
     this.io.use(async (socket: any, next) => {
+      // Skip authentication in development mode
+      if (process.env.NODE_ENV === 'development' && process.env.DISABLE_WS_AUTH === 'true') {
+        (socket as AuthenticatedSocket).userId = 'dev-user';
+        (socket as AuthenticatedSocket).user = { id: 'dev-user' };
+        return next();
+      }
+
       try {
         const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
         

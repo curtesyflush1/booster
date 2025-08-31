@@ -93,6 +93,26 @@ export const createRateLimit = (config: RateLimitConfig) => {
       next();
       return;
     }
+
+    // Always skip CORS preflight
+    if (req.method === 'OPTIONS') {
+      next();
+      return;
+    }
+
+    // Skip health checks everywhere
+    if (req.path.startsWith('/health')) {
+      next();
+      return;
+    }
+
+    // In development, relax auth endpoints to avoid login loops
+    if ((process.env.NODE_ENV || 'development') !== 'production') {
+      if (req.path.startsWith('/api/auth/')) {
+        next();
+        return;
+      }
+    }
     // Generate key based on IP address
     const key = `rate_limit:${req.ip}`;
 

@@ -75,7 +75,9 @@
     "pm2:logs": "pm2 logs booster-beacon-api",
     "pm2:monit": "pm2 monit",
     "pm2:deploy": "pm2 deploy ecosystem.pm2.config.js production",
-    "prepare": "node -e \"if (process.env.NODE_ENV !== 'production') require('husky').install()\""
+    "prepare": "node -e \"if (process.env.NODE_ENV !== 'production') require('husky').install()\"",
+    "memories": "bash ./scripts/push-memories.sh",
+    "memories:push": "bash ./scripts/push-memories.sh"
   },
   "keywords": [
     "pokemon",

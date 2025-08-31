@@ -3,6 +3,7 @@ import { Product, SearchFilters, PaginatedResponse } from '../types';
 import { apiClient } from '../services/apiClient';
 import { useDebounce } from './useDebounce';
 import { SEARCH_CONSTANTS } from '../constants/search';
+import { transformBackendProducts, BackendProduct } from '../utils/fieldMapping';
 
 interface UseProductSearchOptions {
   initialFilters?: Partial<SearchFilters>;
@@ -79,14 +80,16 @@ export const useProductSearch = ({
         ...(filters.sortOrder && { sortOrder: filters.sortOrder })
       });
 
-      const response = await apiClient.get<PaginatedResponse<Product>>(
+      const response = await apiClient.get<PaginatedResponse<BackendProduct>>(
         `/products/search?${searchParams}`
       );
 
+      const transformedProducts = transformBackendProducts(response.data.data);
+
       if (resetResults) {
-        setProducts(response.data.data);
+        setProducts(transformedProducts);
       } else {
-        setProducts(prev => [...prev, ...response.data.data]);
+        setProducts(prev => [...prev, ...transformedProducts]);
       }
       
       setPagination(response.data.pagination);

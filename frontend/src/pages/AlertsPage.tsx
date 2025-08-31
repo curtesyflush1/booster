@@ -100,8 +100,13 @@ const AlertsPage: React.FC = () => {
 
     try {
       await alertService.bulkMarkAsRead(selectedAlerts);
+      // Optimistically update local state
+      setAlerts(prev => {
+        if (!prev) return prev;
+        const updated = prev.data?.map(a => selectedAlerts.includes(a.id) ? { ...a, isRead: true } : a) || [];
+        return { ...prev, data: updated } as PaginatedResponse<Alert>;
+      });
       setSelectedAlerts([]);
-      loadAlerts(); // Reload to reflect changes
     } catch (err) {
       console.error('Error marking alerts as read:', err);
       setError('Failed to mark alerts as read. Please try again.');
@@ -114,15 +119,35 @@ const AlertsPage: React.FC = () => {
       switch (action) {
         case 'read':
           await alertService.markAsRead(alertId);
+          // Optimistic UI: mark single alert as read
+          setAlerts(prev => {
+            if (!prev) return prev;
+            const updated = prev.data?.map(a => a.id === alertId ? { ...a, isRead: true } : a) || [];
+            return { ...prev, data: updated } as PaginatedResponse<Alert>;
+          });
           break;
         case 'click':
           await alertService.markAsClicked(alertId);
           break;
         case 'delete':
           await alertService.deleteAlert(alertId);
+          // Optimistic UI: remove alert from list and adjust pagination count
+          setAlerts(prev => {
+            if (!prev) return prev;
+            const filtered = (prev.data || []).filter(a => a.id !== alertId);
+            const pagination = prev.pagination ? {
+              ...prev.pagination,
+              total: Math.max(0, (prev.pagination.total || 0) - 1),
+              totalPages: prev.pagination.limit
+                ? Math.max(1, Math.ceil(Math.max(0, (prev.pagination.total || 0) - 1) / prev.pagination.limit))
+                : prev.pagination.totalPages
+            } : prev.pagination;
+            return { data: filtered, pagination } as PaginatedResponse<Alert>;
+          });
+          // Ensure it is no longer selected
+          setSelectedAlerts(prev => prev.filter(id => id !== alertId));
           break;
       }
-      loadAlerts(); // Reload to reflect changes
     } catch (err) {
       console.error(`Error performing ${action} action:`, err);
       setError(`Failed to ${action} alert. Please try again.`);

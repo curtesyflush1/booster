@@ -1,0 +1,213 @@
+{
+  "projectId": "booster-beacon-proj-001",
+  "source": "codex-cli",
+  "items": [
+    {
+      "title": "Fix subscription_plans migration (bindings error)",
+      "type": "decision",
+      "tags": ["knex", "migration", "postgres", "jsonb", "enum"],
+      "details": {
+        "files": ["backend/migrations/20250829151931_create_subscription_plans_table.js"],
+        "changes": [
+          "Use native enum { useNative: true, enumName: 'billing_period_enum' }",
+          "Set jsonb defaults via raw casts ('[]'::jsonb, '{...}'::jsonb)"
+        ],
+        "reason": "Avoid parameter bindings in DDL causing 'Expected 1 bindings, saw 0'"
+      },
+      "timestamp": "2025-08-31T13:43:40Z"
+    },
+    {
+      "title": "ML ModelRunner architecture + heuristic model",
+      "type": "feature",
+      "tags": ["ml", "architecture", "dashboard"],
+      "details": {
+        "files": [
+          "backend/src/services/ml/IModelRunner.ts",
+          "backend/src/services/ml/HeuristicModelRunner.ts",
+          "backend/src/services/ml/ModelFactory.ts",
+          "backend/src/services/dashboardService.ts"
+        ],
+        "summary": "Introduced pluggable ModelRunner interface and heuristic model for insights; dashboard now calls ModelFactory.getActiveRunner().predict(productId)",
+        "next": "Add batch scoring + cached insights table; swap factory to cached runner"
+      },
+      "timestamp": "${NOW}"
+    }
+    {
+      "title": "Dashboard populated (stats + activity)",
+      "type": "feature",
+      "tags": ["dashboard", "frontend"],
+      "details": {
+        "file": "frontend/src/pages/DashboardPage.tsx",
+        "endpoint": "GET /api/dashboard",
+        "props": {
+          "DashboardOverview": ["stats", "insights"],
+          "RecentActivity": ["recentAlerts", "watchedProducts"]
+        }
+      },
+      "timestamp": "${NOW}"
+    },
+    {
+      "title": "Advanced analytics integrated (insights + portfolio)",
+      "type": "feature",
+      "tags": ["dashboard", "insights", "portfolio"],
+      "details": {
+        "file": "frontend/src/pages/DashboardPage.tsx",
+        "endpoints": [
+          "GET /api/dashboard/insights",
+          "GET /api/dashboard/portfolio"
+        ],
+        "components": {
+          "PredictiveInsights": ["insights", "watchedProducts"],
+          "PortfolioTracking": ["portfolio", "user"]
+        }
+      },
+      "timestamp": "${NOW}"
+    }
+    {
+      "title": "Alerts page implemented (Inbox + actions)",
+      "type": "feature",
+      "tags": ["frontend", "alerts", "ui"],
+      "details": {
+        "file": "frontend/src/pages/AlertsPage.tsx",
+        "components": ["AlertInbox", "AlertFiltersPanel", "AlertStats", "AlertAnalytics"],
+        "service": "frontend/src/services/alertService.ts",
+        "endpoints": ["GET /api/alerts", "PATCH /api/alerts/:id/read", "PATCH /api/alerts/:id/clicked", "PATCH /api/alerts/bulk/read", "DELETE /api/alerts/:id"]
+      },
+      "timestamp": "${NOW}"
+    },
+    {
+      "title": "Generate test alerts script",
+      "type": "runbook",
+      "tags": ["dev", "alerts", "seed"],
+      "details": {
+        "file": "backend/scripts/generate-test-alerts.ts",
+        "command": "docker compose -f docker-compose.dev.yml exec api npm run alerts:generate-test",
+        "notes": ["Creates 3 realistic alerts for the first user using existing product/retailer"]
+      },
+      "timestamp": "${NOW}"
+    }
+    {
+      "title": "Docker reset sequence for clean migrations",
+      "type": "runbook",
+      "tags": ["docker", "compose", "migrations", "seeds"],
+      "details": {
+        "commands": [
+          "docker compose -f docker-compose.dev.yml down --volumes --remove-orphans",
+          "docker compose -f docker-compose.dev.yml up -d --build",
+          "docker compose -f docker-compose.dev.yml exec api npm run migrate:up",
+          "docker compose -f docker-compose.dev.yml exec api npm run seed:dev"
+        ],
+        "notes": [
+          "Enable pgcrypto if gen_random_uuid() missing",
+          "ML seed check constraint error is non-critical for core app"
+        ]
+      },
+      "timestamp": "2025-08-31T13:43:40Z"
+    },
+    {
+      "title": "ProductCard watch POST body cleanup",
+      "type": "change",
+      "tags": ["frontend", "watches", "axios"],
+      "details": {
+        "file": "frontend/src/components/products/ProductCard.tsx",
+        "before": "POST /watches with retailer_ids hard-coded",
+        "after": "POST /watches with { product_id, availability_type } only",
+        "result": "Avoids Joi validation failing on invalid retailer UUIDs"
+      },
+      "timestamp": "2025-08-31T13:43:40Z"
+    },
+    {
+      "title": "E2E watch add/remove validated via API",
+      "type": "evidence",
+      "tags": ["api", "watches", "verification"],
+      "details": {
+        "flow": [
+          "Login admin -> 200",
+          "POST /api/watches -> created",
+          "GET /api/watches?product_id=... -> returns watch",
+          "DELETE /api/watches/:id -> removed"
+        ]
+      },
+      "timestamp": "2025-08-31T13:43:40Z"
+    },
+    {
+      "title": "Watch Packs crash fix (TDZ + response shape)",
+      "type": "fix",
+      "tags": ["frontend", "watch-packs", "react"],
+      "details": {
+        "files": [
+          "frontend/src/components/watches/WatchPacks.tsx",
+          "backend/src/controllers/watchPackController.ts"
+        ],
+        "changes": [
+          "Move loadWatchPacks above useEffect to avoid TDZ",
+          "Normalize response handling to use data/pagination",
+          "Return successWithPagination from controller"
+        ]
+      },
+      "timestamp": "2025-08-31T13:43:40Z"
+    },
+    {
+      "title": "General rate limit relaxed by 10%",
+      "type": "change",
+      "tags": ["rate-limit", "backend"],
+      "details": {
+        "file": "backend/src/constants/limits.ts",
+        "diff": "GENERAL_MAX_REQUESTS: 100 -> 110"
+      },
+      "timestamp": "2025-08-31T13:43:40Z"
+    },
+    {
+      "title": "Rate limiting quality-of-life (dev)",
+      "type": "change",
+      "tags": ["rate-limit", "auth", "dev-experience"],
+      "details": {
+        "file": "backend/src/middleware/rateLimiter.ts",
+        "rules": [
+          "Skip OPTIONS and /health",
+          "Bypass /api/auth/* in development"
+        ],
+        "authRoutes": "Re-enabled auth-specific rate limiters for login/register"
+      },
+      "timestamp": "2025-08-31T13:43:40Z"
+    },
+    {
+      "title": "My Watches page grid view",
+      "type": "feature",
+      "tags": ["frontend", "watches", "ui"],
+      "details": {
+        "file": "frontend/src/pages/WatchesPage.tsx",
+        "behavior": "List/Grid toggle; grid fetches watches then products; renders ProductGrid",
+        "followUp": "Add batch /products/by-ids endpoint to reduce N requests"
+      },
+      "timestamp": "2025-08-31T13:43:40Z"
+    },
+    {
+      "title": "Port 3000 conflict guidance",
+      "type": "runbook",
+      "tags": ["dev-env", "ports"],
+      "details": {
+        "diagnostics": [
+          "lsof -iTCP:3000 -sTCP:LISTEN -nP",
+          "docker compose ps"
+        ],
+        "fixes": [
+          "Kill local process or change compose port to 3001",
+          "Run either local backend OR Docker, not both"
+        ]
+      },
+      "timestamp": "2025-08-31T13:43:40Z"
+    },
+    {
+      "title": "OpenMemory MCP config",
+      "type": "configuration",
+      "tags": ["mcp", "context7"],
+      "details": {
+        "file": ".codex/config.toml",
+        "section": "[mcp_servers.Context7]",
+        "env": { "CONTEXT7_PROJECT_ID": "booster-beacon-proj-001" }
+      },
+      "timestamp": "2025-08-31T13:43:40Z"
+    }
+  ]
+}

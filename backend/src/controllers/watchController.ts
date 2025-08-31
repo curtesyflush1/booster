@@ -28,7 +28,7 @@ export class WatchController {
         is_active,
         product_id,
         retailer_id
-      } = req.query;
+      } = req.query as any;
 
       const options: any = {
         page: parseInt(page as string),
@@ -36,7 +36,7 @@ export class WatchController {
       };
 
       if (is_active !== undefined) {
-        options.is_active = is_active === 'true';
+        options.is_active = typeof is_active === 'boolean' ? is_active : String(is_active) === 'true';
       }
 
       let watches = await Watch.findByUserId(userId, options);
@@ -165,6 +165,14 @@ export class WatchController {
       logger.error('Error creating watch:', error);
       if (error instanceof Error && error.message.includes('Validation failed')) {
         ResponseHelper.validationError(res, error.message);
+      } else if (error instanceof Error) {
+        // Log the full error details
+        logger.error('Full error details:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        });
+        ResponseHelper.internalError(res, `Failed to create watch: ${error.message}`);
       } else {
         ResponseHelper.internalError(res, 'Failed to create watch');
       }

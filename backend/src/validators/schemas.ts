@@ -142,7 +142,7 @@ export const productSchemas = {
         'number.min': 'Maximum price must be greater than minimum price'
       }),
       availability: Joi.string().valid('in_stock', 'out_of_stock', 'pre_order').optional(),
-      is_active: Joi.boolean().default(false),
+      is_active: Joi.boolean().default(true),
       page: Joi.number().integer().min(1).max(1000).default(1).messages({
         'number.base': 'Page must be a number',
         'number.integer': 'Page must be an integer',
@@ -351,7 +351,8 @@ export const basicWatchSchemas = {
   getUserWatches: {
     query: Joi.object({
       ...commonSchemas.pagination,
-      is_active: commonSchemas.booleanFlag,
+      // Default to active watches when omitted
+      is_active: Joi.boolean().default(true),
       product_id: commonSchemas.optionalUuid,
       retailer_id: commonSchemas.optionalUuid
     })

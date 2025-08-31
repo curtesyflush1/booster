@@ -659,3 +659,133 @@ This checklist provides the final, targeted instructions to resolve all remainin
         3.  The service's constructor likely requires an HTTP server instance. Ensure the test is creating a mock server and passing it during instantiation: `const mockServer = http.createServer(); const service = new WebSocketService(mockServer);`.
 
 ---
+# BoosterBeacon: Core Functionality Integration Checklist
+
+This checklist systematically implements the core features of the BoosterBeacon application by connecting the frontend components to the backend API.
+
+---
+
+### **Phase 1: Data Foundation (Products & Watches)**
+
+* [X] **1. Implement Product Display**
+    * **File:** `frontend/src/pages/ProductsPage.tsx`
+    * **Task:** Fetch and display the list of products from the backend.
+    * **Instructions:**
+        1.  In `ProductsPage.tsx`, use the `apiClient` to make a `GET` request to the `/api/products` endpoint.
+        2.  Store the returned products in a React state variable.
+        3.  Pass the product data to the `ProductGrid` component to render the products.
+
+* [X] **2. Implement Product Search**
+    * **File:** `frontend/src/pages/ProductsPage.tsx`
+    * **Task:** Wire up the search and filter UI to the backend search API.
+    * **Instructions:**
+        1.  Create state variables for search terms and filters.
+        2.  When the user types in the search bar or changes a filter, trigger a `GET` request to the `/api/products/search` endpoint, passing the search terms and filters as query parameters.
+        3.  Update the product state with the results from the search API.
+
+* [X] **3. Implement Watch/Unwatch Functionality**
+    * **File:** `frontend/src/components/products/ProductCard.tsx`
+    * **Task:** Allow users to add and remove products from their watchlist.
+    * **Instructions:**
+        1.  In the `handleAddWatch` function, determine if the product is already watched.
+        2.  If not watched, send a `POST` request to `/api/watches` with the `product.id`.
+        3.  If already watched, send a `DELETE` request to `/api/watches/:id`.
+        4.  Implement an optimistic UI update by changing the button's state immediately upon click.
+
+* [X] **4. Implement the "My Watches" Page**
+    * **File:** `frontend/src/pages/WatchesPage.tsx`
+    * **Task:** Display all products that the current user is watching.
+    * **Instructions:**
+        1.  Use the `apiClient` to make a `GET` request to the `/api/watches` endpoint.
+        2.  Store the returned watches in state.
+        3.  Render the list of watched products, reusing the `ProductGrid` component.
+
+### **Phase 2: Core Loop (Alerts)**
+
+* [X] **5. Implement the Alerts Page**
+    * **File:** `frontend/src/pages/AlertsPage.tsx`
+    * **Task:** Fetch and display a user's alerts.
+    * **Instructions:**
+        1.  Use the `apiClient` to make a `GET` request to the `/api/alerts` endpoint.
+        2.  Pass the returned alert data to the `AlertInbox` component.
+
+* [X] **6. Implement Alert Actions**
+    * **File:** `frontend/src/components/alerts/AlertInbox.tsx`
+    * **Task:** Implement the "Mark as Read" and "Delete" functionality for alerts.
+    * **Instructions:**
+        1.  Wire up the "Mark as Read" button to send a `PATCH` request to `/api/alerts/:id/read`.
+        2.  Wire up the "Delete" button to send a `DELETE` request to `/api/alerts/:id`.
+        3.  Update the UI optimistically upon a successful API response.
+
+### **Phase 3: User Hub (Dashboard)**
+
+* [X] **7. Populate the Dashboard**
+    * **File:** `frontend/src/pages/DashboardPage.tsx`
+    * **Task:** Fetch all the necessary data for the dashboard and pass it to the child components.
+    * **Instructions:**
+        1.  In the `loadDashboardData` function, make a `GET` request to the consolidated `/api/dashboard` endpoint.
+        2.  Take the `stats`, `recentAlerts`, and `watchedProducts` from the response.
+        3.  Pass `stats` as a prop to the `DashboardOverview` component.
+        4.  Pass `recentAlerts` and `watchedProducts` as props to the `RecentActivity` component.
+
+### **Phase 4: Advanced Features**
+
+* [X] **8. Integrate Predictive Insights and Portfolio Tracking**
+    * **File:** `frontend/src/pages/DashboardPage.tsx`
+    * **Task:** Fetch and display the advanced analytics data on the dashboard.
+    * **Instructions:**
+        1.  In the `loadDashboardData` function (or a separate one if preferred), make `GET` requests to `/api/dashboard/insights` and `/api/dashboard/portfolio`.
+        2.  Pass the insights data to the `PredictiveInsights` component.
+        3.  Pass the portfolio data to the `PortfolioTracking` component.
+        4.  This should tie into our machine learning capabilities. If we havne't yet implemented that, now is the time to do ti. The key to our tool is the data accuracy, and predictive modeling.
+
+# BoosterBeacon: Heuristic ML Model Implementation Checklist
+
+This checklist implements a `ModelRunner` interface and a simple heuristic-based model to replace the mock data in the `dashboardService`, providing more realistic predictive insights.
+
+---
+
+### **Phase 1: Create the Model Runner and Heuristic Logic**
+
+* **1. Create the `ModelRunner` Interface**
+    * **File:** `backend/src/services/ml/IModelRunner.ts` (Create this new file and directory).
+    * **Task:** Define the contract for all future model runners.
+    * **Instructions:**
+        1.  Create a new directory: `backend/src/services/ml`.
+        2.  Create a new file `IModelRunner.ts` inside it.
+        3.  Define and export an interface `IModelRunner` with a single method, `predict`, that takes a product ID and returns a promise resolving to the `MLPrediction` type.
+
+* **2. Implement the Heuristic Model**
+    * **File:** `backend/src/services/ml/HeuristicModelRunner.ts` (Create this new file).
+    * **Task:** Create a simple model that implements the `IModelRunner` interface and generates predictions based on heuristics.
+    * **Instructions:**
+        1.  Create a new file `HeuristicModelRunner.ts` in `backend/src/services/ml`.
+        2.  Create a class `HeuristicModelRunner` that implements `IModelRunner`.
+        3.  Implement the `predict` method. Inside this method:
+            * Fetch the product's price history and popularity score.
+            * **Price Forecast:** Implement a simple trend calculation based on the last 7 days of price history.
+            * **Sellout Risk:** Calculate a score based on the product's `popularity_score` and the number of recent alerts.
+            * **ROI Estimate & Hype Score:** For now, these can remain as well-reasoned, non-random placeholder values.
+        4.  Return the data in the shape of the `MLPrediction` type.
+
+### **Phase 2: Integrate the New Model**
+
+* **3. Create a `ModelFactory`**
+    * **File:** `backend/src/services/ml/ModelFactory.ts` (Create this new file).
+    * **Task:** Create a factory that can provide the currently active model runner.
+    * **Instructions:**
+        1.  Create a new file `ModelFactory.ts` in `backend/src/services/ml`.
+        2.  Create a `ModelFactory` class with a static method `getActiveRunner(): IModelRunner`.
+        3.  For now, this method will simply return a new instance of your `HeuristicModelRunner`. In the future, it can be updated to load a real model from the database.
+
+* **4. Update the `DashboardService`**
+    * **File:** `backend/src/services/dashboardService.ts`
+    * **Task:** Replace the mock data generation with a call to the new `ModelFactory`.
+    * **Instructions:**
+        1.  Open `backend/src/services/dashboardService.ts`.
+        2.  Import the `ModelFactory` from `../services/ml/ModelFactory`.
+        3.  Locate the `generateProductInsights` method.
+        4.  Remove the existing block of code that generates random, mock data.
+        5.  Get the active model runner: `const modelRunner = ModelFactory.getActiveRunner();`
+        6.  Call the runner to get the prediction: `const prediction = await modelRunner.predict(productId);`
+        7.  Return the prediction.

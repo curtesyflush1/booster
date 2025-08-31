@@ -3,6 +3,7 @@ import { Watch } from '../models/Watch';
 import { Alert } from '../models/Alert';
 import { Product } from '../models/Product';
 import { logger } from '../utils/logger';
+import { ModelFactory } from './ml/ModelFactory';
 import { DASHBOARD_CONFIG } from '../config/dashboardConfig';
 
 // Type definitions for better type safety
@@ -253,40 +254,8 @@ export class DashboardService {
    */
   private static async generateProductInsights(productId: string): Promise<ProductInsights | null> {
     try {
-      const product = await Product.findById(productId);
-      if (!product) return null;
-
-      const recentAlerts = await Alert.findByProductId(productId, { days: DASHBOARD_CONFIG.INSIGHTS_ALERT_HISTORY_DAYS });
-      const alertCount = recentAlerts.length;
-      
-      // Mock predictive data - in production this would come from ML models
-      const productData = product as any;
-      const { PRICE_FORECAST, SELLOUT_RISK, ROI_ESTIMATE } = DASHBOARD_CONFIG;
-      
-      return {
-        productId,
-        productName: productData.name || 'Unknown Product',
-        priceForcast: {
-          nextWeek: productData.msrp ? 
-            productData.msrp * (PRICE_FORECAST.NEXT_WEEK_VARIANCE.MIN + Math.random() * 0.1) : 0,
-          nextMonth: productData.msrp ? 
-            productData.msrp * (PRICE_FORECAST.NEXT_MONTH_VARIANCE.MIN + Math.random() * 0.2) : 0,
-          confidence: Math.max(PRICE_FORECAST.MIN_CONFIDENCE, Math.min(PRICE_FORECAST.MAX_CONFIDENCE, alertCount / 10))
-        },
-        selloutRisk: {
-          score: Math.min(100, alertCount * SELLOUT_RISK.ALERT_MULTIPLIER + Math.random() * 20),
-          timeframe: alertCount > SELLOUT_RISK.HIGH_RISK_THRESHOLD ? 
-            SELLOUT_RISK.TIMEFRAMES.HIGH : SELLOUT_RISK.TIMEFRAMES.NORMAL,
-          confidence: Math.max(0.5, Math.min(0.9, alertCount / 15))
-        },
-        roiEstimate: {
-          shortTerm: Math.random() * (ROI_ESTIMATE.SHORT_TERM_RANGE.MAX - ROI_ESTIMATE.SHORT_TERM_RANGE.MIN) + ROI_ESTIMATE.SHORT_TERM_RANGE.MIN,
-          longTerm: Math.random() * (ROI_ESTIMATE.LONG_TERM_RANGE.MAX - ROI_ESTIMATE.LONG_TERM_RANGE.MIN) + ROI_ESTIMATE.LONG_TERM_RANGE.MIN,
-          confidence: Math.max(0.4, Math.min(0.8, (productData.popularity_score || 0) / 100))
-        },
-        hypeScore: Math.min(100, (productData.popularity_score || 0) + alertCount * 2),
-        updatedAt: new Date().toISOString()
-      };
+      const runner = ModelFactory.getActiveRunner();
+      return await runner.predict(productId);
     } catch (error) {
       logger.error('Error generating product insights', { productId, error });
       return null;

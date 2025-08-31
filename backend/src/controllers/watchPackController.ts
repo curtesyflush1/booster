@@ -35,7 +35,11 @@ export class WatchPackController {
       };
 
       const watchPacks = await WatchPack.getActiveWatchPacks(options);
-      ResponseHelper.success(res, watchPacks);
+      ResponseHelper.successWithPagination(res, watchPacks.data, {
+        page: watchPacks.page,
+        limit: watchPacks.limit,
+        total: watchPacks.total
+      });
     } catch (error) {
       logger.error('Error getting watch packs:', error);
       ResponseHelper.internalError(res, 'Failed to retrieve watch packs');
