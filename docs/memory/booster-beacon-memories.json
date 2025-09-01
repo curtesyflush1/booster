@@ -230,6 +230,42 @@
         "resolves": "Follow-up from Watches grid view to add batch products endpoint"
       },
       "timestamp": "${NOW}"
+    },
+    {
+      "title": "Event-driven transactions & billing foundation (MVP)",
+      "type": "feature",
+      "tags": ["backend", "events", "redis", "stripe", "migrations", "ml"],
+      "details": {
+        "files": [
+          "backend/migrations/20250901090000_create_transactions_and_billing_events.js",
+          "backend/src/services/eventBusService.ts",
+          "backend/src/services/transactionService.ts",
+          "backend/src/services/billingEventService.ts",
+          "backend/src/controllers/subscriptionController.ts",
+          "backend/scripts/emit-test-events.ts"
+        ],
+        "summary": "Added OLTP tables (transactions, billing_events), Redis Stream event bus, transaction/billing services, and Stripe webhook integration that records and emits billing events. Script included to emit test events.",
+        "stream": "bb:events",
+        "verifications": [
+          "Run migrations; XRANGE bb:events after emitting test events",
+          "Stripe webhook posts now insert into billing_events and emit billing_event"
+        ]
+      },
+      "timestamp": "${NOW}"
+    },
+    {
+      "title": "Frontend: ProductsPage listing + search wiring",
+      "type": "feature",
+      "tags": ["frontend", "products", "search", "api"],
+      "details": {
+        "file": "frontend/src/pages/ProductsPage.tsx",
+        "endpoints": [
+          "GET /api/products/search?page=1&limit=20&q=...&availability=...&sort_by=...&sort_order=..."
+        ],
+        "components": ["ProductGrid", "ProductDetail"],
+        "summary": "ProductsPage now fetches catalog via /products/search, manages pagination, basic filters, and passes results to ProductGrid; clicking shows ProductDetail."
+      },
+      "timestamp": "${NOW}"
     }
   ]
 }

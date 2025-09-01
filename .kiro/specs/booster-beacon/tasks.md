@@ -846,7 +846,7 @@ This checklist resolves the core test environment and test code issues to achiev
 
 ### **Phase 1: Fix the Test Environment**
 
-* [X] **1. Automate Test Database Migrations**
+* [] **1. Automate Test Database Migrations**
     * **File:** `backend/tests/integration/setup.ts`
     * **Task:** Modify the Jest setup file to automatically run database migrations and seeds before any integration tests are executed.
     * **Instructions:**
@@ -857,7 +857,7 @@ This checklist resolves the core test environment and test code issues to achiev
             * `await knex.seed.run();`
         4.  Create an `afterAll` block to clean up the connection: `await knex.destroy();`.
 
-* [X] **2. Harden the Teardown Logic**
+* [ ] **2. Harden the Teardown Logic**
     * **File:** `backend/tests/integration/setup.ts`
     * **Task:** Make the `afterEach` table truncation logic more resilient.
     * **Instructions:**
@@ -866,14 +866,14 @@ This checklist resolves the core test environment and test code issues to achiev
 
 ### **Phase 2: Fix the Test Code**
 
-* [X] **3. Fix Service Mocking Patterns**
+* [ ] **3. Fix Service Mocking Patterns**
     * **File:** `backend/tests/integration/retailerIntegration.test.ts` (and any other affected files).
     * **Task:** Correctly mock the service classes to resolve the ".mockImplementation is not a function" errors.
     * **Instructions:**
         1.  At the top of the test file, add explicit mock declarations for each service being tested.
         2.  **Example:** `jest.mock('../../src/services/retailers/BestBuyService');`
 
-* [X] **4. Fix Test TypeScript Errors**
+* [ ] **4. Fix Test TypeScript Errors**
     * **File:** `backend/tests/integration/auth.test.ts` (and other affected files).
     * **Task:** Correct invalid syntax and update mock data structures.
     * **Instructions:**

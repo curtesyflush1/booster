@@ -4,6 +4,7 @@ import { SubscriptionService } from '../services/subscriptionService';
 import { User } from '../models/User';
 import { IUser } from '../types/database';
 import { logger } from '../utils/logger';
+import { billingEventService } from '../services/billingEventService';
 
 // Validation schemas
 const createCheckoutSessionSchema = Joi.object({
@@ -360,25 +361,88 @@ export const handleStripeWebhook = async (req: Request, res: Response, next: Nex
     switch (event.type) {
       case 'customer.subscription.created':
         await SubscriptionService.handleSubscriptionCreated(event.data.object);
+        try {
+          await billingEventService.recordAndEmit({
+            stripe_customer_id: event.data.object.customer,
+            subscription_id: event.data.object.id,
+            event_type: event.type,
+            status: event.data.object.status,
+            raw_event: event
+          });
+        } catch (e) { logger.warn('Failed to record billing event', { type: event.type }); }
         break;
       case 'customer.subscription.updated':
         // Handle subscription updates
         logger.info('Subscription updated:', event.data.object.id);
+        try {
+          await billingEventService.recordAndEmit({
+            stripe_customer_id: event.data.object.customer,
+            subscription_id: event.data.object.id,
+            event_type: event.type,
+            status: event.data.object.status,
+            raw_event: event
+          });
+        } catch (e) { logger.warn('Failed to record billing event', { type: event.type }); }
         break;
       case 'customer.subscription.deleted':
         // Handle subscription cancellation
         logger.info('Subscription deleted:', event.data.object.id);
+        try {
+          await billingEventService.recordAndEmit({
+            stripe_customer_id: event.data.object.customer,
+            subscription_id: event.data.object.id,
+            event_type: event.type,
+            status: event.data.object.status,
+            raw_event: event
+          });
+        } catch (e) { logger.warn('Failed to record billing event', { type: event.type }); }
         break;
       case 'invoice.payment_succeeded':
         // Handle successful payment
         logger.info('Payment succeeded:', event.data.object.id);
+        try {
+          await billingEventService.recordAndEmit({
+            stripe_customer_id: event.data.object.customer,
+            subscription_id: event.data.object.subscription,
+            event_type: event.type,
+            amount_cents: event.data.object.amount_paid,
+            currency: event.data.object.currency,
+            status: 'succeeded',
+            invoice_id: event.data.object.id,
+            occurred_at: new Date(event.created * 1000),
+            raw_event: event
+          });
+        } catch (e) { logger.warn('Failed to record billing event', { type: event.type }); }
         break;
       case 'invoice.payment_failed':
         // Handle failed payment
         logger.info('Payment failed:', event.data.object.id);
+        try {
+          await billingEventService.recordAndEmit({
+            stripe_customer_id: event.data.object.customer,
+            subscription_id: event.data.object.subscription,
+            event_type: event.type,
+            amount_cents: event.data.object.amount_due,
+            currency: event.data.object.currency,
+            status: 'failed',
+            invoice_id: event.data.object.id,
+            occurred_at: new Date(event.created * 1000),
+            raw_event: event
+          });
+        } catch (e) { logger.warn('Failed to record billing event', { type: event.type }); }
         break;
       default:
         logger.info('Unhandled event type:', event.type);
+        try {
+          // Record unknown events in case useful downstream
+          await billingEventService.recordAndEmit({
+            stripe_customer_id: event.data.object?.customer || 'unknown',
+            subscription_id: event.data.object?.subscription || null,
+            event_type: event.type,
+            status: event.data.object?.status || null,
+            raw_event: event
+          });
+        } catch {}
     }
 
     res.json({ received: true });
