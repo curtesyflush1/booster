@@ -960,3 +960,86 @@ This checklist systematically implements the core features of the BoosterBeacon 
         1.  In the `loadDashboardData` function (or a separate one if preferred), make `GET` requests to `/api/dashboard/insights` and `/api/dashboard/portfolio`.
         2.  Pass the insights data to the `PredictiveInsights` component.
         3.  Pass the portfolio data to the `PortfolioTracking` component.
+
+# BoosterBeacon: Event-Driven Transaction & Billing System MVP
+
+This checklist implements the foundational data models and services for a unified, event-driven transaction system that will power analytics and machine learning.
+
+---
+
+### **Phase 1: The Transactional Foundation**
+
+* [ ] **1. Create the New Database Tables**
+    * **Task:** Create new database migration files to add the `transactions` and `billing_events` tables to your schema.
+    * **Instructions:**
+        1.  Create a new migration file in `backend/migrations/`.
+        2.  In this file, define the schema for the `transactions` table as you've outlined (id, product_id, retailer_slug, user_id_hash, status, price_paid, etc.). Ensure you add appropriate indexes on `user_id_hash`, `product_id`, and `retailer_slug`.
+        3.  Create another migration for the `billing_events` table with its corresponding schema (id, stripe_customer_id, event_type, etc.), with an index on `stripe_customer_id`.
+
+* [ ] **2. Scaffold the `TransactionService` and Event Bus**
+    * **Files:** A new `backend/src/services/transactionService.ts` and `backend/src/services/eventBusService.ts`.
+    * **Task:** Create the core service for recording transaction events and a simple, Redis-based event bus for emitting them.
+    * **Instructions:**
+        1.  **Create `EventBusService`:** In this new service, create a simple `emit` method that uses your existing Redis service to `XADD` a new event to a Redis Stream. The event payload should be a JSON string of the event data.
+        2.  **Create `TransactionService`:** This service will have methods like `recordPurchaseAttempt`, `recordPurchaseSuccess`, and `recordPurchaseFailure`.
+        3.  Each method in `TransactionService` should do two things:
+            * Persist the data to the new `transactions` table in the main Postgres database.
+            * Use the `EventBusService` to emit the full event to your Redis Stream.
+
+### **Phase 2: Integrate the Event Hooks**
+
+* [ ] **3. Integrate `TransactionService` into the Purchase Orchestrator**
+    * **File:** `backend/src/services/PurchaseOrchestrator.ts` (or your equivalent auto-buy worker).
+    * **Task:** Modify your existing auto-buy worker to call the new `TransactionService` at each stage of the purchase process.
+    * **Instructions:**
+        1.  Before a purchase attempt, call `transactionService.recordPurchaseAttempt(...)`.
+        2.  On a successful purchase, call `transactionService.recordPurchaseSuccess(...)`.
+        3.  On a failed purchase, call `transactionService.recordPurchaseFailure(...)`, making sure to include the `failure_reason`.
+
+* [ ] **4. Integrate Stripe Webhooks with the Event Bus**
+    * **File:** `backend/src/controllers/subscriptionController.ts` (or wherever your Stripe webhook handler is).
+    * **Task:** In addition to updating the user's subscription status, the Stripe webhook handler should now also record the event to the `billing_events` table and emit it to the event bus.
+    * **Instructions:**
+        1.  In your Stripe webhook handler, after verifying the event, create a payload that matches the `billing_events` schema.
+        2.  Persist this payload to the `billing_events` table.
+        3.  Use the `EventBusService` to emit the billing event to your Redis Stream.
+
+---
+# BoosterBeacon: Purchase Orchestrator Stub Implementation
+
+This checklist implements a minimal, placeholder `PurchaseOrchestrator` to demonstrate and validate the end-to-end purchase event recording pipeline.
+
+---
+
+* [ ] **1. Create the `PurchaseOrchestrator` Service**
+    * **File:** `backend/src/services/PurchaseOrchestrator.ts` (Create this new file).
+    * **Task:** Create a stubbed orchestrator service that simulates the purchase process and calls the `TransactionService`.
+    * **Instructions:**
+        1.  Create the new `PurchaseOrchestrator.ts` service file.
+        2.  Import the `transactionService` singleton.
+        3.  Create a `PurchaseOrchestrator` class with a single public method: `async executePurchase(job: PurchaseJob)`. The `PurchaseJob` type should include `userId`, `productId`, `retailerId`, etc.
+        4.  Inside `executePurchase`, implement the following logic:
+            * Call `transactionService.recordPurchaseAttempt(...)` immediately.
+            * Use a `setTimeout` of 1-2 seconds to simulate the time it takes to perform a checkout.
+            * Use a simple `Math.random()` to simulate either a success or a failure.
+            * If it "succeeds," call `transactionService.recordPurchaseSuccess(...)`.
+            * If it "fails," call `transactionService.recordPurchaseFailure(...)` with a sample failure reason like "SIMULATED_OUT_OF_STOCK".
+
+* [ ] **2. Create a Simple Job Queue and Worker**
+    * **File:** `backend/src/services/PurchaseQueue.ts` (Create this new file).
+    * **Task:** Create a very simple in-memory queue and a worker that pulls jobs from it and passes them to the orchestrator.
+    * **Instructions:**
+        1.  Create the new `PurchaseQueue.ts` service file.
+        2.  Create a simple array to act as the in-memory queue.
+        3.  Create an `addJob(job: PurchaseJob)` function that pushes a job to the array.
+        4.  Create a `startWorker()` function that uses `setInterval` to check the queue every 5 seconds.
+        5.  If a job is found in the queue, it should pull it off and call `PurchaseOrchestrator.executePurchase(job)`.
+        6.  Call `startWorker()` from your main `backend/src/index.ts` file to start the process.
+
+* [ ] **3. Create a Test Route to Trigger a Purchase**
+    * **File:** `backend/src/routes/admin.ts` (or a new test route file).
+    * **Task:** Add a temporary, admin-only route to easily trigger a test purchase job.
+    * **Instructions:**
+        1.  Add a new route, e.g., `POST /api/admin/test-purchase`.
+        2.  The controller for this route should call the `PurchaseQueue.addJob(...)` function with some hardcoded test data.
+        3.  This will allow you to easily test the entire flow by hitting the endpoint with a tool like `curl`.

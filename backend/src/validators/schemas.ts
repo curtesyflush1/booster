@@ -1172,6 +1172,29 @@ export const rbacSchemas = {
     params: Joi.object({
       userId: commonSchemas.uuid
     })
+  },
+
+  testPurchase: {
+    body: Joi.object({
+      productId: Joi.string().uuid().required().messages({
+        'string.uuid': 'productId must be a valid UUID',
+        'any.required': 'productId is required'
+      }),
+      retailerSlug: Joi.string().valid('best-buy', 'walmart', 'costco', 'sams-club').required().messages({
+        'any.only': 'retailerSlug must be one of best-buy, walmart, costco, sams-club',
+        'any.required': 'retailerSlug is required'
+      }),
+      maxPrice: Joi.number().min(0).optional().messages({
+        'number.min': 'maxPrice cannot be negative'
+      }),
+      qty: Joi.number().integer().min(1).max(10).default(1).messages({
+        'number.min': 'qty must be at least 1',
+        'number.max': 'qty must not exceed 10'
+      }),
+      alertAt: Joi.date().iso().optional().messages({
+        'date.format': 'alertAt must be an ISO date string'
+      })
+    })
   }
 };
 

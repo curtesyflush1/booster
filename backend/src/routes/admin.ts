@@ -12,6 +12,7 @@ import * as rbacController from '../controllers/rbacController';
 import { sanitizeParameters } from '../middleware/parameterSanitization';
 import { contentSanitizationMiddleware } from '../utils/contentSanitization';
 import { validateJoi, validateJoiBody, validateJoiQuery, validateJoiParams, adminSchemas } from '../validators';
+import { addJob as enqueuePurchase } from '../services/PurchaseQueue';
 
 const router = Router();
 
@@ -179,5 +180,28 @@ router.get('/rbac/my-permissions',
   requireMinimumRole(SystemRoles.USER), 
   rbacController.getMyPermissions
 );
+
+/**
+ * Temporary test route to enqueue a simulated purchase job
+ * Requires SYSTEM_HEALTH_VIEW permission
+ */
+router.post(
+  '/test-purchase',
+  requirePermission(Permission.SYSTEM_HEALTH_VIEW),
+  validateJoiBody(adminSchemas.testPurchase.body),
+  (req, res) => {
+  const { productId, retailerSlug, maxPrice, qty, alertAt } = req.body || {};
+  const userId = req.user?.id || 'test-user';
+  const job = {
+    userId,
+    productId,
+    retailerSlug,
+    maxPrice,
+    qty,
+    alertAt: alertAt || new Date().toISOString(),
+  };
+  enqueuePurchase(job);
+  res.json({ queued: true, job });
+});
 
 export default router;

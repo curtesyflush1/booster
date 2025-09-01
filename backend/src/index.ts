@@ -40,6 +40,7 @@ import healthRoutes from './routes/health';
 import monitoringRoutes from './routes/monitoring';
 // import kmsRoutes from './routes/kmsRoutes';
 import { EXPRESS_LIMITS } from './constants/http';
+import { startWorker as startPurchaseWorker } from './services/PurchaseQueue';
 
 // Load environment variables
 dotenv.config();
@@ -211,6 +212,9 @@ if (process.env.NODE_ENV !== 'test') {
         loggerWithContext.info('System monitoring started');
         loggerWithContext.info('Automatic backup service scheduled');
         loggerWithContext.info('Monitoring and alerting service initialized');
+
+        // Start purchase queue worker (stubbed orchestrator)
+        startPurchaseWorker();
       });
 
       // Graceful shutdown
