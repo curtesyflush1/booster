@@ -789,3 +789,174 @@ This checklist implements a `ModelRunner` interface and a simple heuristic-based
         5.  Get the active model runner: `const modelRunner = ModelFactory.getActiveRunner();`
         6.  Call the runner to get the prediction: `const prediction = await modelRunner.predict(productId);`
         7.  Return the prediction.
+
+# BoosterBeacon: "My Watches" Page Performance Optimization
+
+This checklist implements a new batch-fetching endpoint on the backend and refactors the frontend Watches page to use it, eliminating the N+1 query problem.
+
+---
+
+### **Phase 1: Backend Implementation**
+
+* [X] **1. Create the New `by-ids` Route**
+    * **File:** `backend/src/routes/products.ts`
+    * **Task:** Add a new route to handle fetching multiple products by their IDs. A `POST` route is preferred for sending a list of IDs.
+    * **Instructions:**
+        1.  Open `backend/src/routes/products.ts`.
+        2.  Add a new route definition: `router.post('/by-ids', productController.getProductsByIds);`
+
+* [X] **2. Implement the `getProductsByIds` Controller**
+    * **File:** `backend/src/controllers/productController.ts`
+    * **Task:** Create the controller logic to handle the new route.
+    * **Instructions:**
+        1.  Open `backend/src/controllers/productController.ts`.
+        2.  Create a new exported function `getProductsByIds`.
+        3.  The function should expect a JSON body containing an array of product IDs, e.g., `{ ids: ['id1', 'id2', ...] }`.
+        4.  Validate the input to ensure `ids` is an array of strings.
+        5.  Call a new method on the `Product` model/repository (e.g., `Product.findByIds(ids)`) to fetch the data.
+        6.  Return the list of products as a JSON response.
+
+* [ ] **3. Implement the `findByIds` Model/Repository Method**
+    * **File:** `backend/src/models/Product.ts` (or `backend/src/repositories/ProductRepository.ts` if you are using the repository pattern).
+    * **Task:** Create the database logic to fetch multiple products efficiently.
+    * **Instructions:**
+        1.  Open the `Product.ts` model file.
+        2.  Create a new static method `findByIds(ids: string[])`.
+        3.  Inside this method, use a single Knex query with a `whereIn` clause to fetch all products whose IDs are in the provided `ids` array.
+        4.  **Example Query:** `return this.db(this.getTableName()).whereIn('id', ids);`
+
+### **Phase 2: Frontend Refactoring**
+
+* [ ] **4. Refactor the `WatchesPage` Component**
+    * **File:** `frontend/src/pages/WatchesPage.tsx`
+    * **Task:** Update the data fetching logic to use the new, efficient batch endpoint.
+    * **Instructions:**
+        1.  Modify the data fetching logic in `WatchesPage.tsx`. The new flow should be:
+        2.  **First,** fetch the user's list of watches from `GET /api/watches`. This response will contain `watch` objects, each with a `product_id`.
+        3.  **Then,** extract all the `product_id`s from the list of watches into a new array.
+        4.  **Finally,** make a *single* `POST` request to the new `/api/products/by-ids` endpoint, sending the array of product IDs in the request body.
+        5.  Use the product data returned from this second call to render your `ProductGrid`.
+
+---
+# BoosterBeacon: Test Suite Stabilization Checklist
+
+This checklist resolves the core test environment and test code issues to achieve a stable and passing integration test suite.
+
+---
+
+### **Phase 1: Fix the Test Environment**
+
+* [X] **1. Automate Test Database Migrations**
+    * **File:** `backend/tests/integration/setup.ts`
+    * **Task:** Modify the Jest setup file to automatically run database migrations and seeds before any integration tests are executed.
+    * **Instructions:**
+        1.  Import your `knex` instance at the top of the file.
+        2.  Create a `beforeAll` block.
+        3.  Inside the `beforeAll`, add the following asynchronous calls:
+            * `await knex.migrate.latest();`
+            * `await knex.seed.run();`
+        4.  Create an `afterAll` block to clean up the connection: `await knex.destroy();`.
+
+* [X] **2. Harden the Teardown Logic**
+    * **File:** `backend/tests/integration/setup.ts`
+    * **Task:** Make the `afterEach` table truncation logic more resilient.
+    * **Instructions:**
+        1.  Wrap the existing `TRUNCATE` logic inside a `try/catch` block to prevent it from crashing the entire suite if a table doesn't exist.
+        2.  Alternatively, query the database to get a list of all tables and then dynamically generate the `TRUNCATE` command.
+
+### **Phase 2: Fix the Test Code**
+
+* [X] **3. Fix Service Mocking Patterns**
+    * **File:** `backend/tests/integration/retailerIntegration.test.ts` (and any other affected files).
+    * **Task:** Correctly mock the service classes to resolve the ".mockImplementation is not a function" errors.
+    * **Instructions:**
+        1.  At the top of the test file, add explicit mock declarations for each service being tested.
+        2.  **Example:** `jest.mock('../../src/services/retailers/BestBuyService');`
+
+* [X] **4. Fix Test TypeScript Errors**
+    * **File:** `backend/tests/integration/auth.test.ts` (and other affected files).
+    * **Task:** Correct invalid syntax and update mock data structures.
+    * **Instructions:**
+        1.  In `auth.test.ts`, find the invalid assignment `const tokens = await authService.generateTokens = jest.fn()`.
+        2.  Replace it with `const generateTokensSpy = jest.spyOn(authService, 'generateTokens').mockResolvedValue(...);`.
+        3.  Perform a search across the `backend/tests` directory for `IUser` mocks and ensure they include the new required fields (`role`, `admin_permissions`, etc.).
+
+---
+# BoosterBeacon: Core Functionality Integration Checklist
+
+This checklist systematically implements the core features of the BoosterBeacon application by connecting the frontend components to the backend API.
+
+---
+
+### **Phase 1: Data Foundation (Products & Watches)**
+
+* [ ] **1. Implement Product Display**
+    * **File:** `frontend/src/pages/ProductsPage.tsx`
+    * **Task:** Fetch and display the list of products from the backend.
+    * **Instructions:**
+        1.  In `ProductsPage.tsx`, use the `apiClient` to make a `GET` request to the `/api/products` endpoint.
+        2.  Store the returned products in a React state variable.
+        3.  Pass the product data to the `ProductGrid` component to render the products.
+
+* [ ] **2. Implement Product Search**
+    * **File:** `frontend/src/pages/ProductsPage.tsx`
+    * **Task:** Wire up the search and filter UI to the backend search API.
+    * **Instructions:**
+        1.  Create state variables for search terms and filters.
+        2.  When the user types in the search bar or changes a filter, trigger a `GET` request to the `/api/products/search` endpoint, passing the search terms and filters as query parameters.
+        3.  Update the product state with the results from the search API.
+
+* [ ] **3. Implement Watch/Unwatch Functionality**
+    * **File:** `frontend/src/components/products/ProductCard.tsx`
+    * **Task:** Allow users to add and remove products from their watchlist.
+    * **Instructions:**
+        1.  In the `handleAddWatch` function, determine if the product is already watched.
+        2.  If not watched, send a `POST` request to `/api/watches` with the `product.id`.
+        3.  If already watched, send a `DELETE` request to `/api/watches/:id`.
+        4.  Implement an optimistic UI update by changing the button's state immediately upon click.
+
+* [ ] **4. Implement the "My Watches" Page**
+    * **File:** `frontend/src/pages/WatchesPage.tsx`
+    * **Task:** Display all products that the current user is watching.
+    * **Instructions:**
+        1.  Use the `apiClient` to make a `GET` request to the `/api/watches` endpoint.
+        2.  Store the returned watches in state.
+        3.  Render the list of watched products, reusing the `ProductGrid` component.
+
+### **Phase 2: Core Loop (Alerts)**
+
+* [ ] **5. Implement the Alerts Page**
+    * **File:** `frontend/src/pages/AlertsPage.tsx`
+    * **Task:** Fetch and display a user's alerts.
+    * **Instructions:**
+        1.  Use the `apiClient` to make a `GET` request to the `/api/alerts` endpoint.
+        2.  Pass the returned alert data to the `AlertInbox` component.
+
+* [ ] **6. Implement Alert Actions**
+    * **File:** `frontend/src/components/alerts/AlertInbox.tsx`
+    * **Task:** Implement the "Mark as Read" and "Delete" functionality for alerts.
+    * **Instructions:**
+        1.  Wire up the "Mark as Read" button to send a `PATCH` request to `/api/alerts/:id/read`.
+        2.  Wire up the "Delete" button to send a `DELETE` request to `/api/alerts/:id`.
+        3.  Update the UI optimistically upon a successful API response.
+
+### **Phase 3: User Hub (Dashboard)**
+
+* [ ] **7. Populate the Dashboard**
+    * **File:** `frontend/src/pages/DashboardPage.tsx`
+    * **Task:** Fetch all the necessary data for the dashboard and pass it to the child components.
+    * **Instructions:**
+        1.  In the `loadDashboardData` function, make a `GET` request to the consolidated `/api/dashboard` endpoint.
+        2.  Take the `stats`, `recentAlerts`, and `watchedProducts` from the response.
+        3.  Pass `stats` as a prop to the `DashboardOverview` component.
+        4.  Pass `recentAlerts` and `watchedProducts` as props to the `RecentActivity` component.
+
+### **Phase 4: Advanced Features**
+
+* [ ] **8. Integrate Predictive Insights and Portfolio Tracking**
+    * **File:** `frontend/src/pages/DashboardPage.tsx`
+    * **Task:** Fetch and display the advanced analytics data on the dashboard.
+    * **Instructions:**
+        1.  In the `loadDashboardData` function (or a separate one if preferred), make `GET` requests to `/api/dashboard/insights` and `/api/dashboard/portfolio`.
+        2.  Pass the insights data to the `PredictiveInsights` component.
+        3.  Pass the portfolio data to the `PortfolioTracking` component.

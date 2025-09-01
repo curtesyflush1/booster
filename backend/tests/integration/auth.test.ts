@@ -2,11 +2,16 @@ import request from 'supertest';
 import app from '../../src/index';
 import { User } from '../../src/models/User';
 import { authService } from '../../src/services/authService';
+import jwt from 'jsonwebtoken';
 import { rateLimitStore } from '../../src/middleware/rateLimiter';
+import { SubscriptionTier } from '../../src/types/subscription';
 
 // Mock dependencies
 jest.mock('../../src/models/User');
-jest.mock('../../src/utils/logger');
+jest.mock('../../src/utils/logger', () => ({
+  logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+  loggerWithContext: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }
+}));
 
 const MockedUser = User as jest.Mocked<typeof User>;
 
@@ -33,7 +38,8 @@ describe('Authentication Integration Tests', () => {
       id: 'user-123',
       email: 'test@example.com',
       password_hash: 'hashed-password',
-      subscription_tier: 'free' as const,
+      subscription_tier: SubscriptionTier.FREE,
+      role: 'user' as const,
       first_name: 'John',
       last_name: 'Doe',
       email_verified: false,
@@ -43,6 +49,7 @@ describe('Authentication Integration Tests', () => {
       failed_login_attempts: 0,
       locked_until: null,
       last_login: null,
+      admin_permissions: [],
       shipping_addresses: [],
       payment_methods: [],
       retailer_credentials: {},
@@ -143,7 +150,8 @@ describe('Authentication Integration Tests', () => {
       id: 'user-123',
       email: 'test@example.com',
       password_hash: 'hashed-password',
-      subscription_tier: 'free' as const,
+      subscription_tier: SubscriptionTier.FREE,
+      role: 'user' as const,
       first_name: 'John',
       last_name: 'Doe',
       email_verified: true,
@@ -153,6 +161,7 @@ describe('Authentication Integration Tests', () => {
       failed_login_attempts: 0,
       locked_until: null,
       last_login: null,
+      admin_permissions: [],
       shipping_addresses: [],
       payment_methods: [],
       retailer_credentials: {},
@@ -286,13 +295,15 @@ describe('Authentication Integration Tests', () => {
 
       MockedUser.findById.mockResolvedValue(mockUser);
 
-      // Generate a valid refresh token
-      const tokens = await authService.refreshToken = jest.fn().mockResolvedValue({
-        access_token: 'new-access-token',
-        refresh_token: 'new-refresh-token',
-        expires_in: 900,
-        token_type: 'Bearer'
-      });
+      // Mock the refreshToken service method instead of invalid assignment
+      const refreshSpy = jest
+        .spyOn(authService, 'refreshToken')
+        .mockResolvedValue({
+          access_token: 'new-access-token',
+          refresh_token: 'new-refresh-token',
+          expires_in: 900,
+          token_type: 'Bearer'
+        } as any);
 
       const response = await request(app)
         .post('/api/auth/refresh')
@@ -301,6 +312,7 @@ describe('Authentication Integration Tests', () => {
 
       expect(response.body).toHaveProperty('message', 'Token refreshed successfully');
       expect(response.body).toHaveProperty('tokens');
+      refreshSpy.mockRestore();
     });
 
     it('should return 401 for invalid refresh token', async () => {
@@ -363,17 +375,13 @@ describe('Authentication Integration Tests', () => {
     it('should get user profile successfully', async () => {
       MockedUser.findById.mockResolvedValue(mockUser);
 
-      // Generate a valid access token
-      const tokens = await authService.generateTokens = jest.fn().mockResolvedValue({
-        access_token: 'valid-access-token',
-        refresh_token: 'refresh-token',
-        expires_in: 900,
-        token_type: 'Bearer'
-      });
+      // Create a valid access token signed with configured or default secret
+      const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
+      const accessToken = jwt.sign({ sub: mockUser.id, jti: 'test-jti' }, jwtSecret, { expiresIn: '15m' });
 
       const response = await request(app)
         .get('/api/auth/profile')
-        .set('Authorization', 'Bearer valid-access-token')
+        .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
       expect(response.body).toHaveProperty('user');

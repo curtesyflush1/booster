@@ -185,6 +185,70 @@ export class Product extends BaseModel<IProduct> {
     return this.findOneBy<IProduct>({ slug: slug.toLowerCase() });
   }
 
+  /**
+   * Simple batch fetch by IDs (no availability join).
+   */
+  static async findByIds(ids: string[]): Promise<IProduct[]> {
+    if (!Array.isArray(ids) || ids.length === 0) return [];
+    return this.getKnex()(this.getTableName()).whereIn('id', ids);
+  }
+
+  /**
+   * Batch fetch products by IDs including availability joined with retailers.
+   */
+  static async findByIdsWithAvailability(ids: string[]): Promise<Array<IProduct & { availability: any[] }>> {
+    // Fetch products
+    const products: IProduct[] = await this.getKnex()(this.getTableName()).whereIn('id', ids);
+    if (!products || products.length === 0) return [] as any;
+
+    // Fetch availability for these products and join retailer info
+    const rows = await this.getKnex()('product_availability')
+      .select(
+        'product_availability.id',
+        'product_availability.product_id',
+        'product_availability.retailer_id',
+        'product_availability.in_stock',
+        'product_availability.price',
+        'product_availability.original_price',
+        'product_availability.availability_status',
+        'product_availability.product_url',
+        'product_availability.cart_url',
+        'product_availability.store_locations',
+        'product_availability.last_checked',
+        'retailers.name as retailer_name',
+        'retailers.slug as retailer_slug'
+      )
+      .leftJoin('retailers', 'product_availability.retailer_id', 'retailers.id')
+      .whereIn('product_availability.product_id', ids);
+
+    const availabilityByProduct = new Map<string, any[]>();
+    for (const r of rows) {
+      const list = availabilityByProduct.get(String(r.product_id)) || [];
+      list.push({
+        id: r.id,
+        product_id: r.product_id,
+        retailer_id: r.retailer_id,
+        in_stock: r.in_stock,
+        price: r.price,
+        original_price: r.original_price,
+        availability_status: r.availability_status,
+        product_url: r.product_url,
+        cart_url: r.cart_url,
+        store_locations: r.store_locations,
+        last_checked: r.last_checked,
+        retailer_name: r.retailer_name,
+        retailer_slug: r.retailer_slug
+      });
+      availabilityByProduct.set(String(r.product_id), list);
+    }
+
+    // Attach availability to corresponding product
+    return products.map((p) => ({
+      ...(p as any),
+      availability: availabilityByProduct.get(String((p as any).id)) || []
+    }));
+  }
+
   // Find product by UPC
   static async findByUPC(upc: string): Promise<IProduct | null> {
     if (!upc || typeof upc !== 'string') {

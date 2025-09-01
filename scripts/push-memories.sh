@@ -20,12 +20,53 @@ if [[ ! -f "$MEMORY_FILE" ]]; then
   exit 1
 fi
 
-PROJECT_ID="${OPENMEMORY_PROJECT_ID:-booster-beacon-proj-001}"
+APP_NAME="${OPENMEMORY_APP_NAME:-${OPENMEMORY_PROJECT_ID:-booster-beacon}}"
 
-echo "Pushing memories to $API_URL for project $PROJECT_ID ..."
-curl -sS -X POST "$API_URL/projects/$PROJECT_ID/memories" \
-  -H "Authorization: Bearer $OPENMEMORY_API_KEY" \
-  -H "Content-Type: application/json" \
-  --data-binary @"$MEMORY_FILE"
+echo "Pushing memories (per-item) to $API_URL/api/v1/memories/ for app '$APP_NAME' ..."
 
-echo -e "\nDone."
+# Generate per-item memory payloads and push sequentially
+TMP_MEMS="$(mktemp)"
+MEMORY_FILE_PATH="$MEMORY_FILE" OPENMEMORY_APP_NAME="$APP_NAME" node -e '
+  const fs = require("fs");
+  const path = process.env.MEMORY_FILE_PATH;
+  const appName = process.env.OPENMEMORY_APP_NAME || process.env.OPENMEMORY_PROJECT_ID || "booster-beacon";
+  if (!path) {
+    console.error("MEMORY_FILE_PATH env not set");
+    process.exit(2);
+  }
+  const bundle = JSON.parse(fs.readFileSync(path, "utf8"));
+  if (!Array.isArray(bundle.items)) {
+    console.error("Invalid memory bundle: missing items[]");
+    process.exit(2);
+  }
+  const toText = (item) => {
+    const title = item.title || "Untitled";
+    const desc = item.summary || (item.details && item.details.summary) || "";
+    return desc ? `${title} — ${desc}` : title;
+  };
+  for (const item of bundle.items) {
+    const payload = {
+      memory: toText(item),
+      categories: Array.isArray(item.tags) ? item.tags : [],
+      app_name: appName,
+      metadata: item.details || {}
+    };
+    process.stdout.write(JSON.stringify(payload) + "\n");
+  }
+' > "$TMP_MEMS"
+
+OK=0; FAIL=0
+while IFS= read -r line; do
+  if [[ -z "$line" ]]; then continue; fi
+  HTTP_STATUS=$(curl -sS -o /tmp/mem.out -w "%{http_code}" -X POST "$API_URL/api/v1/memories/" \
+    -H "Authorization: Bearer $OPENMEMORY_API_KEY" \
+    -H "Content-Type: application/json" \
+    --data-binary "$line" || true)
+  if [[ "$HTTP_STATUS" == "200" || "$HTTP_STATUS" == "201" ]]; then
+    OK=$((OK+1)); printf ".";
+  else
+    FAIL=$((FAIL+1)); echo; echo "Push failed ($HTTP_STATUS): $(cat /tmp/mem.out)" >&2;
+  fi
+done < "$TMP_MEMS"
+echo; echo "Pushed $OK memories, $FAIL failed."
+rm -f "$TMP_MEMS"

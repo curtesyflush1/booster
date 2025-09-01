@@ -53,10 +53,21 @@ Successfully implemented task 5: "Build product catalog and search functionality
   - `GET /api/products/recent` - Recently released
   - `GET /api/products/upcoming` - Upcoming releases
   - `GET /api/products/:id/price-history` - Price history
+  - `POST /api/products/by-ids` - Batch fetch by IDs
 - **Category Endpoints**:
   - `GET /api/products/categories` - All categories
   - `GET /api/products/categories/tree` - Category tree
   - `GET /api/products/categories/:id` - Category details
+
+### Batch Fetch Products by IDs
+
+- Endpoint: `POST /api/products/by-ids`
+- Description: Efficiently fetches a batch of products and their real-time availability using a list of product IDs. This is the preferred method for hydrating product details on pages like "My Watches" to avoid N+1 query problems.
+- Request Body (JSON):
+  - `{ "ids": ["c2b6c8ac-1a3e-4a41-9b21-9a7b3d6aa111", "8c8d84c0-8d5e-4c4b-82d6-7c0e9d2f2222"] }`
+- Success Response (JSON):
+  - `{ "products": [ { "id": "c2b6c8ac-1a3e-4a41-9b21-9a7b3d6aa111", "name": "Example Product", "slug": "example-product", "msrp": 99.99, "availability": [ { "retailer_slug": "bestbuy", "in_stock": true, "price": 89.99 } ] }, { "id": "8c8d84c0-8d5e-4c4b-82d6-7c0e9d2f2222", "name": "Another Product", "slug": "another-product", "msrp": 49.99, "availability": [] } ] }`
+- Validation Rules: Requires an array of 1 to 200 unique UUIDs. Invalid format, duplicates, empty arrays, and missing `ids` are rejected with `400 VALIDATION_ERROR`.
 
 ### 6. Image Handling Utilities ✅
 - **Image Validation**: URL format and accessibility validation
@@ -122,6 +133,19 @@ Successfully implemented task 5: "Build product catalog and search functionality
 - **Error Handling**: Consistent error response format
 - **Rate Limiting**: API abuse prevention
 - **Pagination**: Efficient result pagination
+
+#### Batch Fetch Products (By IDs)
+- Endpoint: `POST /api/products/by-ids`
+- Purpose: Fetch multiple products (with availability) by UUIDs in one call
+- Validation (Joi):
+  - Body: `{ ids: string[] }`
+  - Constraints: UUID format, min 1, max 200, unique, required
+- Example request body:
+  - `{ "ids": ["c2b6c8ac-1a3e-4a41-9b21-9a7b3d6aa111", "8c8d84c0-8d5e-4c4b-82d6-7c0e9d2f2222"] }`
+- Success response: `{ products: Array<ProductWithAvailability> }`
+- Error responses:
+  - 400 `VALIDATION_ERROR` with details for invalid/missing/duplicate IDs
+  - 400 if more than 200 IDs are requested
 
 ### Performance Considerations
 - **Database Queries**: Optimized queries with proper joins

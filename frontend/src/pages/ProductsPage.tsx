@@ -1,14 +1,35 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Camera, Package } from 'lucide-react';
-import { Product } from '../types';
+import { Product, PaginatedResponse, SearchFilters } from '../types';
 import { ProductSearch } from '../components/products/ProductSearch';
 import { ProductDetail } from '../components/products/ProductDetail';
 import { BarcodeScanner } from '../components/products/BarcodeScanner';
+import { ProductGrid } from '../components/products/ProductGrid';
+import { apiClient } from '../services/apiClient';
+import { BackendProduct, transformBackendProducts } from '../utils/fieldMapping';
 
 const ProductsPage: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [activeTab, setActiveTab] = useState<'search' | 'detail'>('search');
+  
+  // Basic product list state (for initial display)
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false
+  });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState<Partial<SearchFilters>>({
+    sortBy: 'name',
+    sortOrder: 'asc',
+  });
 
   const handleProductSelect = (product: Product) => {
     setSelectedProduct(product);
@@ -23,6 +44,54 @@ const ProductsPage: React.FC = () => {
   const handleBackToSearch = () => {
     setSelectedProduct(null);
     setActiveTab('search');
+  };
+
+  const loadProducts = useCallback(async (page = 1, append = false) => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Build query params for search + filters
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(pagination.limit),
+      });
+      if (searchQuery) params.set('q', searchQuery);
+      if (filters.category) params.set('category_id', filters.category);
+      if (filters.retailer) params.set('retailer_id', filters.retailer);
+      if (typeof filters.minPrice === 'number') params.set('min_price', String(filters.minPrice));
+      if (typeof filters.maxPrice === 'number') params.set('max_price', String(filters.maxPrice));
+      if (filters.inStockOnly) params.set('availability', 'in_stock');
+      if (filters.sortBy) params.set('sort_by', filters.sortBy as string);
+      if (filters.sortOrder) params.set('sort_order', filters.sortOrder as string);
+
+      // Use the backend search endpoint
+      const response = await apiClient.get<PaginatedResponse<BackendProduct>>(
+        `/products/search?${params.toString()}`
+      );
+      const transformed = transformBackendProducts(response.data.data);
+      setProducts(prev => (append ? [...prev, ...transformed] : transformed));
+      setPagination(response.data.pagination);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  }, [pagination.limit, searchQuery, filters]);
+
+  const loadMore = useCallback(() => {
+    if (pagination.hasNext && !loading) {
+      loadProducts(pagination.page + 1, true);
+    }
+  }, [pagination.hasNext, pagination.page, loading, loadProducts]);
+
+  useEffect(() => {
+    // Initial fetch
+    loadProducts(1, false);
+  }, [loadProducts]);
+
+  const onSubmitSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    loadProducts(1, false);
   };
 
   // Check if device supports camera for barcode scanning
@@ -40,8 +109,7 @@ const ProductsPage: React.FC = () => {
           <p className="text-gray-400">
             {activeTab === 'detail' 
               ? 'View product details, availability, and price history'
-              : 'Search and discover Pokémon TCG products'
-            }
+              : 'Search and discover Pokémon TCG products'}
           </p>
         </div>
 
@@ -68,11 +136,46 @@ const ProductsPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Search + Filters */}
+      {activeTab === 'search' && (
+        <form onSubmit={onSubmitSearch} className="mb-6 flex flex-col md:flex-row gap-3">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search products (name, set, series)"
+            className="flex-1 px-4 py-2 rounded-lg bg-gray-800 text-white placeholder-gray-400 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-600"
+          />
+          <label className="inline-flex items-center gap-2 text-gray-300">
+            <input
+              type="checkbox"
+              checked={!!filters.inStockOnly}
+              onChange={(e) => setFilters(prev => ({ ...prev, inStockOnly: e.target.checked }))}
+              className="accent-blue-600"
+            />
+            In stock only
+          </label>
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            disabled={loading}
+          >
+            Search
+          </button>
+        </form>
+      )}
+
       {/* Content */}
       {activeTab === 'search' ? (
-        <ProductSearch 
+        <ProductGrid
+          products={products}
+          loading={loading}
+          error={error}
+          searchQuery={''}
+          pagination={{ total: pagination.total, hasNext: pagination.hasNext }}
           onProductSelect={handleProductSelect}
           showWatchActions={true}
+          onLoadMore={loadMore}
         />
       ) : selectedProduct ? (
         <ProductDetail 

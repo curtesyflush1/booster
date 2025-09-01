@@ -1,6 +1,7 @@
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import app from '../../src/index';
+import { SubscriptionTier } from '../../src/types/subscription';
 import { User } from '../../src/models/User';
 import { redisService } from '../../src/services/redisService';
 import { tokenBlacklistService } from '../../src/services/tokenBlacklistService';
@@ -13,13 +14,29 @@ const mockRedisService = redisService as jest.Mocked<typeof redisService>;
 jest.mock('../../src/models/User');
 const mockUser = User as jest.Mocked<typeof User>;
 
+// Mock logger to prevent side effects during app import
+jest.mock('../../src/utils/logger', () => ({
+  logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+  loggerWithContext: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }
+}));
+
 describe('Auth Token Revocation Integration Tests', () => {
   const testUser = {
     id: 'test-user-id',
     email: 'test@example.com',
     password_hash: '$2b$12$hashedpassword',
-    subscription_tier: 'free',
+    subscription_tier: SubscriptionTier.FREE,
+    role: 'user' as const,
     email_verified: true,
+    admin_permissions: [],
+    failed_login_attempts: 0,
+    shipping_addresses: [],
+    payment_methods: [],
+    retailer_credentials: {},
+    notification_settings: { web_push: true, email: true, sms: false, discord: false },
+    quiet_hours: { enabled: false, start_time: '22:00', end_time: '08:00', timezone: 'UTC', days: [] },
+    timezone: 'UTC',
+    preferences: {},
     created_at: new Date(),
     updated_at: new Date()
   };

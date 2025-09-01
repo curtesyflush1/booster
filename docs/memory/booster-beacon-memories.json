@@ -31,7 +31,7 @@
         "next": "Add batch scoring + cached insights table; swap factory to cached runner"
       },
       "timestamp": "${NOW}"
-    }
+    },
     {
       "title": "Dashboard populated (stats + activity)",
       "type": "feature",
@@ -62,7 +62,7 @@
         }
       },
       "timestamp": "${NOW}"
-    }
+    },
     {
       "title": "Alerts page implemented (Inbox + actions)",
       "type": "feature",
@@ -85,7 +85,7 @@
         "notes": ["Creates 3 realistic alerts for the first user using existing product/retailer"]
       },
       "timestamp": "${NOW}"
-    }
+    },
     {
       "title": "Docker reset sequence for clean migrations",
       "type": "runbook",
@@ -208,6 +208,28 @@
         "env": { "CONTEXT7_PROJECT_ID": "booster-beacon-proj-001" }
       },
       "timestamp": "2025-08-31T13:43:40Z"
+    },
+    {
+      "title": "Batch products-by-ids endpoint validated, tested, documented",
+      "type": "feature",
+      "tags": ["backend", "api", "products", "joi", "validation", "tests", "docs"],
+      "details": {
+        "endpoint": "POST /api/products/by-ids",
+        "files": [
+          "backend/src/validators/schemas.ts",
+          "backend/src/routes/products.ts",
+          "backend/tests/integration/products-by-ids.integration.test.ts",
+          "backend/PRODUCT_CATALOG_IMPLEMENTATION.md"
+        ],
+        "summary": "Added Joi body schema productSchemas.getByIdsBatch, wired validate() middleware on route, implemented integration tests (happy path + validation errors), and documented request/response with validation rules.",
+        "notes": [
+          "Validation: ids is 1..200 unique UUIDs",
+          "Controller returns { products } with availability arrays",
+          "Docs include anti–N+1 rationale"
+        ],
+        "resolves": "Follow-up from Watches grid view to add batch products endpoint"
+      },
+      "timestamp": "${NOW}"
     }
   ]
 }

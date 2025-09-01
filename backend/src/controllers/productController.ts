@@ -128,6 +128,41 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
 };
 
 /**
+ * Batch fetch products by IDs (with availability)
+ * Accepts body: { ids: string[] }
+ */
+export const getProductsByIds = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { ids } = req.body || {};
+    if (!Array.isArray(ids) || ids.length === 0) {
+      ResponseHelper.badRequest(res, 'ids array is required');
+      return;
+    }
+
+    // Basic UUID format check and limit
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const uniqueIds = Array.from(new Set(ids)).filter((id: any) => typeof id === 'string' && uuidRegex.test(id));
+    if (uniqueIds.length === 0) {
+      ResponseHelper.badRequest(res, 'No valid UUIDs provided');
+      return;
+    }
+    if (uniqueIds.length > 200) {
+      ResponseHelper.badRequest(res, 'Too many IDs requested (max 200)');
+      return;
+    }
+
+    const products = await Product.findByIdsWithAvailability(uniqueIds);
+    ResponseHelper.success(res, { products });
+  } catch (error) {
+    logger.error('Error in getProductsByIds', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      count: Array.isArray((req.body || {}).ids) ? (req.body as any).ids.length : 0,
+    });
+    next(error);
+  }
+};
+
+/**
  * Get product by slug
  * Validation and sanitization handled by middleware
  */

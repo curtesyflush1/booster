@@ -243,6 +243,28 @@ export const productSchemas = {
         'string.uuid': 'Must be a valid UUID'
       })
     })
+  },
+
+  // Batch fetch products by IDs
+  getByIdsBatch: {
+    body: Joi.object({
+      ids: Joi.array()
+        .items(
+          Joi.string().uuid().messages({
+            'string.uuid': 'Each id must be a valid UUID'
+          })
+        )
+        .min(1)
+        .max(200)
+        .unique()
+        .required()
+        .messages({
+          'array.min': 'At least one product ID is required',
+          'array.max': 'Cannot request more than 200 IDs',
+          'any.required': 'ids array is required',
+          'array.unique': 'Duplicate IDs are not allowed'
+        })
+    })
   }
 };
 

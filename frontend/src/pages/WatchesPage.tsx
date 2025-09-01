@@ -6,7 +6,7 @@ import { WatchPacks } from '../components/watches/WatchPacks';
 import { ProductGrid } from '../components/products/ProductGrid';
 import { ProductDetail } from '../components/products/ProductDetail';
 import { apiClient } from '../services/apiClient';
-import { transformBackendProduct, BackendProduct } from '../utils/fieldMapping';
+import { transformBackendProduct, transformBackendProducts, BackendProduct } from '../utils/fieldMapping';
 
 const WatchesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'watches' | 'packs'>('watches');
@@ -35,20 +35,14 @@ const WatchesPage: React.FC = () => {
         return;
       }
 
-      // Fetch each product detail (in parallel). In the future, replace with a batch endpoint.
-      const fetched = await Promise.all(
-        productIds.map(async (id) => {
-          try {
-            const pr = await apiClient.get<{ data: { product: BackendProduct } }>(`/products/${id}`);
-            const backendProduct = pr.data?.data?.product as BackendProduct | undefined;
-            return backendProduct ? transformBackendProduct(backendProduct) : null;
-          } catch (_e) {
-            return null;
-          }
-        })
+      // Batch fetch products in a single call
+      const batch = await apiClient.post<{ data: { products: BackendProduct[] } }>(
+        '/products/by-ids',
+        { ids: productIds }
       );
-
-      setProducts(fetched.filter(Boolean) as Product[]);
+      const backendList = (batch.data as any)?.data?.products || (batch.data as any)?.products || [];
+      const transformed = transformBackendProducts(backendList as BackendProduct[]);
+      setProducts(transformed);
     } catch (e: any) {
       setError(e?.message || 'Failed to load watched products');
     } finally {

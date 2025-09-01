@@ -5,11 +5,25 @@ import { CostcoService } from '../../src/services/retailers/CostcoService';
 import { SamsClubService } from '../../src/services/retailers/SamsClubService';
 import { ProductAvailabilityRequest, ProductAvailabilityResponse } from '../../src/types/retailer';
 
-// Mock the retailer services
-jest.mock('../../src/services/retailers/BestBuyService');
-jest.mock('../../src/services/retailers/WalmartService');
-jest.mock('../../src/services/retailers/CostcoService');
-jest.mock('../../src/services/retailers/SamsClubService');
+// Mock the retailer services with factory-based constructors that return
+// the per-test instance configured in beforeEach.
+let bestBuyMockInstance: any;
+let walmartMockInstance: any;
+let costcoMockInstance: any;
+let samsMockInstance: any;
+
+jest.mock('../../src/services/retailers/BestBuyService', () => ({
+  BestBuyService: jest.fn().mockImplementation(() => bestBuyMockInstance)
+}));
+jest.mock('../../src/services/retailers/WalmartService', () => ({
+  WalmartService: jest.fn().mockImplementation(() => walmartMockInstance)
+}));
+jest.mock('../../src/services/retailers/CostcoService', () => ({
+  CostcoService: jest.fn().mockImplementation(() => costcoMockInstance)
+}));
+jest.mock('../../src/services/retailers/SamsClubService', () => ({
+  SamsClubService: jest.fn().mockImplementation(() => samsMockInstance)
+}));
 
 // Mock environment variables
 const originalEnv = process.env;
@@ -20,6 +34,7 @@ describe('Retailer Integration Tests', () => {
   let mockWalmartService: jest.Mocked<WalmartService>;
   let mockCostcoService: jest.Mocked<CostcoService>;
   let mockSamsClubService: jest.Mocked<SamsClubService>;
+  let createSpy: jest.SpyInstance;
 
   beforeEach(() => {
     // Set up environment variables for API keys
@@ -62,11 +77,55 @@ describe('Retailer Integration Tests', () => {
       getConfig: jest.fn()
     } as any;
 
-    // Mock constructors
-    (BestBuyService as jest.MockedClass<typeof BestBuyService>).mockImplementation(() => mockBestBuyService);
-    (WalmartService as jest.MockedClass<typeof WalmartService>).mockImplementation(() => mockWalmartService);
-    (CostcoService as jest.MockedClass<typeof CostcoService>).mockImplementation(() => mockCostcoService);
-    (SamsClubService as jest.MockedClass<typeof SamsClubService>).mockImplementation(() => mockSamsClubService);
+    // Assign instances for factory mocks
+    bestBuyMockInstance = mockBestBuyService;
+    walmartMockInstance = mockWalmartService;
+    costcoMockInstance = mockCostcoService;
+    samsMockInstance = mockSamsClubService;
+
+    // Limit retailer configs to just Best Buy and Walmart to match test expectations
+    jest
+      .spyOn(RetailerIntegrationService.prototype as any, 'getRetailerConfigs')
+      .mockReturnValue([
+        {
+          id: 'best-buy',
+          name: 'Best Buy',
+          slug: 'best-buy',
+          type: 'api',
+          baseUrl: 'https://api.bestbuy.com/v1',
+          apiKey: process.env.BEST_BUY_API_KEY,
+          rateLimit: { requestsPerMinute: 5, requestsPerHour: 100 },
+          timeout: 10000,
+          retryConfig: { maxRetries: 3, retryDelay: 1000 },
+          isActive: true
+        },
+        {
+          id: 'walmart',
+          name: 'Walmart',
+          slug: 'walmart',
+          type: 'affiliate',
+          baseUrl: 'https://api.walmartlabs.com/v1',
+          apiKey: process.env.WALMART_API_KEY,
+          rateLimit: { requestsPerMinute: 5, requestsPerHour: 100 },
+          timeout: 10000,
+          retryConfig: { maxRetries: 3, retryDelay: 1000 },
+          isActive: true
+        }
+      ] as any);
+
+    // As a stronger guarantee, stub the factory inside RetailerIntegrationService
+    createSpy = jest
+      .spyOn(RetailerIntegrationService.prototype as any, 'createRetailerService')
+      .mockImplementation((config: any) => {
+        switch (config.slug) {
+          case 'best-buy':
+            return mockBestBuyService as any;
+          case 'walmart':
+            return mockWalmartService as any;
+          default:
+            throw new Error(`Unknown retailer: ${config.slug}`);
+        }
+      });
 
     // Mock getConfig methods
     mockBestBuyService.getConfig.mockReturnValue({
@@ -124,7 +183,12 @@ describe('Retailer Integration Tests', () => {
 
   afterEach(() => {
     process.env = originalEnv;
-    service.shutdown();
+    if (service && typeof (service as any).shutdown === 'function') {
+      service.shutdown();
+    }
+    if (createSpy) {
+      createSpy.mockRestore();
+    }
     jest.clearAllMocks();
   });
 

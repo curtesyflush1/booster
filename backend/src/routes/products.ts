@@ -5,6 +5,7 @@ import { generalRateLimit } from '../middleware/rateLimiter';
 import { sanitizeParameters, sanitizeProductParameters } from '../middleware/parameterSanitization';
 import { contentSanitizationMiddleware } from '../utils/contentSanitization';
 import { validate, validateQuery, validateParams, productSchemas, categorySchemas } from '../validators';
+import { getProductsByIds } from '../controllers/productController';
 
 const router = Router();
 
@@ -50,6 +51,13 @@ router.get('/upcoming', productController.getUpcomingProducts);
  * @access  Public
  */
 router.get('/stats', productController.getProductStats);
+
+/**
+ * @route   POST /api/products/by-ids
+ * @desc    Batch fetch products (optionally with availability) by IDs
+ * @access  Public
+ */
+router.post('/by-ids', validate(productSchemas.getByIdsBatch), productController.getProductsByIds);
 
 /**
  * @route   GET /api/products/category/:categoryId
