@@ -78,6 +78,10 @@ services:
       LOG_LEVEL: debug
       FRONTEND_URL: http://localhost:5173
       DISABLE_RATE_LIMITING: "true"
+      STRIPE_PUBLISHABLE_KEY: pk_test_51S2YNrCR3n2urghatfeFiluDuwrQ1w8RzYWMzXH3cas5030hto6NW1X2XZdkn4A1FYETM5ebphlRnvPUZ4PcUfDy00a2nGj7nw
+      STRIPE_SECRET_KEY: sk_test_51S2YNrCR3n2urgha1et8WoCVvH1bmrj2SzZmRlQuwYW9kmdV2R0ZwZhnVyvMFqX54qUK3ljZy3RGrR3uKpQi7BrX00vrmNeYhI
+      STRIPE_PRO_MONTHLY_PRICE_ID: price_1S2ZRPCR3n2urghaMW1c8QhC
+      STRIPE_SETUP_FEE_PRICE_ID: price_1S2ZRhCR3n2urghaf5pMFHsO
     ports:
       - "3000:3000"
     volumes:

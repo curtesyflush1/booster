@@ -5,12 +5,15 @@ import { IUser, IUsageStats } from '../types/database';
 import { SubscriptionTier } from '../types/subscription';
 import { logger } from '../utils/logger';
 
-// Initialize Stripe (in production, this would come from environment variables)
-// Temporarily disabled for development
-// const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy', {
-//   apiVersion: '2025-07-30.basil'
-// });
-const stripe = null as any;
+// Initialize Stripe using environment configuration
+const stripeSecret = process.env.STRIPE_SECRET_KEY || '';
+if (!stripeSecret) {
+  // In development without Stripe configured, we still allow the app to boot
+  // but methods that require Stripe will throw a clear error.
+}
+const stripe = stripeSecret
+  ? new Stripe(stripeSecret as string)
+  : (null as any);
 
 export interface SubscriptionPlan {
   id: string;
@@ -124,6 +127,9 @@ export class SubscriptionService extends BaseModel<any> {
     cancelUrl: string
   ): Promise<{ sessionId: string; url: string }> {
     try {
+      if (!stripe) {
+        throw new Error('Stripe is not configured. Missing STRIPE_SECRET_KEY');
+      }
       const user = await User.findById<IUser>(userId);
       if (!user) {
         throw new Error('User not found');
@@ -141,17 +147,28 @@ export class SubscriptionService extends BaseModel<any> {
       }
 
       // Create checkout session
+      // Ensure success URL includes the checkout session id for client confirmation
+      const successUrlWithSession = (() => {
+        try {
+          const u = new URL(successUrl);
+          if (!u.searchParams.has('session_id')) {
+            u.searchParams.set('session_id', '{CHECKOUT_SESSION_ID}');
+          }
+          return u.toString();
+        } catch {
+          // Fallback: append query param safely
+          return successUrl.includes('?')
+            ? `${successUrl}&session_id={CHECKOUT_SESSION_ID}`
+            : `${successUrl}?session_id={CHECKOUT_SESSION_ID}`;
+        }
+      })();
+
       const sessionData: Stripe.Checkout.SessionCreateParams = {
         customer: customerId,
         payment_method_types: ['card'],
-        line_items: [
-          {
-            price: plan.stripe_price_id,
-            quantity: 1,
-          },
-        ],
+        line_items: [],
         mode: 'subscription',
-        success_url: successUrl,
+        success_url: successUrlWithSession,
         cancel_url: cancelUrl,
         metadata: {
           user_id: userId,
@@ -164,6 +181,15 @@ export class SubscriptionService extends BaseModel<any> {
           }
         }
       };
+
+      // Add primary subscription line item
+      sessionData.line_items!.push({ price: plan.stripe_price_id, quantity: 1 });
+
+      // Optionally add a one-time setup fee if configured
+      const setupFeePriceId = process.env.STRIPE_SETUP_FEE_PRICE_ID;
+      if (setupFeePriceId) {
+        sessionData.line_items!.push({ price: setupFeePriceId, quantity: 1 });
+      }
 
       if (plan.trial_days > 0) {
         sessionData.subscription_data!.trial_period_days = plan.trial_days;

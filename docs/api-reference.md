@@ -220,6 +220,61 @@ GET /api/v1/status
 ```
 Returns API version and status information.
 
+### Subscriptions
+
+#### Get Plans
+```http
+GET /api/subscription/plans
+```
+Returns active subscription plans.
+
+#### Create Checkout Session
+```http
+POST /api/subscription/checkout
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "planSlug": "pro-monthly",
+  "successUrl": "http://localhost:5173/subscription/success",
+  "cancelUrl": "http://localhost:5173/pricing"
+}
+```
+Response:
+```json
+{ "sessionId": "cs_test_...", "url": "https://checkout.stripe.com/c/pay/..." }
+```
+
+#### Webhook (Stripe)
+```http
+POST /api/subscription/webhook/stripe
+```
+Raw body required for signature verification (`express.raw`). Set `STRIPE_WEBHOOK_SECRET` to enable strict verification.
+
+#### Subscription Status
+```http
+GET /api/subscription/status
+Authorization: Bearer <token>
+```
+
+#### Billing History
+```http
+GET /api/subscription/billing-history?limit=10
+Authorization: Bearer <token>
+```
+
+#### Cancel / Reactivate
+```http
+POST /api/subscription/cancel
+Authorization: Bearer <token>
+
+{ "cancelAtPeriodEnd": true }
+```
+```http
+POST /api/subscription/reactivate
+Authorization: Bearer <token>
+```
+
 ## Authentication & User Management
 
 ### User Registration

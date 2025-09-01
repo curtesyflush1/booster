@@ -1122,3 +1122,37 @@ This checklist systematically implements the core features of the BoosterBeacon 
         1.  In the `loadDashboardData` function (or a separate one if preferred), make `GET` requests to `/api/dashboard/insights` and `/api/dashboard/portfolio`.
         2.  Pass the insights data to the `PredictiveInsights` component.
         3.  Pass the portfolio data to the `PortfolioTracking` component.
+
+# BoosterBeacon: Auto-Buy & Subscription MVP Checklist
+
+This checklist implements the foundational features for paid subscriptions and automated purchasing, prioritizing security and a stable user experience.
+
+---
+
+### **Phase 1: Stripe Subscription and Billing**
+
+* [X] **1. Configure Stripe and Environment**
+    * **Task:** Add Stripe secret keys and Price IDs for the monthly subscription and one-time setup fee to all `.env` files.
+
+* [ ] **2. Implement Backend Subscription Endpoints**
+    * **Files:** `backend/src/controllers/subscriptionController.ts`, `backend/src/routes/subscription.ts`
+    * **Task:** Implement the `POST /api/subscription/checkout`, Stripe webhook handler, and `POST /api/subscription/portal` endpoints.
+
+* [ ] **3. Wire Up Frontend Billing UI**
+    * **Files:** `frontend/src/pages/PricingPage.tsx`, `frontend/src/pages/ProfilePage.tsx`
+    * **Task:** Connect the UI buttons to the new subscription endpoints and conditionally render auto-buy features based on the user's subscription status.
+
+### **Phase 2: Secure Credential Vault**
+
+* [ ] **4. Implement Retailer Credential Storage**
+    * **Task:** Create a new "Retailer Connect" page on the frontend for submitting retailer credentials. Use the `WebCrypto` API to encrypt the password client-side. Create the corresponding backend endpoints to receive and securely store these credentials using envelope encryption.
+
+### **Phase 3: The Auto-Buy MVP**
+
+* [ ] **5. Enhance the Purchase Orchestrator**
+    * **Files:** `backend/src/services/PurchaseOrchestrator.ts`, `backend/src/services/alertProcessingService.ts`
+    * **Task:** Upgrade the `PurchaseOrchestrator` stub to a real service that transiently decrypts credentials and calls a retailer adapter. Hook it into the `AlertProcessingService`.
+
+* [ ] **6. Implement a Single Retailer Adapter**
+    * **File:** Create `backend/src/services/retailerAdapters/BestBuyAdapter.ts`.
+    * **Task:** Implement the headless browser logic using `puppeteer-core` to perform a full, unattended checkout on the Best Buy website. Include extensive error handling for common checkout failures.

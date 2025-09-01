@@ -58,6 +58,9 @@ app.use(cors({
   credentials: true
 }));
 
+// Stripe webhook must receive the raw body for signature verification
+app.use('/api/subscription/webhook/stripe', express.raw({ type: 'application/json' }));
+
 // Body parsing middleware
 app.use(express.json({ limit: EXPRESS_LIMITS.JSON_BODY_LIMIT }));
 app.use(express.urlencoded({ extended: true }));

@@ -8,8 +8,8 @@ import { billingEventService } from '../services/billingEventService';
 
 // Validation schemas
 const createCheckoutSessionSchema = Joi.object({
-  planSlug: Joi.string().valid('free', 'pro').required().messages({
-    'any.only': 'Plan must be either "free" or "pro"',
+  planSlug: Joi.string().valid('free', 'pro', 'pro-monthly', 'pro-yearly').required().messages({
+    'any.only': 'Plan must be one of "free", "pro", "pro-monthly", or "pro-yearly"',
     'any.required': 'Plan slug is required'
   }),
   successUrl: Joi.string().uri().required().messages({
@@ -128,7 +128,9 @@ export const createCheckoutSession = async (req: Request, res: Response, next: N
       return;
     }
 
-    const { planSlug, successUrl, cancelUrl } = value;
+    let { planSlug, successUrl, cancelUrl } = value;
+    // Backward compatibility: treat 'pro' as 'pro-monthly'
+    if (planSlug === 'pro') planSlug = 'pro-monthly';
 
     // Check if user already has an active subscription
     const user = await User.findById<IUser>(req.user.id);
@@ -340,21 +342,27 @@ export const handleStripeWebhook = async (req: Request, res: Response, next: Nex
   try {
     const sig = req.headers['stripe-signature'] as string;
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const stripeSecret = process.env.STRIPE_SECRET_KEY;
 
-    if (!endpointSecret) {
-      logger.error('Stripe webhook secret not configured');
-      res.status(400).send('Webhook secret not configured');
-      return;
-    }
-
-    let event;
-    try {
-      // In a real implementation, you would verify the webhook signature
-      event = req.body;
-    } catch (err) {
-      logger.error('Webhook signature verification failed:', err);
-      res.status(400).send('Webhook signature verification failed');
-      return;
+    let event: any;
+    if (endpointSecret && stripeSecret && Buffer.isBuffer(req.body)) {
+      try {
+        const stripe = new (require('stripe'))(stripeSecret);
+        event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+      } catch (err) {
+        logger.error('Webhook signature verification failed:', err as any);
+        res.status(400).send('Webhook signature verification failed');
+        return;
+      }
+    } else {
+      // Fallback: parse JSON without signature verification (dev only)
+      try {
+        event = Buffer.isBuffer(req.body) ? JSON.parse(req.body.toString('utf8')) : req.body;
+      } catch (err) {
+        logger.error('Failed to parse webhook body:', err as any);
+        res.status(400).send('Invalid webhook payload');
+        return;
+      }
     }
 
     // Handle the event
@@ -432,14 +440,13 @@ export const handleStripeWebhook = async (req: Request, res: Response, next: Nex
         } catch (e) { logger.warn('Failed to record billing event', { type: event.type }); }
         break;
       default:
-        logger.info('Unhandled event type:', event.type);
+        logger.info(`Unhandled event type: ${event.type}`);
         try {
-          // Record unknown events in case useful downstream
           await billingEventService.recordAndEmit({
-            stripe_customer_id: event.data.object?.customer || 'unknown',
-            subscription_id: event.data.object?.subscription || null,
+            stripe_customer_id: event.data?.object?.customer || 'unknown',
+            subscription_id: event.data?.object?.subscription || null,
             event_type: event.type,
-            status: event.data.object?.status || null,
+            status: event.data?.object?.status || null,
             raw_event: event
           });
         } catch {}

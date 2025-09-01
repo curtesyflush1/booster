@@ -103,6 +103,23 @@ You can browse the catalog even without searching:
 
 On mobile devices with a camera, use the built‑in **Scan Barcode** button to look up products by UPC.
 
+## Subscriptions & Billing
+
+### Upgrading to Pro
+
+1. Navigate to the Pricing page
+2. Click “Upgrade Now” under the Pro plan
+3. Complete the Stripe Checkout using a supported payment method
+4. You are redirected to a success page at `/subscription/success`
+
+The Success page briefly waits for the billing webhook to process, then refreshes your subscription status. When active, you’ll see Pro features unlocked and can proceed to the Dashboard.
+
+### Managing Your Subscription
+
+- View status, usage, and billing history under Subscription
+- Cancel at period end or reactivate anytime
+- Pro features include unlimited watches, priority delivery, SMS/Discord alerts, price analytics, and premium support
+
 #### Watch Packs (Recommended)
 Watch Packs are curated collections of popular products that are automatically updated:
 

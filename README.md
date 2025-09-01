@@ -100,6 +100,74 @@ npm run seed:dev
 npm run dev
 ```
 
+## 💳 Subscriptions & Billing (Stripe)
+
+BoosterBeacon integrates with Stripe for subscription checkout and billing events.
+
+### Configure Environment
+
+Set these in `.env` and `backend/.env` (test values shown):
+
+- `STRIPE_PUBLISHABLE_KEY` – your test publishable key
+- `STRIPE_SECRET_KEY` – your test secret key
+- `STRIPE_PRO_MONTHLY_PRICE_ID` – test Price ID for Pro monthly
+- `STRIPE_SETUP_FEE_PRICE_ID` – optional one-time setup fee Price ID
+- `STRIPE_WEBHOOK_SECRET` – from `stripe listen` (see below)
+
+The dev Docker stack exports these to the API. See `docker-compose.dev.yml` for the exact variables.
+
+### Start Dev Stack
+
+```bash
+docker compose -f docker-compose.dev.yml up -d --build
+docker compose -f docker-compose.dev.yml exec api npm run migrate:up
+docker compose -f docker-compose.dev.yml exec api npm run seed:dev
+```
+
+Admin (seeded) login for testing:
+
+- Email: `admin@boosterbeacon.com`
+- Password: `admin123!@#`
+
+### Webhook Listener (Recommended)
+
+Enable verified webhooks during local testing:
+
+```bash
+stripe listen --forward-to localhost:3000/api/subscription/webhook/stripe
+```
+
+Copy the printed signing secret and set `STRIPE_WEBHOOK_SECRET` in your env, then restart the API so signature verification passes.
+
+### End-to-End Test
+
+1. Log in → open Pricing page → click “Upgrade Now” for Pro
+2. Complete Stripe Checkout (use test card `4242 4242 4242 4242`)
+3. You’ll be redirected to `/subscription/success?session_id=...`
+4. The Success page auto-refreshes your status (allows 2s for the webhook)
+5. Verify status via API (optional):
+
+```bash
+# Replace <ACCESS_TOKEN> with token returned from /api/auth/login
+curl -s -H "Authorization: Bearer <ACCESS_TOKEN>" http://localhost:3000/api/subscription/status | jq .
+```
+
+You should see a `subscriptionId` and tier `pro` when activated.
+
+### Subscription Routes (Backend)
+
+- `GET /api/subscription/plans` – active plans (DB-backed + free plan)
+- `POST /api/subscription/checkout` – creates Stripe Checkout session
+  - Body: `{ planSlug: 'pro-monthly' | 'pro-yearly' | 'free', successUrl, cancelUrl }`
+  - Response: `{ sessionId, url }` (frontend redirects to `url`)
+- `POST /api/subscription/webhook/stripe` – Stripe webhook (use raw body; secured by signature)
+- `GET /api/subscription/status` – subscription info, usage, and quota
+- `GET /api/subscription/billing-history?limit=10` – latest billing events
+- `POST /api/subscription/cancel` – cancel (at period end or immediately)
+- `POST /api/subscription/reactivate` – reactivate a canceled subscription
+
+On success, the frontend’s `SubscriptionSuccessPage` confirms status and lists Pro features.
+
 ## 🔍 Pagination Compliance
 
 BoosterBeacon includes tools to monitor and enforce pagination compliance:
@@ -218,6 +286,8 @@ npm run docker:dev:logs
 # Stop services
 npm run docker:dev:down
 ```
+
+`docker-compose.dev.yml` includes environment for Stripe test mode so you can test checkout end-to-end locally.
 
 ## 📊 Database Management
 
