@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { EmailConfigService } from '../../services/emailConfigService';
 
 export interface SMTPConfig {
   host: string;
@@ -21,6 +22,29 @@ export interface ChannelDeliveryResult {
 
 export class EmailService {
   private static transporter: nodemailer.Transporter | null = null;
+
+  private static getTransporter(): nodemailer.Transporter | null {
+    // If transporter already set (e.g., in production init), reuse it
+    if (this.transporter) return this.transporter;
+
+    try {
+      const cfg = EmailConfigService.getCurrentConfiguration();
+      // STARTTLS on 587/50587: secure=false, requireTLS true
+      const transportOptions: any = {
+        host: cfg.host,
+        port: cfg.port,
+        secure: cfg.secure, // true for 465, false for 587/50587
+        auth: cfg.auth,
+        requireTLS: cfg.secure ? false : true,
+        tls: cfg.tls || { rejectUnauthorized: true }
+      };
+      this.transporter = nodemailer.createTransport(transportOptions);
+      return this.transporter;
+    } catch (e) {
+      // Fall back to null (dev mode stubs)
+      return null;
+    }
+  }
 
   static async sendWelcomeEmail(_user: any): Promise<{ success: boolean; error?: string }> {
     console.log('Email service disabled for deployment');
@@ -74,9 +98,10 @@ export class EmailService {
     const to = process.env.SUPPORT_EMAIL || process.env.FROM_EMAIL || 'support@boosterbeacon.com';
 
     // If a transporter is configured, attempt to send via nodemailer
-    if (this.transporter) {
+    const transporter = this.getTransporter();
+    if (transporter) {
       try {
-        const info = await this.transporter.sendMail({
+        const info = await transporter.sendMail({
           from: process.env.FROM_EMAIL || 'no-reply@boosterbeacon.com',
           to,
           subject: `[Contact] ${subject}`,

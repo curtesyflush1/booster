@@ -38,8 +38,10 @@ router.post('/report', authenticate, async (req, res) => {
     alert_at: value.alertAt,
   });
 
-  return res.json({ data: { recorded: true } });
+  return res.json({
+    data: { recorded: true },
+    notice: 'Thanks for contributing! We only record the price you paid (and non-identifying metadata like product/retailer and a hashed user ID) to improve insights. No personal information is stored.'
+  });
 });
 
 export default router;
-

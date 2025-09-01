@@ -79,6 +79,18 @@ services:
       JWT_REFRESH_SECRET: dev_jwt_refresh_secret_key_change_in_production
       LOG_LEVEL: debug
       FRONTEND_URL: http://localhost:5173
+      # SMTP configuration (dev points to your SMTP provider). Do NOT hardcode the password here.
+      # Export SMTP_PASS in your shell before `docker compose up`, and it will be injected.
+      # Example (bash/zsh): export SMTP_PASS='your_smtp_password'
+      SMTP_HOST: smtp.porkbun.com
+      SMTP_PORT: 587
+      SMTP_SECURE: "false"
+      SMTP_USER: admin@boosterbeacon.com
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_TLS_REJECT_UNAUTHORIZED: "true"
+      FROM_EMAIL: admin@boosterbeacon.com
+      FROM_NAME: BoosterBeacon
+      SUPPORT_EMAIL: support@boosterbeacon.com
       # Optional retailer keys to suppress startup warnings in development
       BESTBUY_API_KEY: dummy
       WALMART_API_KEY: dummy

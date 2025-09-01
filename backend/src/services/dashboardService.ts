@@ -26,6 +26,13 @@ export interface ProductInsights {
     confidence: number;
   };
   hypeScore: number;
+  // Aggregated metrics from user-reported purchases. These contain no PII.
+  purchaseSignals?: {
+    averagePaidPrice: number;           // average price users actually paid
+    avgDeltaToMsrpPct: number;          // (MSRP - avgPaid) / MSRP
+    averageLeadTimeHours: number | null; // avg hours from alert_at to purchase
+    sampleSize: number;                 // number of purchases considered
+  };
   updatedAt: string;
 }
 
