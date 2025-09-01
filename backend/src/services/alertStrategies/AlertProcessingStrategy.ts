@@ -1,4 +1,5 @@
 import { IUser, IAlert, IProduct } from '../../types/database';
+import { inferPlanTier } from '../planPriorityService';
 
 export type AlertPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type AlertType = 'restock' | 'price_drop' | 'low_stock' | 'pre_order';
@@ -79,8 +80,14 @@ export abstract class BaseAlertStrategy implements AlertProcessingStrategy {
       channels.push('email');
     }
 
-    // SMS and Discord are Pro features
-    if (user.subscription_tier === 'pro') {
+    // SMS and Discord are paid features (Pro and Premium)
+    const planTier = inferPlanTier({
+      subscription_plan_id: (user as any).subscription_plan_id,
+      subscription_tier: user.subscription_tier as any,
+    } as any);
+    const isPaid = planTier === 'pro' || planTier === 'premium' || user.subscription_tier === 'pro';
+
+    if (isPaid) {
       if (settings.sms) {
         channels.push('sms');
       }

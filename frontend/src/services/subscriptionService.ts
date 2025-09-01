@@ -22,6 +22,7 @@ export interface SubscriptionStatus {
   tier: 'free' | 'pro';
   status?: string;
   subscriptionId?: string;
+  planId?: string;
   startDate?: string;
   endDate?: string;
   trialEndDate?: string;

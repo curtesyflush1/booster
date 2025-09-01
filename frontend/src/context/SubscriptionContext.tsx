@@ -69,6 +69,7 @@ interface SubscriptionContextType {
   reactivateSubscription: () => Promise<void>;
   checkQuota: (action: 'watch' | 'alert' | 'api') => Promise<QuotaInfo>;
   isProUser: () => boolean;
+  isTopTier: () => boolean;
   canCreateWatch: () => boolean;
   getRemainingWatches: () => number;
   getUsagePercentage: (type: 'watches' | 'alerts' | 'api') => number;
@@ -174,6 +175,12 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     return state.subscription?.tier === 'pro' && state.subscription?.status === 'active';
   };
 
+  const isTopTier = (): boolean => {
+    if (!isProUser()) return false;
+    const pid = state.subscription?.planId;
+    return pid === 'pro-yearly' || pid === 'pro-plus';
+  };
+
   const canCreateWatch = (): boolean => {
     if (isProUser()) return true;
     
@@ -226,6 +233,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     reactivateSubscription,
     checkQuota,
     isProUser,
+    isTopTier,
     canCreateWatch,
     getRemainingWatches,
     getUsagePercentage

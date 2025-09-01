@@ -120,6 +120,12 @@ The Success page briefly waits for the billing webhook to process, then refreshe
 - Cancel at period end or reactivate anytime
 - Pro features include unlimited watches, priority delivery, SMS/Discord alerts, price analytics, and premium support
 
+#### Queue Priority
+- Premium: Top priority for alerts and automated purchase attempts.
+- Pro: Higher priority than Free users.
+- Free: Standard processing.
+- Prioritization is enforced server-side using your active plan ID.
+
 #### Watch Packs (Recommended)
 Watch Packs are curated collections of popular products that are automatically updated:
 

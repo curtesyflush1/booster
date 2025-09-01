@@ -8,8 +8,8 @@ import { billingEventService } from '../services/billingEventService';
 
 // Validation schemas
 const createCheckoutSessionSchema = Joi.object({
-  planSlug: Joi.string().valid('free', 'pro', 'pro-monthly', 'pro-yearly').required().messages({
-    'any.only': 'Plan must be one of "free", "pro", "pro-monthly", or "pro-yearly"',
+  planSlug: Joi.string().valid('free', 'pro', 'pro-monthly', 'pro-yearly', 'premium', 'premium-monthly').required().messages({
+    'any.only': 'Plan must be one of "free", "pro", "pro-monthly", "pro-yearly", "premium", or "premium-monthly"',
     'any.required': 'Plan slug is required'
   }),
   successUrl: Joi.string().uri().required().messages({
@@ -83,6 +83,7 @@ export const getSubscriptionStatus = async (req: Request, res: Response, next: N
         tier: user.subscription_tier,
         status: user.subscription_status,
         subscriptionId: user.subscription_id,
+        planId: user.subscription_plan_id,
         startDate: user.subscription_start_date,
         endDate: user.subscription_end_date,
         trialEndDate: user.trial_end_date,
@@ -129,8 +130,9 @@ export const createCheckoutSession = async (req: Request, res: Response, next: N
     }
 
     let { planSlug, successUrl, cancelUrl } = value;
-    // Backward compatibility: treat 'pro' as 'pro-monthly'
+    // Backward compatibility: treat 'pro' as 'pro-monthly' and 'premium' as 'premium-monthly'
     if (planSlug === 'pro') planSlug = 'pro-monthly';
+    if (planSlug === 'premium') planSlug = 'premium-monthly';
 
     // Check if user already has an active subscription
     const user = await User.findById<IUser>(req.user.id);

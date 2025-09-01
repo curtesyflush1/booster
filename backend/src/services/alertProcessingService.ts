@@ -107,9 +107,17 @@ export class AlertProcessingService {
           return { type: 'deduplicated', alert: deduplicationResult.existingAlert! };
         }
 
-        // Use strategy pattern to determine priority
+        // Use strategy pattern to determine base priority, then boost by plan tier
         const strategy = AlertProcessorFactory.getProcessor(alertData.type);
-        const priority = alertData.priority || await strategy.calculatePriority(alertData);
+        let computedPriority = alertData.priority || await strategy.calculatePriority(alertData);
+
+        try {
+          const userForPriority = await CachedUserService.getUserWithPreferences(alertData.userId);
+          const { boostAlertPriorityByPlan } = await import('./planPriorityService');
+          computedPriority = boostAlertPriorityByPlan(userForPriority as any, computedPriority as any) as any;
+        } catch (e) {
+          // If anything goes wrong, proceed with computed priority without boost
+        }
 
         // Create the alert within the transaction
         const alertCreateData: Partial<IAlert> = {
@@ -117,7 +125,7 @@ export class AlertProcessingService {
           product_id: alertData.productId,
           retailer_id: alertData.retailerId,
           type: alertData.type,
-          priority,
+          priority: computedPriority,
           data: {
             ...alertData.data,
             availability_status: alertData.data?.availability_status || 'unknown'

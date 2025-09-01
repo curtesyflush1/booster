@@ -39,6 +39,8 @@ export interface IUser {
   subscription_end_date?: Date;
   trial_end_date?: Date;
   cancel_at_period_end?: boolean;
+  // Stripe/local plan identifier (e.g., 'pro-monthly', 'premium-monthly' or price id)
+  subscription_plan_id?: string;
   usage_stats?: IUsageStats;
   billing_address?: IAddress;
   created_at: Date;

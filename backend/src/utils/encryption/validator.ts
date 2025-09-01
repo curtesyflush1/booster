@@ -10,6 +10,15 @@ export class EncryptionValidator {
       );
     }
     
+    // Disallow empty plaintext to avoid creating meaningless ciphertext
+    if (plaintext.length === 0) {
+      throw new EncryptionError(
+        'Plaintext must be a non-empty string',
+        EncryptionErrorCodes.INVALID_INPUT,
+        { length: 0 }
+      );
+    }
+    
     if (plaintext.length > EncryptionConstants.MAX_PLAINTEXT_SIZE) {
       throw new EncryptionError(
         `Plaintext too large for encryption (max ${EncryptionConstants.MAX_PLAINTEXT_SIZE} bytes)`,

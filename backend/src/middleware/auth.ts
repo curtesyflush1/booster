@@ -5,6 +5,7 @@ import { logger } from '../utils/logger';
 import { IUser } from '../types/database';
 import { AuthResponseFactory } from '../utils/authResponseFactory';
 import { SubscriptionTier, SubscriptionValidator } from '../types/subscription';
+import { HTTP_STATUS } from '../constants/http';
 
 // Extend Express Request interface to include user
 declare global {
@@ -110,6 +111,31 @@ export const requireEmailVerification = (req: Request, res: Response, next: Next
   }
 
   next();
+};
+
+/**
+ * Middleware to require a specific subscription plan (by plan slug or Stripe price id)
+ */
+export const requirePlan = (allowedPlans: string[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      AuthResponseFactory.sendAuthenticationRequired(res);
+      return;
+    }
+
+    const planId = (req.user as any).subscription_plan_id;
+    if (!planId || !allowedPlans.includes(String(planId))) {
+      AuthResponseFactory.sendError(
+        res,
+        HTTP_STATUS.FORBIDDEN,
+        'INSUFFICIENT_PLAN',
+        'This feature is only available to higher-tier subscribers'
+      );
+      return;
+    }
+
+    next();
+  };
 };
 
 /**

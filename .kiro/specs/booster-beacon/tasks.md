@@ -1134,25 +1134,221 @@ This checklist implements the foundational features for paid subscriptions and a
 * [X] **1. Configure Stripe and Environment**
     * **Task:** Add Stripe secret keys and Price IDs for the monthly subscription and one-time setup fee to all `.env` files.
 
-* [ ] **2. Implement Backend Subscription Endpoints**
+* [X] **2. Implement Backend Subscription Endpoints**
     * **Files:** `backend/src/controllers/subscriptionController.ts`, `backend/src/routes/subscription.ts`
     * **Task:** Implement the `POST /api/subscription/checkout`, Stripe webhook handler, and `POST /api/subscription/portal` endpoints.
 
-* [ ] **3. Wire Up Frontend Billing UI**
+* [X] **3. Wire Up Frontend Billing UI**
     * **Files:** `frontend/src/pages/PricingPage.tsx`, `frontend/src/pages/ProfilePage.tsx`
     * **Task:** Connect the UI buttons to the new subscription endpoints and conditionally render auto-buy features based on the user's subscription status.
 
 ### **Phase 2: Secure Credential Vault**
 
-* [ ] **4. Implement Retailer Credential Storage**
+* [X] **4. Implement Retailer Credential Storage**
     * **Task:** Create a new "Retailer Connect" page on the frontend for submitting retailer credentials. Use the `WebCrypto` API to encrypt the password client-side. Create the corresponding backend endpoints to receive and securely store these credentials using envelope encryption.
 
 ### **Phase 3: The Auto-Buy MVP**
 
-* [ ] **5. Enhance the Purchase Orchestrator**
+* [X] **5. Enhance the Purchase Orchestrator**
     * **Files:** `backend/src/services/PurchaseOrchestrator.ts`, `backend/src/services/alertProcessingService.ts`
     * **Task:** Upgrade the `PurchaseOrchestrator` stub to a real service that transiently decrypts credentials and calls a retailer adapter. Hook it into the `AlertProcessingService`.
 
-* [ ] **6. Implement a Single Retailer Adapter**
+* [X] **6. Implement a Single Retailer Adapter**
     * **File:** Create `backend/src/services/retailerAdapters/BestBuyAdapter.ts`.
     * **Task:** Implement the headless browser logic using `puppeteer-core` to perform a full, unattended checkout on the Best Buy website. Include extensive error handling for common checkout failures.
+
+# BoosterBeacon: Subscription Tiers & Premium Features Checklist
+
+This checklist guides the implementation of a multi-tiered subscription system to gate access to premium features like ML-powered insights, advanced alerts, and extended data history.
+
+---
+
+### **Phase 1: Backend - Data Model & Subscription Logic**
+
+**Objective:** Update the backend to recognize and store different subscription *plans*, not just a generic "pro" tier.
+
+* [ ] **1. Enhance the User Data Model**
+    * **File:** `backend/migrations/` (Create a new migration file)
+    * **Task:** Add a new column to the `users` table to store the specific subscription plan a user is on.
+    * **Instructions:**
+        1.  Create a new Knex migration file using a command like `cd backend && npx knex migrate:make add_subscription_plan_to_users`.
+        2.  In the `up` function of the new migration file, add a nullable string column named `subscription_plan_id` to the `users` table. This will store the Stripe Price ID (e.g., `price_...`) or an internal slug (e.g., `pro-yearly`).
+        3.  In the `down` function, add the logic to drop this column.
+        4.  Run the migration to apply the schema change: `npm run migrate:up`.
+
+* [ ] **2. Create a Centralized Plan Policy Configuration**
+    * **File:** `backend/src/services/subscriptionService.ts`
+    * **Task:** Create a configuration object that maps Stripe Price IDs to plan slugs and their associated permissions/limits.
+    * **Instructions:**
+        1.  At the top of `subscriptionService.ts`, create a `PLAN_POLICIES` constant.
+        2.  This object should map your internal plan slugs (e.g., `pro-monthly`, `pro-yearly`) to their policies.
+        3.  Define another map to link Stripe Price IDs from your `.env` file to these plan slugs.
+        4.  **Example Structure:**
+            ```typescript
+            const PLAN_POLICIES = {
+              'pro-monthly': { historyDays: 365, apiLimit: 50000, alertsPriority: 2, mlEnabled: false },
+              'pro-yearly': { historyDays: -1, apiLimit: 250000, alertsPriority: 1, mlEnabled: true },
+              // Add 'pro-plus' if you create it
+            };
+
+            const STRIPE_PRICE_ID_TO_PLAN_SLUG = {
+              [process.env.STRIPE_PRO_MONTHLY_PRICE_ID]: 'pro-monthly',
+              [process.env.STRIPE_PRO_YEARLY_PRICE_ID]: 'pro-yearly',
+            };
+            ```
+
+* [ ] **3. Update the Stripe Webhook Handler**
+    * **File:** `backend/src/services/subscriptionService.ts`
+    * **Task:** When a subscription is successfully created or updated via a Stripe webhook, save the corresponding plan slug to the new `subscription_plan_id` column on the user's record.
+    * **Instructions:**
+        1.  Locate the `handleSubscriptionCreated` (or similar) method that processes the `customer.subscription.created` and `customer.subscription.updated` webhook events.
+        2.  Inside this handler, get the Stripe Price ID from `subscription.items.data[0].price.id`.
+        3.  Use the `STRIPE_PRICE_ID_TO_PLAN_SLUG` map to find your internal plan slug.
+        4.  When updating the user in your database, set their `subscription_plan_id` to this slug.
+
+---
+
+### **Phase 2: Backend - Enforcement & Gating**
+
+**Objective:** Protect premium API endpoints and features based on the user's specific subscription plan.
+
+* [ ] **4. Create the `requirePlan` Middleware**
+    * **File:** `backend/src/middleware/auth.ts`
+    * **Task:** Create a new authorization middleware that restricts access to an endpoint to users on a specific list of subscription plans.
+    * **Instructions:**
+        1.  Create and export a new middleware function `requirePlan(allowedPlans: string[])`.
+        2.  The middleware should first check if `req.user` is present (user is authenticated).
+        3.  It should then check if the `req.user.subscription_plan_id` is included in the `allowedPlans` array.
+        4.  If the user is not on an allowed plan, it should return a `403 Forbidden` response with a clear error message (e.g., "This feature requires a Pro+ subscription.").
+
+* [ ] **5. Protect the ML Routes**
+    * **File:** `backend/src/routes/mlRoutes.ts`
+    * **Task:** Apply the new `requirePlan` middleware to all machine learning endpoints.
+    * **Instructions:**
+        1.  Import the `requirePlan` middleware.
+        2.  Add `requirePlan(['pro-yearly', 'pro-plus'])` (or your chosen top-tier slugs) to the middleware chain for every route defined in this file.
+
+* [ ] **6. Gate Premium Alert Channels**
+    * **File:** `backend/src/services/alertDeliveryService.ts`
+    * **Task:** Modify the alert delivery logic to only send SMS and Discord notifications to users on a "Pro" plan or higher.
+    * **Instructions:**
+        1.  In the logic that determines which notification channels to use, wrap the checks for SMS and Discord in a condition that verifies the user's `subscription_tier` is `'pro'`.
+
+* [ ] **7. Gate Price History Data**
+    * **File:** `backend/src/controllers/productController.ts`
+    * **Task:** Modify the `getProductPriceHistory` controller to limit the number of days of history returned based on the user's subscription plan.
+    * **Instructions:**
+        1.  Inside the `getProductPriceHistory` function, access the authenticated user via `req.user`.
+        2.  Use the `PLAN_POLICIES` configuration from `subscriptionService.ts` to look up the `historyDays` limit for the user's `subscription_plan_id`.
+        3.  If the user is on a free plan or has no plan, cap the `days` parameter from the query at 30.
+        4.  If the user is on a `pro-monthly` plan, cap the `days` parameter at 365.
+        5.  If the user is on a `pro-yearly` plan (and `historyDays` is -1), do not cap the `days` parameter.
+
+---
+
+### **Phase 3: Frontend - UI Gating & Presentation**
+
+**Objective:** Update the user interface to clearly communicate the different subscription tiers and conditionally render features based on the user's access level.
+
+* [X] **8. Enhance the `SubscriptionContext`**
+    * **File:** `frontend/src/context/SubscriptionContext.tsx`
+    * **Task:** Add the user's specific `subscription_plan_id` to the context and create helper functions to easily check their access level.
+    * **Instructions:**
+        1.  Modify the context's state to store the user's `subscription_plan_id` (fetched from the `/api/subscription/status` endpoint).
+        2.  Create a new helper function, `isTopTier()`, which returns `true` if `subscription_plan_id` is `'pro-yearly'` or `'pro-plus'`.
+        3.  Ensure the existing `isProUser()` helper correctly returns `true` for *any* paid plan.
+
+* [X] **9. Conditionally Render ML Features**
+    * **Files:** `frontend/src/pages/DashboardPage.tsx`, `frontend/src/components/dashboard/PredictiveInsights.tsx`
+    * **Task:** Use the new `isTopTier()` helper to show or hide the ML-powered UI elements.
+    * **Instructions:**
+        1.  In `DashboardPage.tsx`, find where the `PredictiveInsights` component is rendered.
+        2.  Wrap it in a conditional check: `{isTopTier() && <PredictiveInsights ... />}`.
+        3.  Also, hide the "Predictive Insights" navigation tab if `isTopTier()` is false.
+
+* [X] **10. Update the Pricing Page**
+    * **File:** `frontend/src/pages/PricingPage.tsx`
+    * **Task:** Clearly communicate the features and benefits of each tier to potential customers.
+    * **Instructions:**
+        1.  Review and update the list of features under each subscription plan in the UI.
+        2.  Ensure the features match the "Tiering Proposal" exactly.
+        3.  Add a prominent badge or label (e.g., "Pro Yearly Only") to the Machine Learning feature bullet point to make it clear which tier is required to access it.
+
+# BoosterBeacon: Core Functionality Integration Checklist
+
+This checklist systematically implements the core features of the BoosterBeacon application by connecting the frontend components to the backend API.
+
+---
+
+### **Phase 1: Data Foundation (Products & Watches)**
+
+* [ ] **1. Implement Product Display**
+    * **File:** `frontend/src/pages/ProductsPage.tsx`
+    * **Task:** Fetch and display the list of products from the backend.
+    * **Instructions:**
+        1.  In `ProductsPage.tsx`, use the `apiClient` to make a `GET` request to the `/api/products` endpoint.
+        2.  Store the returned products in a React state variable.
+        3.  Pass the product data to the `ProductGrid` component to render the products.
+
+* [ ] **2. Implement Product Search**
+    * **File:** `frontend/src/pages/ProductsPage.tsx`
+    * **Task:** Wire up the search and filter UI to the backend search API.
+    * **Instructions:**
+        1.  Create state variables for search terms and filters.
+        2.  When the user types in the search bar or changes a filter, trigger a `GET` request to the `/api/products/search` endpoint, passing the search terms and filters as query parameters.
+        3.  Update the product state with the results from the search API.
+
+* [ ] **3. Implement Watch/Unwatch Functionality**
+    * **File:** `frontend/src/components/products/ProductCard.tsx`
+    * **Task:** Allow users to add and remove products from their watchlist.
+    * **Instructions:**
+        1.  In the `handleAddWatch` function, determine if the product is already watched.
+        2.  If not watched, send a `POST` request to `/api/watches` with the `product.id`.
+        3.  If already watched, send a `DELETE` request to `/api/watches/:id`.
+        4.  Implement an optimistic UI update by changing the button's state immediately upon click.
+
+* [ ] **4. Implement the "My Watches" Page**
+    * **File:** `frontend/src/pages/WatchesPage.tsx`
+    * **Task:** Display all products that the current user is watching.
+    * **Instructions:**
+        1.  Use the `apiClient` to make a `GET` request to the `/api/watches` endpoint.
+        2.  Store the returned watches in state.
+        3.  Render the list of watched products, reusing the `ProductGrid` component.
+
+### **Phase 2: Core Loop (Alerts)**
+
+* [ ] **5. Implement the Alerts Page**
+    * **File:** `frontend/src/pages/AlertsPage.tsx`
+    * **Task:** Fetch and display a user's alerts.
+    * **Instructions:**
+        1.  Use the `apiClient` to make a `GET` request to the `/api/alerts` endpoint.
+        2.  Pass the returned alert data to the `AlertInbox` component.
+
+* [ ] **6. Implement Alert Actions**
+    * **File:** `frontend/src/components/alerts/AlertInbox.tsx`
+    * **Task:** Implement the "Mark as Read" and "Delete" functionality for alerts.
+    * **Instructions:**
+        1.  Wire up the "Mark as Read" button to send a `PATCH` request to `/api/alerts/:id/read`.
+        2.  Wire up the "Delete" button to send a `DELETE` request to `/api/alerts/:id`.
+        3.  Update the UI optimistically upon a successful API response.
+
+### **Phase 3: User Hub (Dashboard)**
+
+* [ ] **7. Populate the Dashboard**
+    * **File:** `frontend/src/pages/DashboardPage.tsx`
+    * **Task:** Fetch all the necessary data for the dashboard and pass it to the child components.
+    * **Instructions:**
+        1.  In the `loadDashboardData` function, make a `GET` request to the consolidated `/api/dashboard` endpoint.
+        2.  Take the `stats`, `recentAlerts`, and `watchedProducts` from the response.
+        3.  Pass `stats` as a prop to the `DashboardOverview` component.
+        4.  Pass `recentAlerts` and `watchedProducts` as props to the `RecentActivity` component.
+
+### **Phase 4: Advanced Features**
+
+* [ ] **8. Integrate Predictive Insights and Portfolio Tracking**
+    * **File:** `frontend/src/pages/DashboardPage.tsx`
+    * **Task:** Fetch and display the advanced analytics data on the dashboard.
+    * **Instructions:**
+        1.  In the `loadDashboardData` function (or a separate one if preferred), make `GET` requests to `/api/dashboard/insights` and `/api/dashboard/portfolio`.
+        2.  Pass the insights data to the `PredictiveInsights` component.
+        3.  Pass the portfolio data to the `PortfolioTracking` component.

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, Suspense, lazy, useCallback } from 'react';
+import { useSubscription } from '../context/SubscriptionContext';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 import { DashboardStats, Alert, MLPrediction, Product } from '../types';
@@ -281,10 +282,19 @@ const DashboardPage: React.FC = () => {
 
         {activeTab === 'insights' && (
           <Suspense fallback={<LoadingSpinner size="lg" />}>
-            <PredictiveInsights
-              insights={predictiveInsights}
-              watchedProducts={dashboardData?.watchedProducts || []}
-            />
+            {(() => {
+              const { isTopTier } = useSubscription();
+              return isTopTier() ? (
+                <PredictiveInsights
+                  insights={predictiveInsights}
+                  watchedProducts={dashboardData?.watchedProducts || []}
+                />
+              ) : (
+                <div className="card-dark p-6 text-center text-gray-300">
+                  ML insights are available on the highest tier.
+                </div>
+              );
+            })()}
           </Suspense>
         )}
 

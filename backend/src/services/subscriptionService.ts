@@ -7,13 +7,105 @@ import { logger } from '../utils/logger';
 
 // Initialize Stripe using environment configuration
 const stripeSecret = process.env.STRIPE_SECRET_KEY || '';
-if (!stripeSecret) {
-  // In development without Stripe configured, we still allow the app to boot
-  // but methods that require Stripe will throw a clear error.
-}
-const stripe = stripeSecret
-  ? new Stripe(stripeSecret as string)
+// Always initialize Stripe in tests (module is usually mocked), and when a secret is provided.
+// This keeps production strict but unblocks unit tests without env configuration.
+const stripe = (process.env.NODE_ENV === 'test' || stripeSecret)
+  ? new Stripe((stripeSecret || 'sk_test_dummy') as string)
   : (null as any);
+
+// ------------------------------
+// Centralized Plan Policy Config
+// ------------------------------
+export type PlanPolicy = {
+  slug: string;
+  label: string;
+  mlEnabled: boolean;
+  // History window in days; -1 means unlimited
+  historyDays: number;
+  // Notification channel access
+  channels: {
+    sms: boolean;
+    discord: boolean;
+  };
+};
+
+export const PLAN_POLICIES: Record<string, PlanPolicy> = {
+  'free': {
+    slug: 'free',
+    label: 'Free',
+    mlEnabled: false,
+    historyDays: 30,
+    channels: { sms: false, discord: false },
+  },
+  'pro-monthly': {
+    slug: 'pro-monthly',
+    label: 'Pro (Monthly)',
+    mlEnabled: true, // limited ML allowed
+    historyDays: 365,
+    channels: { sms: true, discord: true },
+  },
+  'pro-yearly': {
+    slug: 'pro-yearly',
+    label: 'Pro (Yearly)',
+    mlEnabled: true,
+    historyDays: -1, // unlimited
+    channels: { sms: true, discord: true },
+  },
+  'premium-monthly': {
+    slug: 'premium-monthly',
+    label: 'Premium',
+    mlEnabled: true,
+    historyDays: -1, // unlimited
+    channels: { sms: true, discord: true },
+  },
+  'pro-plus': {
+    slug: 'pro-plus',
+    label: 'Pro+',
+    mlEnabled: true,
+    historyDays: -1,
+    channels: { sms: true, discord: true },
+  }
+};
+
+// Map Stripe Price IDs to plan slugs (only include if env var present)
+export const STRIPE_PRICE_ID_TO_PLAN_SLUG: Record<string, string> = (() => {
+  const map: Record<string, string> = {};
+  const pairs: Array<[string | undefined, string]> = [
+    [process.env.STRIPE_PRO_MONTHLY_PRICE_ID, 'pro-monthly'],
+    [process.env.STRIPE_PRO_YEARLY_PRICE_ID, 'pro-yearly'],
+    [process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID, 'premium-monthly'],
+    [process.env.STRIPE_PRO_PLUS_PRICE_ID, 'pro-plus'],
+  ];
+  for (const [priceId, slug] of pairs) {
+    if (priceId && priceId.trim().length > 0) {
+      map[priceId] = slug;
+    }
+  }
+  return map;
+})();
+
+export function getPlanSlugForPriceId(priceId?: string): string | undefined {
+  if (!priceId) return undefined;
+  return STRIPE_PRICE_ID_TO_PLAN_SLUG[priceId] || undefined;
+}
+
+export function getPlanPolicyForSlug(slug?: string): PlanPolicy {
+  if (!slug) return PLAN_POLICIES['free'];
+  return PLAN_POLICIES[slug] || PLAN_POLICIES['free'];
+}
+
+export function getUserPlanPolicy(user?: Pick<IUser, 'subscription_plan_id' | 'subscription_tier'> | null): PlanPolicy {
+  if (!user) return PLAN_POLICIES['free'];
+  // Prefer explicit plan slug, then fall back to subscription_tier
+  const planSlug = (user.subscription_plan_id || '').toLowerCase();
+  if (planSlug && PLAN_POLICIES[planSlug]) return PLAN_POLICIES[planSlug];
+  const tier = (user.subscription_tier || '').toLowerCase();
+  if (tier === 'pro') return PLAN_POLICIES['pro-monthly'];
+  return PLAN_POLICIES['free'];
+}
+
+// Useful list for gating ML endpoints
+export const TOP_TIER_PLAN_SLUGS = ['premium-monthly', 'pro-yearly', 'pro-plus'];
 
 export interface SubscriptionPlan {
   id: string;
@@ -65,15 +157,70 @@ export class SubscriptionService extends BaseModel<any> {
         .where('is_active', true)
         .orderBy('price', 'asc');
       
-      return plans.map(plan => ({
+      const normalized = plans.map(plan => ({
         ...plan,
         features: typeof plan.features === 'string' ? JSON.parse(plan.features) : plan.features,
         limits: typeof plan.limits === 'string' ? JSON.parse(plan.limits) : plan.limits
       }));
+
+      // If database has no plans yet, provide sensible defaults to avoid 500s
+      if (!normalized || normalized.length === 0) {
+        return this.getDefaultPlans();
+      }
+
+      return normalized;
     } catch (error) {
       logger.error('Error fetching subscription plans:', error);
-      throw new Error('Failed to fetch subscription plans');
+      // Fallback to defaults when table doesn't exist or any fetch failure occurs
+      return this.getDefaultPlans();
     }
+  }
+
+  // Default plans used as a fallback when DB is not ready
+  private static getDefaultPlans(): SubscriptionPlan[] {
+    return [
+      {
+        id: 'pro-monthly',
+        name: 'Pro',
+        slug: 'pro-monthly',
+        description: 'Advanced features with limited auto-purchase and ML insights',
+        price: 40.0,
+        billing_period: 'monthly',
+        stripe_price_id: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || 'price_pro_monthly',
+        features: [
+          'Higher alert priority',
+          'SMS & Discord notifications',
+          'Auto-purchase (limited capacity)',
+          'ML insights (limited: basic price trend + risk)',
+          'Extended price history (12 months)',
+          'Advanced filtering',
+          'Browser extension access'
+        ],
+        limits: { max_watches: null, max_alerts_per_day: null, api_rate_limit: null },
+        is_active: true,
+        trial_days: 7
+      },
+      {
+        id: 'premium-monthly',
+        name: 'Premium',
+        slug: 'premium-monthly',
+        description: 'Full auto-purchase, full ML suite, top queue priority',
+        price: 100.0,
+        billing_period: 'monthly',
+        stripe_price_id: process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID || 'price_premium_monthly',
+        features: [
+          'Highest queue priority + fastest alerts',
+          'Auto-purchase (full capacity & priority)',
+          'Full ML suite: price prediction, sellout risk, ROI',
+          'Full price history access',
+          'Premium support',
+          'One-time $300 setup fee'
+        ],
+        limits: { max_watches: null, max_alerts_per_day: null, api_rate_limit: null },
+        is_active: true,
+        trial_days: 7
+      }
+    ];
   }
 
   // Get plan by slug
@@ -185,10 +332,11 @@ export class SubscriptionService extends BaseModel<any> {
       // Add primary subscription line item
       sessionData.line_items!.push({ price: plan.stripe_price_id, quantity: 1 });
 
-      // Optionally add a one-time setup fee if configured
-      const setupFeePriceId = process.env.STRIPE_SETUP_FEE_PRICE_ID;
-      if (setupFeePriceId) {
-        sessionData.line_items!.push({ price: setupFeePriceId, quantity: 1 });
+      // Optionally add a one-time setup fee for premium only
+      // Use STRIPE_PREMIUM_SETUP_FEE_PRICE_ID to avoid charging setup fee to Pro
+      const premiumSetupFeePriceId = process.env.STRIPE_PREMIUM_SETUP_FEE_PRICE_ID;
+      if (premiumSetupFeePriceId && plan.slug.startsWith('premium')) {
+        sessionData.line_items!.push({ price: premiumSetupFeePriceId, quantity: 1 });
       }
 
       if (plan.trial_days > 0) {
@@ -223,11 +371,17 @@ export class SubscriptionService extends BaseModel<any> {
         return;
       }
 
-      // Update user subscription status
+      // Extract plan/price information and map to internal slug
+      const firstItem = subscription.items?.data?.[0];
+      const priceId = (firstItem && (firstItem.price as any)?.id) || undefined;
+      const planIdentifier: string | undefined = getPlanSlugForPriceId(priceId) || priceId;
+
       const updateData: Partial<IUser> = {
         subscription_id: subscription.id,
         subscription_status: subscription.status as any,
-        subscription_tier: SubscriptionTier.PRO
+        // Keep tier as PRO for now to avoid broad changes; planIdentifier differentiates premium
+        subscription_tier: SubscriptionTier.PRO,
+        ...(planIdentifier ? { subscription_plan_id: planIdentifier } : {})
       };
 
       if ((subscription as any).current_period_start) {

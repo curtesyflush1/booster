@@ -5,6 +5,7 @@ import { EmailService } from './notifications/emailService';
 import { SMSService } from './notifications/smsService';
 import { DiscordService } from './notifications/discordService';
 import { HTTP_TIMEOUTS, INTERVALS, PERFORMANCE_CONFIG } from '../constants';
+import { inferPlanTier } from './planPriorityService';
 
 export interface DeliveryResult {
   success: boolean;
@@ -36,6 +37,23 @@ export class AlertDeliveryService {
     channels: string[]
   ): Promise<DeliveryResult> {
     try {
+      // Enforce plan-based channel access and prioritization
+      const planTier = inferPlanTier({
+        subscription_plan_id: (user as any).subscription_plan_id,
+        subscription_tier: (user as any).subscription_tier,
+      } as any);
+
+      // Remove SMS/Discord for free users
+      if (planTier === 'free') {
+        channels = channels.filter(c => c === 'web_push' || c === 'email');
+      }
+
+      // Reorder delivery preference by tier
+      const premiumOrder = ['web_push', 'sms', 'discord', 'email'];
+      const proOrder = ['web_push', 'email', 'sms', 'discord'];
+      const freeOrder = ['web_push', 'email'];
+      const order = planTier === 'premium' ? premiumOrder : planTier === 'pro' ? proOrder : freeOrder;
+      channels = channels.sort((a, b) => order.indexOf(a) - order.indexOf(b));
       logger.info('Starting alert delivery', {
         alertId: alert.id,
         userId: user.id,

@@ -1,6 +1,7 @@
 import React, { memo, useState, useEffect } from 'react';
 import { PRICING_PLANS, PRICING_CONFIG } from '../constants/pricing';
 import PricingHeader from '../components/pricing/PricingHeader';
+import { useAuth } from '../context/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useSubscription } from '../context/SubscriptionContext';
 import { subscriptionService, SubscriptionPlan } from '../services/subscriptionService';
@@ -44,9 +45,15 @@ const PricingPage: React.FC = memo(() => {
         }
     };
 
+    const { isAuthenticated } = useAuth();
     const isCurrentPlan = (planSlug: string) => {
-        return subscriptionState.subscription?.tier === planSlug || 
-               (planSlug === 'free' && (!subscriptionState.subscription || subscriptionState.subscription.tier === 'free'));
+        if (!isAuthenticated) return false;
+        if (!subscriptionState.subscription) return false;
+        // Treat 'free' as current only when explicitly on free tier
+        if (planSlug === 'free') return subscriptionState.subscription.tier === 'free';
+        // For paid plans, match by planId when available, else by tier
+        const paidPlanId = subscriptionState.subscription.planId;
+        return paidPlanId === planSlug || subscriptionState.subscription.tier === planSlug;
     };
 
     if (loading) {
@@ -57,9 +64,10 @@ const PricingPage: React.FC = memo(() => {
         );
     }
 
-    // Combine database plans with static free plan
+    // Combine database plans with static free plan, avoiding duplicate Free card
     const freePlan = PRICING_PLANS.find(p => p.id === 'free');
-    const allPlans = freePlan ? [freePlan, ...plans] : plans;
+    const remotePlans = plans.filter(p => p.slug !== 'free');
+    const allPlans = freePlan ? [freePlan, ...remotePlans] : remotePlans;
 
     return (
         <div className="min-h-screen bg-background-primary py-12">
@@ -78,13 +86,13 @@ const PricingPage: React.FC = memo(() => {
                         return (
                             <div
                                 key={plan.id || planSlug}
-                                className={`relative bg-background-secondary rounded-2xl p-6 border transition-all duration-300 ${
+                        className={`relative bg-background-secondary rounded-2xl p-6 border transition-all duration-300 ${
                                     isCurrent 
                                         ? 'border-pokemon-electric shadow-lg shadow-pokemon-electric/20' 
                                         : 'border-gray-700 hover:border-gray-600'
-                                } ${planSlug === 'pro' ? 'lg:scale-105' : ''}`}
+                                } ${planSlug.startsWith('pro') ? 'lg:scale-105' : ''}`}
                             >
-                                {planSlug === 'pro' && (
+                                {planSlug.startsWith('pro') && (
                                     <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                                         <span className="bg-pokemon-electric text-background-primary px-3 py-1 rounded-full text-sm font-medium">
                                             Most Popular

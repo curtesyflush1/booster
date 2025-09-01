@@ -1,0 +1,11 @@
+name,slug,sku,upc,category,series,set_name,msrp,release_date,image_url,description
+Pokémon Scarlet & Violet Base Set Booster Box,pokemon-scarlet-violet-base-booster-box,SV01-BB-EN,820650850011,Booster Boxes,Scarlet & Violet,Scarlet & Violet Base Set,109.99,2023-03-31,https://images.pokemon.com/scarlet-violet-base-box.jpg,Base set booster box
+Pokémon Scarlet & Violet Base Set Elite Trainer Box,pokemon-scarlet-violet-base-etb,SV01-ETB-EN,820650850028,Elite Trainer Boxes,Scarlet & Violet,Scarlet & Violet Base Set,49.99,2023-03-31,https://images.pokemon.com/scarlet-violet-base-etb.jpg,Base set ETB
+Pokémon 151 Elite Trainer Box,pokemon-151-etb,SV2a-ETB-EN,820650550151,Elite Trainer Boxes,Scarlet & Violet,151,49.99,2023-09-22,https://images.pokemon.com/151-etb.jpg,151 ETB
+Pokémon 151 Booster Bundle,pokemon-151-booster-bundle,SV2a-BB-EN,820650551512,Booster Boxes,Scarlet & Violet,151,29.99,2023-09-22,https://images.pokemon.com/151-bundle.jpg,151 bundle
+Pokémon Paldea Evolved Booster Box,pokemon-paldea-evolved-booster-box,SV02-BB-EN,820650850028,Booster Boxes,Scarlet & Violet,Paldea Evolved,109.99,2023-06-09,https://images.pokemon.com/paldea-evolved-box.jpg,Paldea Evolved booster box
+Pokémon Paldea Evolved Elite Trainer Box,pokemon-paldea-evolved-etb,SV02-ETB-EN,820650850029,Elite Trainer Boxes,Scarlet & Violet,Paldea Evolved,49.99,2023-06-09,https://images.pokemon.com/paldea-evolved-etb.jpg,Paldea Evolved ETB
+Pokémon Crown Zenith Elite Trainer Box,pokemon-crown-zenith-etb,SWSH12.5-ETB-EN,820650852345,Elite Trainer Boxes,Sword & Shield,Crown Zenith,49.99,2023-01-20,https://images.pokemon.com/crown-zenith-etb.jpg,Crown Zenith ETB
+Pokémon Crown Zenith Premium Figure Collection,pokemon-crown-zenith-figure-collection,SWSH12.5-PFC-EN,820650852312,Collection Boxes,Sword & Shield,Crown Zenith,59.99,2023-03-17,https://images.pokemon.com/crown-zenith-figure.jpg,Premium Figure Collection
+Pokémon Celebrations Elite Trainer Box,pokemon-celebrations-etb,SWSH7.5-ETB-EN,820650850777,Elite Trainer Boxes,Sword & Shield,Celebrations,49.99,2021-10-08,https://images.pokemon.com/celebrations-etb.jpg,Celebrations ETB
+Pokémon Evolving Skies Booster Box,pokemon-evolving-skies-booster-box,SWSH7-BB-EN,0820650853025,Booster Boxes,Sword & Shield,Evolving Skies,139.99,2021-08-27,https://images.pokemon.com/evolving-skies-box.jpg,Evolving Skies booster box

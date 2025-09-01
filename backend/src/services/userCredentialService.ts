@@ -1,5 +1,5 @@
 import { encrypt, decrypt, sanitizeForLogging } from '../utils/encryption';
-import { UserEncryptionService } from '../utils/encryption/userEncryption';
+import { UserEncryptionService, isUserEncrypted } from '../utils/encryption/userEncryption';
 import { IUser, IRetailerCredential } from '../types/database';
 import { IUserRepository, ILogger } from '../types/dependencies';
 
@@ -125,7 +125,7 @@ export class UserCredentialService {
 
       // Check if this is user-specific encryption
       if (credentialData.encryption_type === 'user-specific' || 
-          UserEncryptionService.isUserEncrypted(credentialData.encrypted_password)) {
+          isUserEncrypted(credentialData.encrypted_password)) {
         
         // Decrypt using user-specific key
         decryptedPassword = await this.userEncryption.decryptWithUserKey(
@@ -189,7 +189,7 @@ export class UserCredentialService {
 
       // Skip if already user-encrypted
       if (credentialData.encryption_type === 'user-specific' || 
-          UserEncryptionService.isUserEncrypted(credentialData.encrypted_password)) {
+          isUserEncrypted(credentialData.encrypted_password)) {
         this.logger.info('Credentials already use user-specific encryption', {
           userId,
           retailer
@@ -268,7 +268,7 @@ export class UserCredentialService {
           
           // Skip if already user-encrypted
           if (credentialData.encryption_type === 'user-specific' || 
-              UserEncryptionService.isUserEncrypted(credentialData.encrypted_password)) {
+              isUserEncrypted(credentialData.encrypted_password)) {
             results.skipped.push(retailer);
             continue;
           }

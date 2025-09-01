@@ -117,6 +117,8 @@ export class Product extends BaseModel<IProduct> {
     return errors;
   }
 
+  
+
   // Sanitize product input
   sanitize(data: Partial<IProduct>): Partial<IProduct> {
     const sanitized: Partial<IProduct> = { ...data };

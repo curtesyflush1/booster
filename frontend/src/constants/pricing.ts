@@ -11,6 +11,7 @@ export interface PricingPlan {
   badge?: string;
 }
 
+// Keep only the Free tier here. Paid plans are loaded from the backend.
 export const PRICING_PLANS: PricingPlan[] = [
   {
     id: 'free',
@@ -27,25 +28,6 @@ export const PRICING_PLANS: PricingPlan[] = [
     cta: 'Get Started',
     href: '/register',
     popular: false
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    price: '$9.99',
-    period: 'month',
-    description: 'For serious collectors',
-    features: [
-      'Unlimited product watches',
-      'SMS & Discord alerts',
-      'Priority alert delivery',
-      'Price predictions & ROI',
-      'Historical data access',
-      'Premium support'
-    ],
-    cta: 'Start Free Trial',
-    href: '/register',
-    popular: true,
-    badge: 'Most Popular'
   }
 ];
 

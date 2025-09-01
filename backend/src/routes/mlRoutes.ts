@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { MLController } from '../controllers/mlController';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requirePlan } from '../middleware/auth';
+import { TOP_TIER_PLAN_SLUGS } from '../services/subscriptionService';
 import { createRateLimit } from '../middleware/rateLimiter';
 import { sanitizeParameters } from '../middleware/parameterSanitization';
 import { validate, mlSchemas } from '../validators';
@@ -10,6 +11,8 @@ const router = Router();
 
 // Apply authentication to all ML routes
 router.use(authenticate);
+// Highest tier access only, centralized in subscriptionService
+router.use(requirePlan(TOP_TIER_PLAN_SLUGS));
 
 // Apply rate limiting for ML endpoints (more restrictive due to computational cost)
 const mlRateLimit = createRateLimit({

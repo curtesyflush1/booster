@@ -7,7 +7,7 @@ exports.seed = async function(knex) {
   // Clear existing entries
   await knex('subscription_plans').del();
 
-  // Insert default subscription plans
+  // Insert default subscription plans (Free, Pro Monthly, Premium Monthly)
   await knex('subscription_plans').insert([
     {
       id: knex.raw('gen_random_uuid()'),
@@ -35,21 +35,20 @@ exports.seed = async function(knex) {
     },
     {
       id: knex.raw('gen_random_uuid()'),
-      name: 'Pro Monthly',
+      name: 'Pro',
       slug: 'pro-monthly',
-      description: 'Unlimited alerts for serious collectors',
-      price: 9.99,
+      description: 'Advanced features with limited auto-purchase and ML insights',
+      price: 40.00,
       billing_period: 'monthly',
       stripe_price_id: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || 'price_pro_monthly',
       features: JSON.stringify([
-        'Unlimited product watches',
-        'Priority alerts (5-second delivery)',
-        'SMS notifications',
-        'Discord integration',
+        'Higher alert priority',
+        'SMS & Discord notifications',
+        'Auto-purchase (limited capacity)',
+        'ML insights (limited: basic price trend + risk)',
+        'Extended price history (12 months)',
         'Advanced filtering',
-        'Price history & analytics',
-        'Browser extension access',
-        'Priority support'
+        'Browser extension access'
       ]),
       limits: JSON.stringify({
         max_watches: null,
@@ -63,22 +62,23 @@ exports.seed = async function(knex) {
     },
     {
       id: knex.raw('gen_random_uuid()'),
-      name: 'Pro Yearly',
-      slug: 'pro-yearly',
-      description: 'Unlimited alerts with 2 months free',
-      price: 99.99,
-      billing_period: 'yearly',
-      stripe_price_id: process.env.STRIPE_PRO_YEARLY_PRICE_ID || 'price_pro_yearly',
+      name: 'Premium',
+      slug: 'premium-monthly',
+      description: 'Full auto-purchase, full ML, and highest queue priority',
+      price: 100.00,
+      billing_period: 'monthly',
+      stripe_price_id: process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID || 'price_premium_monthly',
       features: JSON.stringify([
         'Unlimited product watches',
-        'Priority alerts (5-second delivery)',
-        'SMS notifications',
-        'Discord integration',
+        'Fastest alert delivery and queue priority',
+        'SMS & Discord notifications',
+        'Auto-purchase (full capacity & priority)',
+        'Full ML: price predictions, sellout risk, ROI',
+        'Full price history access',
         'Advanced filtering',
-        'Price history & analytics',
         'Browser extension access',
-        'Priority support',
-        '2 months free (17% savings)'
+        'Premium support',
+        'One-time $300 setup fee'
       ]),
       limits: JSON.stringify({
         max_watches: null,
@@ -86,7 +86,7 @@ exports.seed = async function(knex) {
         api_rate_limit: null
       }),
       is_active: true,
-      trial_days: 14,
+      trial_days: 7,
       created_at: knex.fn.now(),
       updated_at: knex.fn.now()
     }

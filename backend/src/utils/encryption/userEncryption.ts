@@ -175,6 +175,7 @@ export class UserEncryptionService implements IEncryptionService {
     }
   }
 
+
   /**
    * Migrate existing global-encrypted data to user-specific encryption
    */
@@ -309,3 +310,6 @@ export class UserEncryptionService implements IEncryptionService {
     this.performanceTracker.reset();
   }
 }
+
+// Named export helper for easier mocking in tests
+export const isUserEncrypted = (encryptedData: string) => UserEncryptionService.isUserEncrypted(encryptedData);

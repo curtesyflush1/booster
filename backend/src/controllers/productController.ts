@@ -4,6 +4,7 @@ import { logger } from '../utils/logger';
 import { ResponseHelper } from '../utils/responseHelpers';
 import { analyticsService } from '../services/analyticsService';
 import { IProduct } from '../types/database';
+import { getUserPlanPolicy } from '../services/subscriptionService';
 import { STRING_LIMITS, HTTP_STATUS, BARCODE_LIMITS, VALIDATION_PATTERNS } from '../constants';
 
 /**
@@ -425,6 +426,14 @@ export const getProductPriceHistory = async (req: Request, res: Response, next: 
     
     const { days, retailer_id } = req.query as { days?: string; retailer_id?: string };
 
+    // Plan-based history limits using centralized policy
+    const parsedDays = Number.parseInt(days || '30', 10);
+    let requestedDays = Number.isFinite(parsedDays) && parsedDays > 0 ? parsedDays : 30;
+    const user: any = (req as any).user;
+    const policy = getUserPlanPolicy(user || null);
+    const maxDays = policy.historyDays === -1 ? 3650 : policy.historyDays; // hard cap for safety
+    requestedDays = Math.min(requestedDays, maxDays);
+
     // Validate retailer_id if provided (already sanitized by middleware)
     if (retailer_id && retailer_id.trim().length === 0) {
       ResponseHelper.error(res, 'INVALID_RETAILER_ID', 'Retailer ID cannot be empty', 400);
@@ -432,8 +441,8 @@ export const getProductPriceHistory = async (req: Request, res: Response, next: 
     }
 
     const priceHistory = await Product.getPriceHistory(
-      id, 
-      Math.min(parseInt(days || '30'), 365), 
+      id,
+      requestedDays,
       retailer_id
     );
 
@@ -471,3 +480,9 @@ export const getProductStats = async (req: Request, res: Response, next: NextFun
     next(error);
   }
 };
+
+/**
+ * Batch fetch products by IDs (optionally include availability using existing joins later)
+ * Body validated by Joi: { ids: string[] }
+ */
+// (duplicate removed) getProductsByIds — primary implementation above

@@ -41,6 +41,8 @@ import monitoringRoutes from './routes/monitoring';
 // import kmsRoutes from './routes/kmsRoutes';
 import { EXPRESS_LIMITS } from './constants/http';
 import { startWorker as startPurchaseWorker } from './services/PurchaseQueue';
+import { AvailabilityPollingService } from './services/availabilityPollingService';
+import { CronService } from './services/CronService';
 
 // Load environment variables
 dotenv.config();
@@ -190,8 +192,8 @@ if (process.env.NODE_ENV !== 'test') {
       // Initialize WebSocket service
       const websocketService = initializeWebSocketService(server);
       
-      // Initialize ML data collection service
-      DataCollectionService.scheduleDataCollection();
+      // Start scheduled jobs (availability scanning, data collection, maintenance)
+      CronService.start();
       
       // Start system monitoring
       const adminSystemService = createAdminSystemService();
