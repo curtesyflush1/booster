@@ -19,6 +19,19 @@ BoosterBeacon implements a modern, enterprise-grade architecture with advanced d
 - Plan-based monetization support with intelligent resource allocation
 - Production-ready reliability with health checks and error recovery
 
+### Subscription-Based Policy Management
+**Purpose**: Centralized plan-based feature access and resource allocation
+- **Plan Policy Configuration**: Single source of truth for subscription features and limits
+- **Environment-Driven Mapping**: Stripe price ID to plan slug mapping via environment variables
+- **Feature Gating**: ML endpoints, history access, and notification channels based on plan tier
+- **Intelligent Prioritization**: Channel ordering and resource allocation based on subscription level
+
+**Key Benefits**:
+- Consistent policy enforcement across all services
+- Easy plan management and feature updates
+- Environment-driven configuration for different deployments
+- Scalable monetization with clear feature differentiation
+
 ### Repository Pattern
 **Purpose**: Clean separation between business logic and data access
 - **Interface-driven design** with `IAlertRepository`, `IUserRepository`, etc.

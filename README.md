@@ -4,21 +4,30 @@
 
 BoosterBeacon is a production-ready, real-time monitoring and alerting system that helps Pokémon TCG collectors never miss a drop. Get instant notifications when sealed products restock at major retailers with official cart deep-links for one-tap purchasing.
 
-**🎯 Status**: **Production Ready** - All 26 major systems completed with advanced architecture patterns (100% feature complete)
+**🎯 Status**: **Production Ready** - All major systems completed with advanced architecture patterns including subscription-based policy management, enhanced ML capabilities, and intelligent resource allocation (100% feature complete)
 
 ## ✨ Features
 
 - **⚡ Real-time alerts** - Get notified within 5 seconds of product availability
-- **📱 Multi-channel notifications** - Web push, email, SMS, and Discord support
+- **📱 Multi-channel notifications** - Web push, email, SMS, and Discord support with plan-based prioritization
 - **🛒 Official cart links** - One-tap add-to-cart for instant purchasing
 - **🏪 Cross-retailer monitoring** - Best Buy, Walmart, Costco, and Sam's Club
-- **🤖 Predictive analytics** - Price forecasting and ROI estimates
+- **🤖 Predictive analytics** - Price forecasting, ROI estimates, and market insights (Premium tier)
 - **🔧 Browser extension** - Automated checkout assistance
 - **📱 PWA mobile app** - Barcode scanning and offline capability
+- **💳 Subscription management** - Stripe integration with plan-based feature access
+- **📊 Real-time dashboard** - WebSocket-powered live updates and portfolio tracking
 
 ## 🏗️ Architecture
 
-BoosterBeacon implements modern architectural patterns including Repository Pattern, Strategy Pattern, Dependency Injection, and Multi-Tier Caching for enterprise-grade scalability and maintainability.
+BoosterBeacon implements modern architectural patterns including Repository Pattern, Strategy Pattern, Dependency Injection, Multi-Tier Caching, and Subscription-Based Policy Management for enterprise-grade scalability and maintainability.
+
+**Key Architectural Features**:
+- **Subscription-Based Policy Management**: Centralized plan-based feature access and resource allocation
+- **Intelligent Alert Delivery**: Plan-based channel filtering and prioritization
+- **Enhanced ML System**: Top-tier access control with comprehensive prediction endpoints
+- **Real-Time Dashboard**: WebSocket-powered live updates with lazy loading
+- **Background Service Infrastructure**: Automated operations with intelligent prioritization
 
 ```
 booster/

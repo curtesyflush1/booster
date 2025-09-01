@@ -36,6 +36,8 @@ interface PortfolioData {
 
 const DashboardPage: React.FC = () => {
   const { user, isLoading } = useAuth();
+  // Always call hooks at top-level to preserve order across renders
+  const { isTopTier } = useSubscription();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(null);
   const [predictiveInsights, setPredictiveInsights] = useState<MLPrediction[]>([]);
@@ -282,19 +284,16 @@ const DashboardPage: React.FC = () => {
 
         {activeTab === 'insights' && (
           <Suspense fallback={<LoadingSpinner size="lg" />}>
-            {(() => {
-              const { isTopTier } = useSubscription();
-              return isTopTier() ? (
-                <PredictiveInsights
-                  insights={predictiveInsights}
-                  watchedProducts={dashboardData?.watchedProducts || []}
-                />
-              ) : (
-                <div className="card-dark p-6 text-center text-gray-300">
-                  ML insights are available on the highest tier.
-                </div>
-              );
-            })()}
+            {isTopTier() ? (
+              <PredictiveInsights
+                insights={predictiveInsights}
+                watchedProducts={dashboardData?.watchedProducts || []}
+              />
+            ) : (
+              <div className="card-dark p-6 text-center text-gray-300">
+                ML insights are available on the highest tier.
+              </div>
+            )}
           </Suspense>
         )}
 

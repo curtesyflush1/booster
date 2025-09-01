@@ -187,7 +187,8 @@ router.get('/rbac/my-permissions',
  */
 router.post(
   '/test-purchase',
-  requirePermission(Permission.SYSTEM_HEALTH_VIEW),
+  // In development, allow any authenticated user to trigger a simulated purchase
+  (process.env.NODE_ENV === 'development' ? (_req, _res, next) => next() : requirePermission(Permission.SYSTEM_HEALTH_VIEW)),
   validateJoiBody(adminSchemas.testPurchase.body),
   (req, res) => {
   const { productId, retailerSlug, maxPrice, qty, alertAt } = req.body || {};

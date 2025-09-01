@@ -102,13 +102,9 @@ const OptimizedLayout: React.FC<LayoutProps> = ({ children }) => {
               {/* Subscription Badge */}
               {subscriptionBadge}
 
-              {/* Pricing Link */}
-              <Link
-                to="/pricing"
-                className="hidden sm:block text-sm text-gray-300 hover:text-white transition-colors"
-              >
-                Pricing
-              </Link>
+              {/* Header Links */}
+              <Link to="/pricing" className="hidden sm:block text-sm text-gray-300 hover:text-white transition-colors">Pricing</Link>
+              <Link to="/contact" className="hidden sm:block text-sm text-gray-300 hover:text-white transition-colors">Contact</Link>
 
               {/* User Menu */}
               {user ? (

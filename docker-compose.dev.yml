@@ -70,6 +70,8 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
+      # Allow WebSocket connections in dev without token auth for easier local testing
+      DISABLE_WS_AUTH: "true"
       DATABASE_URL: postgresql://booster_user:booster_dev_password@postgres:5432/boosterbeacon_dev
       TEST_DATABASE_URL: postgresql://booster_user:booster_test_password@postgres-test:5432/boosterbeacon_test
       REDIS_URL: redis://:booster_redis_password@redis:6379
@@ -77,10 +79,20 @@ services:
       JWT_REFRESH_SECRET: dev_jwt_refresh_secret_key_change_in_production
       LOG_LEVEL: debug
       FRONTEND_URL: http://localhost:5173
+      # Optional retailer keys to suppress startup warnings in development
+      BESTBUY_API_KEY: dummy
+      WALMART_API_KEY: dummy
       DISABLE_RATE_LIMITING: "true"
       STRIPE_PUBLISHABLE_KEY: pk_test_51S2YNrCR3n2urghatfeFiluDuwrQ1w8RzYWMzXH3cas5030hto6NW1X2XZdkn4A1FYETM5ebphlRnvPUZ4PcUfDy00a2nGj7nw
       STRIPE_SECRET_KEY: sk_test_51S2YNrCR3n2urgha1et8WoCVvH1bmrj2SzZmRlQuwYW9kmdV2R0ZwZhnVyvMFqX54qUK3ljZy3RGrR3uKpQi7BrX00vrmNeYhI
       STRIPE_PRO_MONTHLY_PRICE_ID: price_1S2ZRPCR3n2urghaMW1c8QhC
+      # Use the same test Price ID for other plans in dev unless you have distinct ones
+      STRIPE_PRO_YEARLY_PRICE_ID: price_1S2ZRPCR3n2urghaMW1c8QhC
+      STRIPE_PREMIUM_MONTHLY_PRICE_ID: price_1S2ZRPCR3n2urghaMW1c8QhC
+      STRIPE_PRO_PLUS_PRICE_ID: price_1S2ZRPCR3n2urghaMW1c8QhC
+      # Premium setup fee (Stripe env expects STRIPE_PREMIUM_SETUP_FEE_PRICE_ID)
+      STRIPE_PREMIUM_SETUP_FEE_PRICE_ID: price_1S2ZRhCR3n2urghaf5pMFHsO
+      # Back-compat for earlier config name used in docs
       STRIPE_SETUP_FEE_PRICE_ID: price_1S2ZRhCR3n2urghaf5pMFHsO
     ports:
       - "3000:3000"

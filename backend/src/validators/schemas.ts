@@ -1098,10 +1098,13 @@ export const adminSchemas = {
 // Subscription schemas
 export const subscriptionSchemas = {
   createCheckoutSession: Joi.object({
-    planSlug: Joi.string().valid('free', 'pro', 'pro-monthly', 'pro-yearly').required().messages({
-      'any.only': 'Plan must be one of "free", "pro", "pro-monthly", or "pro-yearly"',
-      'any.required': 'Plan is required'
-    }),
+    planSlug: Joi.string()
+      .valid('free', 'pro', 'pro-monthly', 'pro-yearly', 'premium-monthly', 'pro-plus')
+      .required()
+      .messages({
+        'any.only': 'Plan must be one of "free", "pro", "pro-monthly", "pro-yearly", "premium-monthly", or "pro-plus"',
+        'any.required': 'Plan is required'
+      }),
     successUrl: Joi.string().uri().required().messages({
       'string.uri': 'Success URL must be a valid URL',
       'any.required': 'Success URL is required'

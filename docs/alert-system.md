@@ -61,7 +61,30 @@ Orchestrates all scheduled tasks with comprehensive job management:
 - Stale data removal
 - System health checks
 
-### 2. Alert Processing Strategy Pattern
+### 2. Alert Delivery Service
+
+**File**: `backend/src/services/alertDeliveryService.ts`
+
+Enhanced alert delivery with plan-based channel filtering and prioritization:
+
+**Key Features**:
+- **Plan-Based Channel Access**: Filters available channels based on subscription tier
+- **Intelligent Channel Ordering**: Prioritizes channels based on plan level
+- **Bulk Delivery**: Processes multiple alerts with rate limiting
+- **Delivery Tracking**: Comprehensive delivery status and analytics
+- **Timeout Handling**: Configurable delivery timeouts with retry mechanisms
+
+**Channel Prioritization by Plan**:
+- **Premium Users**: `['web_push', 'sms', 'discord', 'email']`
+- **Pro Users**: `['web_push', 'email', 'sms', 'discord']`
+- **Free Users**: `['web_push', 'email']`
+
+**Delivery Capabilities**:
+- Individual alert delivery with timeout handling
+- Bulk delivery for multiple alerts with batch processing
+- Delivery statistics and analytics
+- Channel configuration validation
+- Retry mechanisms for failed deliveries
 
 #### Base Strategy Interface
 **File**: `backend/src/services/alertStrategies/AlertProcessingStrategy.ts`

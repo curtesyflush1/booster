@@ -94,16 +94,17 @@ class AlertService {
 
   // Get alert statistics
   async getAlertStats(): Promise<AlertStats> {
-    const response = await apiClient.get<{ stats: AlertStats }>('/alerts/stats/summary');
-    return response.data.stats;
+    const response = await apiClient.get<{ data: { stats: AlertStats } }>('/alerts/stats/summary');
+    // API responses are wrapped as { data: { ... } }
+    return (response.data as any)?.data?.stats as AlertStats;
   }
 
   // Get alert analytics
   async getAlertAnalytics(days: number = 30): Promise<AlertAnalytics> {
-    const response = await apiClient.get<{ analytics: AlertAnalytics }>(
+    const response = await apiClient.get<{ data: { analytics: AlertAnalytics } }>(
       `/alerts/analytics/engagement?days=${days}`
     );
-    return response.data.analytics;
+    return (response.data as any)?.data?.analytics as AlertAnalytics;
   }
 
   // Helper method to format alert data for display

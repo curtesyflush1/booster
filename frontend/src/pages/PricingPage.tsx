@@ -70,12 +70,22 @@ const PricingPage: React.FC = memo(() => {
     const allPlans = freePlan ? [freePlan, ...remotePlans] : remotePlans;
 
     return (
-        <div className="min-h-screen bg-background-primary py-12">
+    <div className="min-h-screen bg-background-primary py-12">
+            {/* Back / Navigation */}
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mb-4">
+              <button
+                onClick={() => window.history.length > 1 ? window.history.back() : (window.location.href = '/dashboard')}
+                className="text-sm text-gray-300 hover:text-white"
+                aria-label="Go back"
+              >
+                ← Back
+              </button>
+            </div>
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                <PricingHeader
-                    title={PRICING_CONFIG.title}
-                    subtitle={PRICING_CONFIG.subtitle}
-                />
+              <PricingHeader
+                title={PRICING_CONFIG.title}
+                subtitle={PRICING_CONFIG.subtitle}
+              />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
                     {allPlans.map((plan) => {

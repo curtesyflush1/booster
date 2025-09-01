@@ -7,6 +7,7 @@ import OptimizedLayout from './components/OptimizedLayout';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBoundary from './components/ErrorBoundary';
 import PWAUpdatePrompt from './components/PWAUpdatePrompt';
+import Footer from './components/layout/Footer';
 
 // Page Components (lazy loaded)
 const HomePage = React.lazy(() => import('./pages/HomePage'));
@@ -22,6 +23,10 @@ const PricingPage = React.lazy(() => import('./pages/PricingPage'));
 const SubscriptionPage = React.lazy(() => import('./pages/SubscriptionPage'));
 const SubscriptionSuccessPage = React.lazy(() => import('./pages/SubscriptionSuccessPage'));
 const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage'));
+const ContactPage = React.lazy(() => import('./pages/ContactPage'));
+const TermsPage = React.lazy(() => import('./pages/TermsPage'));
+const PrivacyPage = React.lazy(() => import('./pages/PrivacyPage'));
+const SiteMapPage = React.lazy(() => import('./pages/SiteMapPage'));
 
 // SEO-optimized landing pages
 const PokemonTCGAlertsPage = React.lazy(() => import('./pages/PokemonTCGAlertsPage'));
@@ -91,6 +96,10 @@ const routeConfig: RouteConfig[] = [
   // Public Routes
   { path: '/', element: HomePage },
   { path: '/pricing', element: PricingPage },
+  { path: '/contact', element: ContactPage },
+  { path: '/terms', element: TermsPage },
+  { path: '/privacy', element: PrivacyPage },
+  { path: '/sitemap', element: SiteMapPage },
 
   // SEO-optimized landing pages
   { path: '/pokemon-tcg-alerts', element: PokemonTCGAlertsPage },
@@ -227,6 +236,7 @@ const App: React.FC = () => {
                 <Suspense fallback={<LoadingSpinner />}>
                   <AppRoutes />
                 </Suspense>
+                <Footer />
                 <PWAUpdatePrompt />
               </div>
             </Router>

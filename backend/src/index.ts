@@ -24,6 +24,7 @@ import watchRoutes from './routes/watches';
 import retailerRoutes from './routes/retailers';
 import notificationRoutes from './routes/notifications';
 import emailRoutes from './routes/emailRoutes';
+import contactRoutes from './routes/contact';
 import dashboardRoutes from './routes/dashboard';
 import alertRoutes from './routes/alerts';
 import subscriptionRoutes from './routes/subscription';
@@ -35,6 +36,7 @@ import csvRoutes from './routes/csv';
 import socialRoutes from './routes/social';
 import communityRoutes from './routes/community';
 import priceComparisonRoutes from './routes/priceComparisonRoutes';
+import purchasesRoutes from './routes/purchases';
 import sitemapRoutes from './routes/sitemapRoutes';
 import healthRoutes from './routes/health';
 import monitoringRoutes from './routes/monitoring';
@@ -108,6 +110,8 @@ app.use('/api/notifications', notificationRoutes);
 
 // Email management routes
 app.use('/api/email', emailRoutes);
+// Contact form route
+app.use('/api/contact', contactRoutes);
 
 // Dashboard routes
 app.use('/api/dashboard', dashboardRoutes);
@@ -141,6 +145,8 @@ app.use('/api/community', communityRoutes);
 
 // Price comparison routes
 app.use('/api/price-comparison', priceComparisonRoutes);
+// Purchase reporting routes
+app.use('/api/purchases', purchasesRoutes);
 
 // SEO and sitemap routes
 app.use('/', sitemapRoutes);

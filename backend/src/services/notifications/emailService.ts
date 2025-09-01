@@ -64,4 +64,33 @@ export class EmailService {
       complaintRate: 0
     };
   }
+
+  /**
+   * Send contact form email to support
+   * In development, this is a no-op that returns success. Configure SMTP/SES in production.
+   */
+  static async sendContactEmail(params: { name: string; email: string; subject: string; message: string }): Promise<{ success: boolean; error?: string }> {
+    const { name, email, subject, message } = params;
+    const to = process.env.SUPPORT_EMAIL || process.env.FROM_EMAIL || 'support@boosterbeacon.com';
+
+    // If a transporter is configured, attempt to send via nodemailer
+    if (this.transporter) {
+      try {
+        const info = await this.transporter.sendMail({
+          from: process.env.FROM_EMAIL || 'no-reply@boosterbeacon.com',
+          to,
+          subject: `[Contact] ${subject}`,
+          text: `From: ${name} <${email}>\n\n${message}`,
+          html: `<p><strong>From:</strong> ${name} &lt;${email}&gt;</p><p>${message.replace(/\n/g, '<br/>')}</p>`
+        });
+        return { success: true };
+      } catch (err: any) {
+        return { success: false, error: err?.message || 'Failed to send contact email' };
+      }
+    }
+
+    // Development default: pretend success
+    console.log(`Contact email (dev mode): to=${to} subject=${subject} from=${name}<${email}> msg=${message.substring(0, 120)}...`);
+    return { success: true };
+  }
 }
