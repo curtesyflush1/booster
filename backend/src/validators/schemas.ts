@@ -1077,6 +1077,21 @@ export const adminSchemas = {
       status: Joi.string().valid('approved', 'rejected').required(),
       review_notes: Joi.string().optional()
     })
+  },
+
+  // Temporary test route schema for purchase enqueue
+  testPurchase: {
+    body: Joi.object({
+      productId: commonSchemas.uuid,
+      retailerSlug: Joi.string().min(1).max(100).required().messages({
+        'string.min': 'retailerSlug cannot be empty',
+        'string.max': 'retailerSlug must not exceed 100 characters',
+        'any.required': 'retailerSlug is required'
+      }),
+      maxPrice: Joi.number().min(0).optional(),
+      qty: Joi.number().integer().min(1).max(10).default(1),
+      alertAt: Joi.string().isoDate().optional()
+    })
   }
 };
 

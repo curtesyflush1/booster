@@ -165,9 +165,24 @@ if (process.env.NODE_ENV !== 'test') {
   // Initialize services
   const initializeServices = async () => {
     try {
-      // Initialize Redis connection
-      await redisService.connect();
-      loggerWithContext.info('Redis connection established');
+      // Initialize Redis connection (optional in dev)
+      if (process.env.DISABLE_REDIS === 'true') {
+        loggerWithContext.warn('Redis initialization skipped due to DISABLE_REDIS=true');
+      } else {
+        try {
+          await redisService.connect();
+          loggerWithContext.info('Redis connection established');
+        } catch (err) {
+          // Do not crash the dev server if Redis is unavailable
+          if ((process.env.NODE_ENV || 'development') === 'development') {
+            loggerWithContext.warn('Redis connection failed; continuing without Redis in development', {
+              error: err instanceof Error ? err.message : String(err)
+            });
+          } else {
+            throw err;
+          }
+        }
+      }
       
       // Initialize WebSocket service
       const websocketService = initializeWebSocketService(server);

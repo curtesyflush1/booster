@@ -169,6 +169,33 @@ See [Pagination Enforcement Documentation](../backend/docs/PAGINATION_ENFORCEMEN
 
 ## Core Endpoints
 
+### Product Catalog
+
+#### Search Products
+```http
+GET /api/products/search?q=etb&category_id={uuid}&retailer_id={uuid}&min_price=0&max_price=100&availability=in_stock&sort_by=name&sort_order=asc&page=1&limit=20
+```
+Returns paginated list of products. Parameters are validated and sanitized. Response uses the standard paginated format.
+
+#### Recent Products
+```http
+GET /api/products/recent?limit=20
+```
+
+#### Popular Products
+```http
+GET /api/products/popular?limit=20
+```
+
+#### Batch Fetch by IDs
+```http
+POST /api/products/by-ids
+Content-Type: application/json
+
+{ "ids": ["uuid1", "uuid2", "uuid3"] }
+```
+Validates 1..200 unique UUIDs. Returns `{ products: Product[] }`.
+
 ### Health Check
 ```http
 GET /health

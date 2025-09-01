@@ -1296,3 +1296,23 @@ extension/
 - **Security**: Regular security audits and vulnerability scanning
 - **Compliance**: Retailer terms of service adherence
 - **Documentation**: Keep documentation current with code changes
+## [1.19.0] - 2025-09-01
+
+### Added - Product Discovery & Search
+- ProductsPage wired to backend search: `GET /api/products/search` with filters and pagination
+- Debounced search input to reduce requests during typing
+- Discovery toggle for zero‑query browsing: `Recent` (`GET /api/products/recent`) and `Popular` (`GET /api/products/popular`)
+- Contextual badge indicating active discover mode
+
+### Added - Watches Grid
+- "My Watches" renders watched products using batch endpoint `POST /api/products/by-ids`
+- Refresh control and ProductDetail integration
+
+### Added - Alerts Inbox & Actions
+- AlertsPage integrated with `GET /api/alerts` and filters
+- Actions: Mark as Read (`PATCH /api/alerts/:id/read`), Click (`PATCH /api/alerts/:id/clicked`), Bulk Read (`PATCH /api/alerts/bulk/read`), Delete (`DELETE /api/alerts/:id`)
+- Optimistic UI updates for fast feedback
+
+### Documentation
+- Frontend development guide updated with discovery modes and search wiring
+- User guide updated with product discovery instructions and mobile barcode scanning note

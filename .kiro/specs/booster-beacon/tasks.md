@@ -1043,3 +1043,82 @@ This checklist implements a minimal, placeholder `PurchaseOrchestrator` to demon
         1.  Add a new route, e.g., `POST /api/admin/test-purchase`.
         2.  The controller for this route should call the `PurchaseQueue.addJob(...)` function with some hardcoded test data.
         3.  This will allow you to easily test the entire flow by hitting the endpoint with a tool like `curl`.
+
+# BoosterBeacon: Core Functionality Integration Checklist
+
+This checklist systematically implements the core features of the BoosterBeacon application by connecting the frontend components to the backend API.
+
+---
+
+### **Phase 1: Data Foundation (Products & Watches)**
+
+* [X] **1. Implement Product Display**
+    * **File:** `frontend/src/pages/ProductsPage.tsx`
+    * **Task:** Fetch and display the list of products from the backend.
+    * **Instructions:**
+        1.  In `ProductsPage.tsx`, use the `apiClient` to make a `GET` request to the `/api/products` endpoint.
+        2.  Store the returned products in a React state variable.
+        3.  Pass the product data to the `ProductGrid` component to render the products.
+
+* [X] **2. Implement Product Search**
+    * **File:** `frontend/src/pages/ProductsPage.tsx`
+    * **Task:** Wire up the search and filter UI to the backend search API.
+    * **Instructions:**
+        1.  Create state variables for search terms and filters.
+        2.  When the user types in the search bar or changes a filter, trigger a `GET` request to the `/api/products/search` endpoint, passing the search terms and filters as query parameters.
+        3.  Update the product state with the results from the search API.
+
+* [X] **3. Implement Watch/Unwatch Functionality**
+    * **File:** `frontend/src/components/products/ProductCard.tsx`
+    * **Task:** Allow users to add and remove products from their watchlist.
+    * **Instructions:**
+        1.  In the `handleAddWatch` function, determine if the product is already watched.
+        2.  If not watched, send a `POST` request to `/api/watches` with the `product.id`.
+        3.  If already watched, send a `DELETE` request to `/api/watches/:id`.
+        4.  Implement an optimistic UI update by changing the button's state immediately upon click.
+
+* [ ] **4. Implement the "My Watches" Page**
+    * **File:** `frontend/src/pages/WatchesPage.tsx`
+    * **Task:** Display all products that the current user is watching.
+    * **Instructions:**
+        1.  Use the `apiClient` to make a `GET` request to the `/api/watches` endpoint.
+        2.  Store the returned watches in state.
+        3.  Render the list of watched products, reusing the `ProductGrid` component.
+
+### **Phase 2: Core Loop (Alerts)**
+
+* [X] **5. Implement the Alerts Page**
+    * **File:** `frontend/src/pages/AlertsPage.tsx`
+    * **Task:** Fetch and display a user's alerts.
+    * **Instructions:**
+        1.  Use the `apiClient` to make a `GET` request to the `/api/alerts` endpoint.
+        2.  Pass the returned alert data to the `AlertInbox` component.
+
+* [X] **6. Implement Alert Actions**
+    * **File:** `frontend/src/components/alerts/AlertInbox.tsx`
+    * **Task:** Implement the "Mark as Read" and "Delete" functionality for alerts.
+    * **Instructions:**
+        1.  Wire up the "Mark as Read" button to send a `PATCH` request to `/api/alerts/:id/read`.
+        2.  Wire up the "Delete" button to send a `DELETE` request to `/api/alerts/:id`.
+        3.  Update the UI optimistically upon a successful API response.
+
+### **Phase 3: User Hub (Dashboard)**
+
+* [X] **7. Populate the Dashboard**
+    * **File:** `frontend/src/pages/DashboardPage.tsx`
+    * **Task:** Fetch all the necessary data for the dashboard and pass it to the child components.
+    * **Instructions:**
+        1.  In the `loadDashboardData` function, make a `GET` request to the consolidated `/api/dashboard` endpoint.
+        2.  Take the `stats`, `recentAlerts`, and `watchedProducts` from the response.
+        3.  Pass `stats` as a prop to the `DashboardOverview` component.
+        4.  Pass `recentAlerts` and `watchedProducts` as props to the `RecentActivity` component.
+
+### **Phase 4: Advanced Features**
+
+* [X] **8. Integrate Predictive Insights and Portfolio Tracking**
+    * **File:** `frontend/src/pages/DashboardPage.tsx`
+    * **Task:** Fetch and display the advanced analytics data on the dashboard.
+    * **Instructions:**
+        1.  In the `loadDashboardData` function (or a separate one if preferred), make `GET` requests to `/api/dashboard/insights` and `/api/dashboard/portfolio`.
+        2.  Pass the insights data to the `PredictiveInsights` component.
+        3.  Pass the portfolio data to the `PortfolioTracking` component.

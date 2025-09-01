@@ -45,8 +45,13 @@ export class WebSocketService {
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-        // const user = await User.findById(decoded.userId);
-        const user = { id: decoded.userId }; // Temporary mock
+        // Support both 'sub' (standard) and legacy 'userId' claims
+        const userId = decoded?.sub || decoded?.userId;
+        if (!userId || typeof userId !== 'string') {
+          return next(new Error('Invalid token payload'));
+        }
+        // const user = await User.findById(userId);
+        const user = { id: userId }; // Temporary mock
         
         if (!user) {
           return next(new Error('User not found'));

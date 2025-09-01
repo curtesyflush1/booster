@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useDebounce } from '../hooks/useDebounce';
 import { Camera, Package } from 'lucide-react';
 import { Product, PaginatedResponse, SearchFilters } from '../types';
 import { ProductSearch } from '../components/products/ProductSearch';
@@ -12,6 +13,7 @@ const ProductsPage: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [activeTab, setActiveTab] = useState<'search' | 'detail'>('search');
+  const [discoverMode, setDiscoverMode] = useState<'recent' | 'popular'>('recent');
   
   // Basic product list state (for initial display)
   const [products, setProducts] = useState<Product[]>([]);
@@ -26,6 +28,7 @@ const ProductsPage: React.FC = () => {
     hasPrev: false
   });
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [filters, setFilters] = useState<Partial<SearchFilters>>({
     sortBy: 'name',
     sortOrder: 'asc',
@@ -50,6 +53,27 @@ const ProductsPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
+      // When no search query and on first page, show recent products list
+      const isInitialNoQuery = (!searchQuery || searchQuery.trim() === '') && page === 1;
+      if (isInitialNoQuery && !filters.category && !filters.retailer && !filters.inStockOnly && !filters.minPrice && !filters.maxPrice) {
+        const endpoint = discoverMode === 'popular' ? 'popular' : 'recent';
+        const res = await apiClient.get<{ data: { products: BackendProduct[] } }>(
+          `/products/${endpoint}?limit=${pagination.limit}`
+        );
+        const list = (res.data as any)?.data?.products || [];
+        const transformed = transformBackendProducts(list);
+        setProducts(transformed);
+        setPagination({
+          page: 1,
+          limit: pagination.limit,
+          total: transformed.length,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false
+        });
+        return;
+      }
+
       // Build query params for search + filters
       const params = new URLSearchParams({
         page: String(page),
@@ -76,7 +100,7 @@ const ProductsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.limit, searchQuery, filters]);
+   }, [pagination.limit, searchQuery, filters, discoverMode]);
 
   const loadMore = useCallback(() => {
     if (pagination.hasNext && !loading) {
@@ -89,10 +113,23 @@ const ProductsPage: React.FC = () => {
     loadProducts(1, false);
   }, [loadProducts]);
 
+  // When discover mode changes and there is no active search query, reload
+  useEffect(() => {
+    if (!searchQuery) {
+      loadProducts(1, false);
+    }
+  }, [discoverMode]);
+
   const onSubmitSearch = (e: React.FormEvent) => {
     e.preventDefault();
     loadProducts(1, false);
   };
+
+  // Trigger search automatically when user types or filters change
+  useEffect(() => {
+    if (activeTab !== 'search') return;
+    loadProducts(1, false);
+  }, [debouncedSearchQuery, filters, loadProducts, activeTab]);
 
   // Check if device supports camera for barcode scanning
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -110,6 +147,15 @@ const ProductsPage: React.FC = () => {
             {activeTab === 'detail' 
               ? 'View product details, availability, and price history'
               : 'Search and discover Pokémon TCG products'}
+            {activeTab === 'search' && !searchQuery && (
+              <span
+                className={`ml-3 align-middle inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                  discoverMode === 'popular' ? 'bg-purple-900 text-purple-200' : 'bg-blue-900 text-blue-200'
+                }`}
+              >
+                {discoverMode === 'popular' ? 'Showing Popular Products' : 'Showing Recent Releases'}
+              </span>
+            )}
           </p>
         </div>
 
@@ -135,6 +181,33 @@ const ProductsPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Discover Toggle */}
+      {activeTab === 'search' && (
+        <div className="mb-4 flex items-center gap-2">
+          <div className="inline-flex bg-gray-800 rounded-lg p-1">
+            <button
+              type="button"
+              onClick={() => setDiscoverMode('recent')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                discoverMode === 'recent' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white hover:bg-gray-700'
+              }`}
+            >
+              Recent
+            </button>
+            <button
+              type="button"
+              onClick={() => setDiscoverMode('popular')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                discoverMode === 'popular' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white hover:bg-gray-700'
+              }`}
+            >
+              Popular
+            </button>
+          </div>
+          <span className="text-gray-400 text-sm">Browse curated lists or search below</span>
+        </div>
+      )}
 
       {/* Search + Filters */}
       {activeTab === 'search' && (
@@ -171,7 +244,7 @@ const ProductsPage: React.FC = () => {
           products={products}
           loading={loading}
           error={error}
-          searchQuery={''}
+          searchQuery={searchQuery}
           pagination={{ total: pagination.total, hasNext: pagination.hasNext }}
           onProductSelect={handleProductSelect}
           showWatchActions={true}

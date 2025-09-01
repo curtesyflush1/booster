@@ -90,7 +90,18 @@ BoosterBeacon is a collector-grade alerting service that helps Pokémon TCG coll
    - **Retailers**: Choose which stores to monitor
    - **Max Price**: Set your price threshold
    - **Alert Channels**: Select notification methods
-   - **Priority**: Set urgency level (High/Medium/Low)
+    - **Priority**: Set urgency level (High/Medium/Low)
+
+### Discovering Products
+
+You can browse the catalog even without searching:
+
+- **Recent Releases**: Shows the newest products via `Recent` toggle
+- **Popular Products**: See trending items via `Popular` toggle
+- A small badge under the page title indicates which list is active
+- Switch between modes anytime; type in the search bar to run full-text search
+
+On mobile devices with a camera, use the built‑in **Scan Barcode** button to look up products by UPC.
 
 #### Watch Packs (Recommended)
 Watch Packs are curated collections of popular products that are automatically updated:

@@ -266,6 +266,86 @@
         "summary": "ProductsPage now fetches catalog via /products/search, manages pagination, basic filters, and passes results to ProductGrid; clicking shows ProductDetail."
       },
       "timestamp": "${NOW}"
+    },
+    {
+      "title": "Product discovery toggle (Recent/Popular)",
+      "type": "feature",
+      "tags": ["frontend", "products", "discover"],
+      "details": {
+        "file": "frontend/src/pages/ProductsPage.tsx",
+        "endpoints": [
+          "GET /api/products/recent?limit=20",
+          "GET /api/products/popular?limit=20"
+        ],
+        "ui": "Header badge shows active mode; toggle between Recent and Popular",
+        "notes": [
+          "Zero-query browsing defaults to discover mode",
+          "Switching modes reloads list when no active search"
+        ]
+      },
+      "timestamp": "${NOW}"
+    },
+    {
+      "title": "Debounced product search & filter wiring",
+      "type": "feature",
+      "tags": ["frontend", "search", "ux"],
+      "details": {
+        "file": "frontend/src/pages/ProductsPage.tsx",
+        "hook": "useDebounce(…, 300ms)",
+        "queryParams": ["q", "category_id", "retailer_id", "min_price", "max_price", "availability", "sort_by", "sort_order", "page", "limit"],
+        "result": "Auto-fetches /api/products/search on typing or filter changes; preserves discover mode when query is empty"
+      },
+      "timestamp": "${NOW}"
+    },
+    {
+      "title": "Alerts Inbox actions wired with optimistic updates",
+      "type": "feature",
+      "tags": ["frontend", "alerts", "optimistic-ui"],
+      "details": {
+        "files": [
+          "frontend/src/pages/AlertsPage.tsx",
+          "frontend/src/components/alerts/AlertInbox.tsx",
+          "frontend/src/services/alertService.ts"
+        ],
+        "endpoints": [
+          "GET /api/alerts",
+          "PATCH /api/alerts/:id/read",
+          "PATCH /api/alerts/:id/clicked",
+          "PATCH /api/alerts/bulk/read",
+          "DELETE /api/alerts/:id"
+        ],
+        "summary": "Mark-as-read, click tracking, bulk read, and delete implemented with immediate UI feedback"
+      },
+      "timestamp": "${NOW}"
+    },
+    {
+      "title": "MCP: BrightData server added",
+      "type": "configuration",
+      "tags": ["mcp", "brightdata", "scraping"],
+      "details": {
+        "file": ".codex/config.toml",
+        "section": "[mcp_servers.brightData]",
+        "env": { "API_TOKEN": "<redacted>" },
+        "notes": [
+          "Enables Bright Data MCP for data collection integrations"
+        ]
+      },
+      "timestamp": "${NOW}"
+    },
+    {
+      "title": "MCP: OpenMemory configuration fixed",
+      "type": "configuration",
+      "tags": ["mcp", "openmemory", "memories"],
+      "details": {
+        "file": ".codex/config.toml",
+        "section": "[mcp_servers.openmemory]",
+        "env": { "OPENMEMORY_API_KEY": "<redacted>", "CLIENT_NAME": "cursor" },
+        "notes": [
+          "Validated command + args for npx openmemory",
+          "Ready to push docs/memory/booster-beacon-memories.json via script"
+        ]
+      },
+      "timestamp": "${NOW}"
     }
   ]
 }

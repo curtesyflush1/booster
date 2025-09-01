@@ -74,6 +74,12 @@ The application will be available at http://localhost:5173
 - Barcode scanner for mobile PWA
 - Watch management integration
 
+### Product Discovery Modes
+- Recent/Popular toggle for zero-query browsing
+- Initial catalog view loads `GET /api/products/recent?limit={n}`
+- Popular view loads `GET /api/products/popular?limit={n}`
+- Clear contextual badge indicates current discover mode
+
 ### PWA Support
 - Service worker for offline functionality
 - Installable web app

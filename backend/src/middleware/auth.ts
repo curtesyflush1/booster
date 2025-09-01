@@ -42,15 +42,19 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     }
 
     // Check if token is blacklisted first (faster check)
-    const isBlacklisted = await TokenBlacklistService.isTokenRevoked(token);
-    if (isBlacklisted) {
-      logger.warn('Blacklisted token used', { 
-        path: req.path,
-        method: req.method,
-        ip: req.ip
-      });
-      AuthResponseFactory.sendInvalidToken(res);
-      return;
+    if (process.env.DISABLE_TOKEN_BLACKLIST === 'true' || process.env.DISABLE_REDIS === 'true') {
+      logger.debug('Token blacklist check disabled via environment flag');
+    } else {
+      const isBlacklisted = await TokenBlacklistService.isTokenRevoked(token);
+      if (isBlacklisted) {
+        logger.warn('Blacklisted token used', { 
+          path: req.path,
+          method: req.method,
+          ip: req.ip
+        });
+        AuthResponseFactory.sendInvalidToken(res);
+        return;
+      }
     }
 
     // Validate token and get user
