@@ -23,22 +23,48 @@ export interface ChannelDeliveryResult {
 export class EmailService {
   private static transporter: nodemailer.Transporter | null = null;
 
-  private static getTransporter(): nodemailer.Transporter | null {
+  private static async getTransporter(): Promise<nodemailer.Transporter | null> {
     // If transporter already set (e.g., in production init), reuse it
     if (this.transporter) return this.transporter;
 
     try {
       const cfg = EmailConfigService.getCurrentConfiguration();
-      // STARTTLS on 587/50587: secure=false, requireTLS true
-      const transportOptions: any = {
+      // If a custom SMTP provider is configured, use it as-is
+      if (cfg.provider === 'custom') {
+        const transportOptions: any = {
+          host: cfg.host,
+          port: cfg.port,
+          secure: cfg.secure,
+          auth: cfg.auth,
+          requireTLS: cfg.secure ? false : true,
+          tls: cfg.tls || { rejectUnauthorized: true }
+        };
+        this.transporter = nodemailer.createTransport(transportOptions);
+        return this.transporter;
+      }
+
+      // In development, create an Ethereal test account dynamically
+      if ((process.env.NODE_ENV || 'development') === 'development') {
+        const testAccount = await nodemailer.createTestAccount();
+        this.transporter = nodemailer.createTransport({
+          host: 'smtp.ethereal.email',
+          port: 587,
+          secure: false,
+          auth: {
+            user: testAccount.user,
+            pass: testAccount.pass
+          }
+        });
+        return this.transporter;
+      }
+
+      // Fallback: local or minimal config
+      this.transporter = nodemailer.createTransport({
         host: cfg.host,
         port: cfg.port,
-        secure: cfg.secure, // true for 465, false for 587/50587
-        auth: cfg.auth,
-        requireTLS: cfg.secure ? false : true,
-        tls: cfg.tls || { rejectUnauthorized: true }
-      };
-      this.transporter = nodemailer.createTransport(transportOptions);
+        secure: cfg.secure,
+        tls: cfg.tls || { rejectUnauthorized: false }
+      });
       return this.transporter;
     } catch (e) {
       // Fall back to null (dev mode stubs)
@@ -93,12 +119,12 @@ export class EmailService {
    * Send contact form email to support
    * In development, this is a no-op that returns success. Configure SMTP/SES in production.
    */
-  static async sendContactEmail(params: { name: string; email: string; subject: string; message: string }): Promise<{ success: boolean; error?: string }> {
+  static async sendContactEmail(params: { name: string; email: string; subject: string; message: string }): Promise<{ success: boolean; error?: string; previewUrl?: string }> {
     const { name, email, subject, message } = params;
     const to = process.env.SUPPORT_EMAIL || process.env.FROM_EMAIL || 'support@boosterbeacon.com';
 
     // If a transporter is configured, attempt to send via nodemailer
-    const transporter = this.getTransporter();
+    const transporter = await this.getTransporter();
     if (transporter) {
       try {
         const info = await transporter.sendMail({
@@ -106,10 +132,27 @@ export class EmailService {
           to,
           subject: `[Contact] ${subject}`,
           text: `From: ${name} <${email}>\n\n${message}`,
-          html: `<p><strong>From:</strong> ${name} &lt;${email}&gt;</p><p>${message.replace(/\n/g, '<br/>')}</p>`
+          html: `<p><strong>From:</strong> ${name} &lt;${email}&gt;</p><p>${message.replace(/\n/g, '<br/>')}</p>`,
+          replyTo: `${name} <${email}>`
         });
-        return { success: true };
+        const previewUrl = nodemailer.getTestMessageUrl(info) || undefined;
+        if (previewUrl) {
+          console.log('Contact email preview URL (dev):', previewUrl);
+        }
+        return { success: true, previewUrl };
       } catch (err: any) {
+        // If a custom provider is configured, surface the error so it can be fixed
+        try {
+          const cfg = EmailConfigService.getCurrentConfiguration();
+          if (cfg.provider === 'custom') {
+            return { success: false, error: err?.message || 'Failed to send contact email' };
+          }
+        } catch {}
+        // Otherwise (dev/test fallback), simulate success
+        if ((process.env.NODE_ENV || 'development') !== 'production') {
+          console.warn('SMTP send failed in development; simulating success:', err?.message || err);
+          return { success: true };
+        }
         return { success: false, error: err?.message || 'Failed to send contact email' };
       }
     }

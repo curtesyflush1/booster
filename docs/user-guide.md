@@ -305,20 +305,26 @@ The PWA works even without internet connection:
 
 ### Free Plan
 Perfect for casual collectors:
-- **5 Active Watches**: Monitor up to 5 products
+- **2 Active Watches**: Monitor up to 2 products
 - **Web Push Notifications**: Browser-based alerts
 - **Email Alerts**: Basic email notifications
 - **Standard Support**: Community support and documentation
 
 ### Pro Plan ($9.99/month)
 Designed for serious collectors:
-- **Unlimited Watches**: Monitor as many products as you want
+- **10 Active Watches**: Monitor up to 10 products
 - **All Notification Channels**: Web push, email, SMS, and Discord
 - **Priority Alerts**: Faster notification delivery
 - **Advanced Analytics**: Detailed insights and predictions
 - **ML Predictions**: Price forecasting and ROI estimates
 - **Priority Support**: Direct email support
 - **Early Access**: Beta features and new retailer integrations
+
+### Premium Plan
+For power users and dropship operators:
+- **Unlimited Watches**: No limit on active watches
+- **Highest Priority**: Fastest delivery and queue priority
+- **Full ML Suite**: All predictive features unlocked
 
 ### Upgrading Your Plan
 1. Go to **Account Settings** → **Subscription**

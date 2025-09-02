@@ -10,7 +10,7 @@ const UsageQuotaCard: React.FC<UsageQuotaCardProps> = ({
   className = '', 
   showUpgradeButton = true 
 }) => {
-  const { state, upgradeToProPlan, isProUser, getUsagePercentage, getRemainingWatches } = useSubscription();
+  const { state, upgradeToProPlan, isProUser, isTopTier, getUsagePercentage, getRemainingWatches } = useSubscription();
 
   if (!state.usage) {
     return null;
@@ -18,6 +18,7 @@ const UsageQuotaCard: React.FC<UsageQuotaCardProps> = ({
 
   const isPro = isProUser();
   const remainingWatches = getRemainingWatches();
+  const topTier = isTopTier();
   const watchUsagePercent = getUsagePercentage('watches');
   const alertUsagePercent = getUsagePercentage('alerts');
 
@@ -38,11 +39,11 @@ const UsageQuotaCard: React.FC<UsageQuotaCardProps> = ({
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm text-gray-300">Product Watches</span>
             <span className="text-sm text-white">
-              {state.usage.watches_used} {!isPro && `/ ${state.quota?.limit || 5}`}
+              {state.usage.watches_used} {(!topTier) && `/ ${state.quota?.limit ?? (isPro ? 10 : 2)}`}
             </span>
           </div>
           
-          {!isPro && (
+          {(!topTier) && (
             <>
               <div className="w-full bg-gray-700 rounded-full h-2 mb-1">
                 <div 
@@ -59,7 +60,7 @@ const UsageQuotaCard: React.FC<UsageQuotaCardProps> = ({
             </>
           )}
           
-          {isPro && (
+          {topTier && (
             <div className="text-xs text-pokemon-electric">Unlimited</div>
           )}
         </div>
@@ -73,7 +74,7 @@ const UsageQuotaCard: React.FC<UsageQuotaCardProps> = ({
             </span>
           </div>
           
-          {!isPro && (
+          {(!isPro) && (
             <div className="w-full bg-gray-700 rounded-full h-2">
               <div 
                 className={`h-2 rounded-full transition-all duration-300 ${
@@ -94,7 +95,7 @@ const UsageQuotaCard: React.FC<UsageQuotaCardProps> = ({
         {!isPro && showUpgradeButton && (
           <div className="pt-4 border-t border-gray-700">
             <div className="text-xs text-gray-400 mb-3">
-              Upgrade to Pro for unlimited watches and premium features
+              Upgrade to Pro for up to 10 watches, or Premium for unlimited.
             </div>
             <button
               onClick={() => upgradeToProPlan('pro')}
@@ -112,7 +113,7 @@ const UsageQuotaCard: React.FC<UsageQuotaCardProps> = ({
             <div className="grid grid-cols-2 gap-2 text-xs text-gray-300">
               <div className="flex items-center">
                 <span className="text-pokemon-electric mr-1">✓</span>
-                Unlimited watches
+                Up to 10 watches
               </div>
               <div className="flex items-center">
                 <span className="text-pokemon-electric mr-1">✓</span>

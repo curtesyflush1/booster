@@ -21,6 +21,13 @@ else
   MEMORIES_ENDPOINT="$DEFAULT_MEMORIES_ENDPOINT"
 fi
 
+# Resolve potential redirects ahead of time to avoid 307 loops
+RESOLVED_ENDPOINT=$(curl -Ls -o /dev/null -w '%{url_effective}' "$MEMORIES_ENDPOINT" || true)
+if [[ -n "$RESOLVED_ENDPOINT" && "$RESOLVED_ENDPOINT" != "$MEMORIES_ENDPOINT" ]]; then
+  echo "Resolved OpenMemory endpoint: $MEMORIES_ENDPOINT -> $RESOLVED_ENDPOINT"
+  MEMORIES_ENDPOINT="$RESOLVED_ENDPOINT"
+fi
+
 if [[ -z "${OPENMEMORY_API_KEY:-}" ]]; then
   echo "ERROR: OPENMEMORY_API_KEY is not set." >&2
   echo "Export it, then re-run: export OPENMEMORY_API_KEY=..." >&2
@@ -68,7 +75,7 @@ MEMORY_FILE_PATH="$MEMORY_FILE" OPENMEMORY_APP_NAME="$APP_NAME" node -e '
 ' > "$TMP_MEMS"
 
 OK=0; FAIL=0
-HEADERS=(-H "Content-Type: application/json")
+HEADERS=(-H "Content-Type: application/json" -H "Accept: application/json")
 if [[ -n "${OPENMEMORY_API_KEY:-}" ]]; then
   HEADERS+=( -H "Authorization: Bearer $OPENMEMORY_API_KEY" )
 fi
@@ -78,7 +85,7 @@ fi
 
 while IFS= read -r line; do
   if [[ -z "$line" ]]; then continue; fi
-  HTTP_STATUS=$(curl -sS -o /tmp/mem.out -w "%{http_code}" -X POST "$MEMORIES_ENDPOINT" \
+  HTTP_STATUS=$(curl -sS -L --max-redirs 5 -o /tmp/mem.out -w "%{http_code}" -X POST "$MEMORIES_ENDPOINT" \
     "${HEADERS[@]}" \
     --data-binary "$line" || true)
   if [[ "$HTTP_STATUS" == "200" || "$HTTP_STATUS" == "201" ]]; then

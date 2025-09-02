@@ -15,10 +15,16 @@ export class WebSocketService {
   private connectedUsers: Map<string, Set<string>> = new Map(); // userId -> Set of socketIds
 
   constructor(server: HTTPServer) {
+    const isDev = (process.env.NODE_ENV || 'development') === 'development';
+    const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
+
     this.io = new SocketIOServer(server, {
       cors: {
-        origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-        credentials: true
+        // In dev, accept any origin to avoid localhost/127.0.0.1 and port drift issues
+        origin: isDev ? ((origin: any, callback: any) => callback(null, true)) : allowedOrigin,
+        credentials: true,
+        methods: ['GET', 'POST'],
+        allowedHeaders: ['Authorization', 'Content-Type']
       },
       transports: ['websocket', 'polling']
     });
@@ -121,6 +127,13 @@ export class WebSocketService {
             productId 
           });
         }
+      });
+
+      // Optional ping handler to mirror client pings (not required; Socket.IO handles heartbeat)
+      socket.on('ping', () => {
+        try {
+          socket.emit('pong', { ts: Date.now() });
+        } catch {}
       });
 
       // Handle disconnect

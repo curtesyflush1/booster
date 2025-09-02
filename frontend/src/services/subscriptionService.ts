@@ -180,13 +180,13 @@ class SubscriptionService {
   } {
     return {
       free: [
-        'Up to 5 product watches',
+        'Up to 2 product watches',
         'Basic email alerts',
         'Web push notifications',
         'Community support'
       ],
       pro: [
-        'Unlimited product watches',
+        'Up to 10 product watches',
         'SMS & Discord alerts',
         'Priority alert delivery',
         'Price predictions & ROI',

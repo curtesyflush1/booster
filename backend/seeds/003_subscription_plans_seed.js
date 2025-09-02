@@ -18,13 +18,13 @@ exports.seed = async function(knex) {
       billing_period: 'monthly',
       stripe_price_id: null,
       features: JSON.stringify([
-        'Up to 5 product watches',
+        'Up to 2 product watches',
         'Basic email alerts',
         'Web push notifications',
         'Community support'
       ]),
       limits: JSON.stringify({
-        max_watches: 5,
+        max_watches: 2,
         max_alerts_per_day: 50,
         api_rate_limit: 1000
       }),
@@ -42,6 +42,7 @@ exports.seed = async function(knex) {
       billing_period: 'monthly',
       stripe_price_id: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || 'price_pro_monthly',
       features: JSON.stringify([
+        'Up to 10 product watches',
         'Higher alert priority',
         'SMS & Discord notifications',
         'Auto-purchase (limited capacity)',
@@ -51,7 +52,7 @@ exports.seed = async function(knex) {
         'Browser extension access'
       ]),
       limits: JSON.stringify({
-        max_watches: null,
+        max_watches: 10,
         max_alerts_per_day: null,
         api_rate_limit: null
       }),

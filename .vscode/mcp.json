@@ -1,0 +1,41 @@
+{
+  "mcpServers": {
+    "fetch": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-fetch"
+      ],
+      "env": {},
+      "disabled": false,
+      "autoApprove": []
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ]
+    },
+    "openmemory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "openmemory"
+      ],
+      "env": {
+        "OPENMEMORY_API_KEY": "om-tczrqlm1fq8pi1tweh6rtlrpdigish3g",
+        "CLIENT_NAME": "cursor"
+      }
+    },
+    "brightData": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@brightdata/mcp"
+      ],
+      "env": {
+        "API_TOKEN": "b029b04d9695bee1ac7aa94b2a827b0ae24e1eeafa9133c181d4bb54924e7a9d"
+      }
+    }
+  }
+}

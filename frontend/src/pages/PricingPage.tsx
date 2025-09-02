@@ -15,7 +15,7 @@ const PricingPage: React.FC = memo(() => {
 
     useDocumentTitle({
         title: 'Pricing',
-        description: 'Choose the perfect plan for your Pokémon TCG collecting needs. Free tier with basic alerts or Pro with unlimited watches and advanced features.',
+        description: 'Choose the perfect plan. Free includes 2 watches, Pro includes 10 watches and advanced features, Premium offers unlimited.',
         keywords: ['pokemon tcg pricing', 'collector alerts pricing', 'pokemon card alerts cost', 'tcg monitoring subscription']
     });
 
@@ -92,6 +92,12 @@ const PricingPage: React.FC = memo(() => {
                         const planSlug = 'slug' in plan ? plan.slug : plan.id;
                         const isCurrent = isCurrentPlan(planSlug);
                         const isUpgrading = upgrading === planSlug;
+                        const computedWatchFeature = (() => {
+                          const max = ('limits' in plan && plan.limits && typeof plan.limits.max_watches !== 'undefined') ? plan.limits.max_watches : null;
+                          if (max === null) return 'Unlimited product watches';
+                          return `Up to ${max} product watches`;
+                        })();
+                        const featureList = [computedWatchFeature, ...((plan.features || []).filter(f => !/product watches/i.test(f)))]
                         
                         return (
                             <div
@@ -142,7 +148,7 @@ const PricingPage: React.FC = memo(() => {
                                 </div>
 
                                 <ul className="space-y-3 mb-8">
-                                    {(plan.features || []).map((feature, index) => (
+                                    {featureList.map((feature, index) => (
                                         <li key={index} className="flex items-center text-gray-300">
                                             <span className="text-pokemon-electric mr-3">✓</span>
                                             {feature}

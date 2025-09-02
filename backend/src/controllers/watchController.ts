@@ -140,6 +140,19 @@ export class WatchController {
         return;
       }
 
+      // Enforce plan watch limits before creating
+      const quota = await (await import('../services/subscriptionService')).SubscriptionService.checkQuota(userId, 'watch_created');
+      if (!quota.allowed) {
+        const limit = quota.limit ?? 0;
+        ResponseHelper.error(
+          res,
+          'WATCH_LIMIT_REACHED',
+          `Watch limit reached for your plan. Limit is ${limit} active watches. Upgrade to add more.`,
+          403
+        );
+        return;
+      }
+
       // Create the watch
       const watchData: Partial<IWatch> = {
         user_id: userId,
@@ -335,6 +348,24 @@ export class WatchController {
         return;
       }
 
+      // If we are about to activate a watch, enforce limit
+      if (!watch.is_active) {
+        const { SubscriptionService } = await import('../services/subscriptionService');
+        const quota = await SubscriptionService.checkQuota(userId, 'watch_created');
+        if (quota.limit !== undefined && quota.limit !== null) {
+          const used = quota.used || 0;
+          if (used >= quota.limit) {
+            ResponseHelper.error(
+              res,
+              'WATCH_LIMIT_REACHED',
+              `Activating this watch would exceed your limit (${quota.limit}). Remove another active watch or upgrade your plan.`,
+              403
+            );
+            return;
+          }
+        }
+      }
+
       const success = await Watch.toggleActive(watchId);
       if (!success) {
         ResponseHelper.internalError(res, 'Failed to toggle watch status');
@@ -463,8 +494,30 @@ export class WatchController {
         return;
       }
 
-      // Bulk create watches
-      const createdWatches = await Watch.bulkCreate<IWatch>(watchesToCreate);
+      // Enforce plan watch limits for bulk import
+      const { SubscriptionService } = await import('../services/subscriptionService');
+      const quota = await SubscriptionService.checkQuota(userId, 'watch_created');
+      let toInsert = watchesToCreate;
+      if (quota.limit !== undefined && quota.limit !== null) {
+        const used = quota.used || 0;
+        const remaining = Math.max(0, quota.limit - used);
+        if (remaining <= 0) {
+          ResponseHelper.error(
+            res,
+            'WATCH_LIMIT_REACHED',
+            `Import would exceed your watch limit (${quota.limit}). Remove some watches or upgrade your plan.`,
+            403
+          );
+          return;
+        }
+        if (toInsert.length > remaining) {
+          errors.push(`Import truncated: only ${remaining} of ${toInsert.length} rows imported due to plan limit.`);
+          toInsert = toInsert.slice(0, remaining);
+        }
+      }
+
+      // Bulk create watches (respecting limit)
+      const createdWatches = await Watch.bulkCreate<IWatch>(toInsert);
 
       const result = {
         created: createdWatches.length,

@@ -5,9 +5,17 @@
     {
       "title": "Fix subscription_plans migration (bindings error)",
       "type": "decision",
-      "tags": ["knex", "migration", "postgres", "jsonb", "enum"],
+      "tags": [
+        "knex",
+        "migration",
+        "postgres",
+        "jsonb",
+        "enum"
+      ],
       "details": {
-        "files": ["backend/migrations/20250829151931_create_subscription_plans_table.js"],
+        "files": [
+          "backend/migrations/20250829151931_create_subscription_plans_table.js"
+        ],
         "changes": [
           "Use native enum { useNative: true, enumName: 'billing_period_enum' }",
           "Set jsonb defaults via raw casts ('[]'::jsonb, '{...}'::jsonb)"
@@ -19,7 +27,11 @@
     {
       "title": "ML ModelRunner architecture + heuristic model",
       "type": "feature",
-      "tags": ["ml", "architecture", "dashboard"],
+      "tags": [
+        "ml",
+        "architecture",
+        "dashboard"
+      ],
       "details": {
         "files": [
           "backend/src/services/ml/IModelRunner.ts",
@@ -35,13 +47,22 @@
     {
       "title": "Dashboard populated (stats + activity)",
       "type": "feature",
-      "tags": ["dashboard", "frontend"],
+      "tags": [
+        "dashboard",
+        "frontend"
+      ],
       "details": {
         "file": "frontend/src/pages/DashboardPage.tsx",
         "endpoint": "GET /api/dashboard",
         "props": {
-          "DashboardOverview": ["stats", "insights"],
-          "RecentActivity": ["recentAlerts", "watchedProducts"]
+          "DashboardOverview": [
+            "stats",
+            "insights"
+          ],
+          "RecentActivity": [
+            "recentAlerts",
+            "watchedProducts"
+          ]
         }
       },
       "timestamp": "${NOW}"
@@ -49,7 +70,11 @@
     {
       "title": "Advanced analytics integrated (insights + portfolio)",
       "type": "feature",
-      "tags": ["dashboard", "insights", "portfolio"],
+      "tags": [
+        "dashboard",
+        "insights",
+        "portfolio"
+      ],
       "details": {
         "file": "frontend/src/pages/DashboardPage.tsx",
         "endpoints": [
@@ -57,8 +82,14 @@
           "GET /api/dashboard/portfolio"
         ],
         "components": {
-          "PredictiveInsights": ["insights", "watchedProducts"],
-          "PortfolioTracking": ["portfolio", "user"]
+          "PredictiveInsights": [
+            "insights",
+            "watchedProducts"
+          ],
+          "PortfolioTracking": [
+            "portfolio",
+            "user"
+          ]
         }
       },
       "timestamp": "${NOW}"
@@ -66,30 +97,56 @@
     {
       "title": "Alerts page implemented (Inbox + actions)",
       "type": "feature",
-      "tags": ["frontend", "alerts", "ui"],
+      "tags": [
+        "frontend",
+        "alerts",
+        "ui"
+      ],
       "details": {
         "file": "frontend/src/pages/AlertsPage.tsx",
-        "components": ["AlertInbox", "AlertFiltersPanel", "AlertStats", "AlertAnalytics"],
+        "components": [
+          "AlertInbox",
+          "AlertFiltersPanel",
+          "AlertStats",
+          "AlertAnalytics"
+        ],
         "service": "frontend/src/services/alertService.ts",
-        "endpoints": ["GET /api/alerts", "PATCH /api/alerts/:id/read", "PATCH /api/alerts/:id/clicked", "PATCH /api/alerts/bulk/read", "DELETE /api/alerts/:id"]
+        "endpoints": [
+          "GET /api/alerts",
+          "PATCH /api/alerts/:id/read",
+          "PATCH /api/alerts/:id/clicked",
+          "PATCH /api/alerts/bulk/read",
+          "DELETE /api/alerts/:id"
+        ]
       },
       "timestamp": "${NOW}"
     },
     {
       "title": "Generate test alerts script",
       "type": "runbook",
-      "tags": ["dev", "alerts", "seed"],
+      "tags": [
+        "dev",
+        "alerts",
+        "seed"
+      ],
       "details": {
         "file": "backend/scripts/generate-test-alerts.ts",
         "command": "docker compose -f docker-compose.dev.yml exec api npm run alerts:generate-test",
-        "notes": ["Creates 3 realistic alerts for the first user using existing product/retailer"]
+        "notes": [
+          "Creates 3 realistic alerts for the first user using existing product/retailer"
+        ]
       },
       "timestamp": "${NOW}"
     },
     {
       "title": "Docker reset sequence for clean migrations",
       "type": "runbook",
-      "tags": ["docker", "compose", "migrations", "seeds"],
+      "tags": [
+        "docker",
+        "compose",
+        "migrations",
+        "seeds"
+      ],
       "details": {
         "commands": [
           "docker compose -f docker-compose.dev.yml down --volumes --remove-orphans",
@@ -107,7 +164,11 @@
     {
       "title": "ProductCard watch POST body cleanup",
       "type": "change",
-      "tags": ["frontend", "watches", "axios"],
+      "tags": [
+        "frontend",
+        "watches",
+        "axios"
+      ],
       "details": {
         "file": "frontend/src/components/products/ProductCard.tsx",
         "before": "POST /watches with retailer_ids hard-coded",
@@ -119,7 +180,11 @@
     {
       "title": "E2E watch add/remove validated via API",
       "type": "evidence",
-      "tags": ["api", "watches", "verification"],
+      "tags": [
+        "api",
+        "watches",
+        "verification"
+      ],
       "details": {
         "flow": [
           "Login admin -> 200",
@@ -133,7 +198,11 @@
     {
       "title": "Watch Packs crash fix (TDZ + response shape)",
       "type": "fix",
-      "tags": ["frontend", "watch-packs", "react"],
+      "tags": [
+        "frontend",
+        "watch-packs",
+        "react"
+      ],
       "details": {
         "files": [
           "frontend/src/components/watches/WatchPacks.tsx",
@@ -150,7 +219,10 @@
     {
       "title": "General rate limit relaxed by 10%",
       "type": "change",
-      "tags": ["rate-limit", "backend"],
+      "tags": [
+        "rate-limit",
+        "backend"
+      ],
       "details": {
         "file": "backend/src/constants/limits.ts",
         "diff": "GENERAL_MAX_REQUESTS: 100 -> 110"
@@ -160,7 +232,11 @@
     {
       "title": "Rate limiting quality-of-life (dev)",
       "type": "change",
-      "tags": ["rate-limit", "auth", "dev-experience"],
+      "tags": [
+        "rate-limit",
+        "auth",
+        "dev-experience"
+      ],
       "details": {
         "file": "backend/src/middleware/rateLimiter.ts",
         "rules": [
@@ -174,7 +250,11 @@
     {
       "title": "My Watches page grid view",
       "type": "feature",
-      "tags": ["frontend", "watches", "ui"],
+      "tags": [
+        "frontend",
+        "watches",
+        "ui"
+      ],
       "details": {
         "file": "frontend/src/pages/WatchesPage.tsx",
         "behavior": "List/Grid toggle; grid fetches watches then products; renders ProductGrid",
@@ -185,7 +265,10 @@
     {
       "title": "Port 3000 conflict guidance",
       "type": "runbook",
-      "tags": ["dev-env", "ports"],
+      "tags": [
+        "dev-env",
+        "ports"
+      ],
       "details": {
         "diagnostics": [
           "lsof -iTCP:3000 -sTCP:LISTEN -nP",
@@ -201,18 +284,31 @@
     {
       "title": "OpenMemory MCP config",
       "type": "configuration",
-      "tags": ["mcp", "context7"],
+      "tags": [
+        "mcp",
+        "context7"
+      ],
       "details": {
         "file": ".codex/config.toml",
         "section": "[mcp_servers.Context7]",
-        "env": { "CONTEXT7_PROJECT_ID": "booster-beacon-proj-001" }
+        "env": {
+          "CONTEXT7_PROJECT_ID": "booster-beacon-proj-001"
+        }
       },
       "timestamp": "2025-08-31T13:43:40Z"
     },
     {
       "title": "Batch products-by-ids endpoint validated, tested, documented",
       "type": "feature",
-      "tags": ["backend", "api", "products", "joi", "validation", "tests", "docs"],
+      "tags": [
+        "backend",
+        "api",
+        "products",
+        "joi",
+        "validation",
+        "tests",
+        "docs"
+      ],
       "details": {
         "endpoint": "POST /api/products/by-ids",
         "files": [
@@ -234,7 +330,14 @@
     {
       "title": "Event-driven transactions & billing foundation (MVP)",
       "type": "feature",
-      "tags": ["backend", "events", "redis", "stripe", "migrations", "ml"],
+      "tags": [
+        "backend",
+        "events",
+        "redis",
+        "stripe",
+        "migrations",
+        "ml"
+      ],
       "details": {
         "files": [
           "backend/migrations/20250901090000_create_transactions_and_billing_events.js",
@@ -256,13 +359,21 @@
     {
       "title": "Frontend: ProductsPage listing + search wiring",
       "type": "feature",
-      "tags": ["frontend", "products", "search", "api"],
+      "tags": [
+        "frontend",
+        "products",
+        "search",
+        "api"
+      ],
       "details": {
         "file": "frontend/src/pages/ProductsPage.tsx",
         "endpoints": [
           "GET /api/products/search?page=1&limit=20&q=...&availability=...&sort_by=...&sort_order=..."
         ],
-        "components": ["ProductGrid", "ProductDetail"],
+        "components": [
+          "ProductGrid",
+          "ProductDetail"
+        ],
         "summary": "ProductsPage now fetches catalog via /products/search, manages pagination, basic filters, and passes results to ProductGrid; clicking shows ProductDetail."
       },
       "timestamp": "${NOW}"
@@ -270,7 +381,11 @@
     {
       "title": "Product discovery toggle (Recent/Popular)",
       "type": "feature",
-      "tags": ["frontend", "products", "discover"],
+      "tags": [
+        "frontend",
+        "products",
+        "discover"
+      ],
       "details": {
         "file": "frontend/src/pages/ProductsPage.tsx",
         "endpoints": [
@@ -288,11 +403,26 @@
     {
       "title": "Debounced product search & filter wiring",
       "type": "feature",
-      "tags": ["frontend", "search", "ux"],
+      "tags": [
+        "frontend",
+        "search",
+        "ux"
+      ],
       "details": {
         "file": "frontend/src/pages/ProductsPage.tsx",
         "hook": "useDebounce(…, 300ms)",
-        "queryParams": ["q", "category_id", "retailer_id", "min_price", "max_price", "availability", "sort_by", "sort_order", "page", "limit"],
+        "queryParams": [
+          "q",
+          "category_id",
+          "retailer_id",
+          "min_price",
+          "max_price",
+          "availability",
+          "sort_by",
+          "sort_order",
+          "page",
+          "limit"
+        ],
         "result": "Auto-fetches /api/products/search on typing or filter changes; preserves discover mode when query is empty"
       },
       "timestamp": "${NOW}"
@@ -300,7 +430,11 @@
     {
       "title": "Alerts Inbox actions wired with optimistic updates",
       "type": "feature",
-      "tags": ["frontend", "alerts", "optimistic-ui"],
+      "tags": [
+        "frontend",
+        "alerts",
+        "optimistic-ui"
+      ],
       "details": {
         "files": [
           "frontend/src/pages/AlertsPage.tsx",
@@ -321,11 +455,17 @@
     {
       "title": "MCP: BrightData server added",
       "type": "configuration",
-      "tags": ["mcp", "brightdata", "scraping"],
+      "tags": [
+        "mcp",
+        "brightdata",
+        "scraping"
+      ],
       "details": {
         "file": ".codex/config.toml",
         "section": "[mcp_servers.brightData]",
-        "env": { "API_TOKEN": "<redacted>" },
+        "env": {
+          "API_TOKEN": "<redacted>"
+        },
         "notes": [
           "Enables Bright Data MCP for data collection integrations"
         ]
@@ -335,17 +475,147 @@
     {
       "title": "MCP: OpenMemory configuration fixed",
       "type": "configuration",
-      "tags": ["mcp", "openmemory", "memories"],
+      "tags": [
+        "mcp",
+        "openmemory",
+        "memories"
+      ],
       "details": {
         "file": ".codex/config.toml",
         "section": "[mcp_servers.openmemory]",
-        "env": { "OPENMEMORY_API_KEY": "<redacted>", "CLIENT_NAME": "cursor" },
+        "env": {
+          "OPENMEMORY_API_KEY": "<redacted>",
+          "CLIENT_NAME": "cursor"
+        },
         "notes": [
           "Validated command + args for npx openmemory",
           "Ready to push docs/memory/booster-beacon-memories.json via script"
         ]
       },
       "timestamp": "${NOW}"
+    },
+    {
+      "title": "Enforce plan-based watch limits + UI updates",
+      "type": "change",
+      "tags": [
+        "subscription",
+        "watches",
+        "quota",
+        "frontend",
+        "backend",
+        "docs"
+      ],
+      "details": {
+        "policy": {
+          "free": {
+            "max_watches": 2
+          },
+          "pro": {
+            "max_watches": 10
+          },
+          "premium": {
+            "max_watches": null
+          }
+        },
+        "backend": [
+          "backend/src/services/subscriptionService.ts (checkQuota: count active watches; default plan limits)",
+          "backend/src/controllers/watchController.ts (enforce before create)",
+          "backend/seeds/003_subscription_plans_seed.js (feature text + limits)",
+          "backend/src/controllers/subscriptionController.ts (status uses real quota)",
+          "backend/src/controllers/watchController.ts (bulkImport enforces/truncates to remaining; toggle activation enforces limit)"
+        ],
+        "frontend": [
+          "frontend/src/context/SubscriptionContext.tsx (unlimited only for premium; pro=10)",
+          "frontend/src/constants/pricing.ts (Free: Up to 2)",
+          "frontend/src/pages/SubscriptionSuccessPage.tsx (Pro features copy: Up to 10)"
+        ],
+        "docs": [
+          "README.md (Watch Limits by Plan)",
+          "docs/subscription-policies.md (Watch Limits section)"
+        ]
+      },
+      "timestamp": "${NOW}"
+    },
+    {
+      "title": "Stripe env load + setup fee var compatibility",
+      "type": "fix",
+      "tags": [
+        "stripe",
+        "env",
+        "checkout"
+      ],
+      "details": {
+        "changes": [
+          "backend/src/index.ts loads dotenv at top to init Stripe",
+          "subscriptionService accepts STRIPE_PREMIUM_SETUP_FEE_PRICE_ID or STRIPE_SETUP_FEE_PRICE_ID",
+          "Default plans prefer env price IDs"
+        ]
+      },
+      "timestamp": "${NOW}"
+    },
+    {
+      "title": "Dev WebSocket resilience (CORS + dynamic URL)",
+      "type": "improvement",
+      "tags": [
+        "websocket",
+        "socket.io",
+        "dev-experience"
+      ],
+      "details": {
+        "backend": "In development, accept any origin for WS CORS to avoid localhost/127.0.0.1 mismatches; add ping→pong handler",
+        "frontend": "Use window.location to derive WS base when VITE_API_URL is not set"
+      },
+      "timestamp": "${NOW}"
+    },
+    {
+      "title": "Email in dev via Ethereal + contact preview URL",
+      "type": "improvement",
+      "tags": [
+        "email",
+        "nodemailer",
+        "dev-experience"
+      ],
+      "details": {
+        "files": [
+          "backend/src/services/notifications/emailService.ts",
+          "README.md",
+          "DEPLOYMENT_GUIDE.md",
+          "docs/email-system.md"
+        ],
+        "summary": "In development, create Nodemailer Ethereal test accounts on the fly and send contact emails through them; print preview URL to logs. Custom SMTP supported when env vars set.",
+        "env": [
+          "SMTP_HOST",
+          "SMTP_PORT",
+          "SMTP_SECURE",
+          "SMTP_USER",
+          "SMTP_PASS",
+          "FROM_EMAIL",
+          "FROM_NAME",
+          "SUPPORT_EMAIL"
+        ]
+      },
+      "timestamp": ""
+    },
+    {
+      "title": "Watch-limit toasts with Upgrade CTA",
+      "type": "ux",
+      "tags": [
+        "frontend",
+        "toast",
+        "subscription"
+      ],
+      "details": {
+        "files": [
+          "frontend/src/App.tsx",
+          "frontend/src/components/products/ProductCard.tsx",
+          "frontend/src/components/products/ProductDetail.tsx"
+        ],
+        "summary": "Added global Toaster and custom toast with an Upgrade button linking to /pricing when WATCH_LIMIT_REACHED occurs.",
+        "notes": [
+          "Ensures users see clear guidance on limits and upgrade path"
+        ]
+      },
+      "timestamp": ""
     }
   ]
 }

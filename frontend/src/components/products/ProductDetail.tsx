@@ -131,6 +131,22 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
           setIsWatched(exists);
           if (exists) toast.success('Already in your watchlist');
         } catch {}
+      } else if (errorObj?.code === 'WATCH_LIMIT_REACHED' || (errorObj?.statusCode === 403 && /watch limit/i.test(errorObj?.message || ''))) {
+        const msg = errorObj?.message || 'Watch limit reached for your plan.';
+        toast.custom((t) => (
+          <div className="bg-gray-800 text-white px-4 py-3 rounded-lg shadow-lg border border-gray-700">
+            <div className="text-sm mb-2">{msg}</div>
+            <div className="flex justify-end">
+              <a
+                href="/pricing"
+                onClick={() => toast.dismiss(t.id)}
+                className="px-3 py-1 bg-pokemon-electric text-background-primary rounded font-medium text-sm hover:bg-yellow-400"
+              >
+                Upgrade
+              </a>
+            </div>
+          </div>
+        ), { id: 'watch-limit', duration: 5000 });
       } else {
         toast.error('Failed to update watchlist. Please try again.');
       }

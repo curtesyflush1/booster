@@ -20,7 +20,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     period: 'forever',
     description: 'Perfect for casual collectors',
     features: [
-      'Up to 5 product watches',
+      'Up to 2 product watches',
       'Basic email alerts',
       'Web push notifications',
       'Community support'

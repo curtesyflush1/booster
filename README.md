@@ -548,6 +548,13 @@ When running locally, services are available at:
 - `POST /api/subscription/webhook/stripe` - Stripe webhook handler
 - `GET /api/subscription/analytics/conversion` - Get conversion analytics (admin)
 
+##### Watch Limits by Plan
+- Free: up to 2 active watches
+- Pro (monthly/yearly): up to 10 active watches
+- Premium: unlimited active watches
+
+Limits are enforced server-side during watch creation. The UI reflects remaining quota from `/api/subscription/status` and `/api/subscription/usage`.
+
 #### Email & Notifications
 - `GET /api/email/preferences` - Get email preferences
 - `PUT /api/email/preferences` - Update email preferences
@@ -555,6 +562,17 @@ When running locally, services are available at:
 - `GET /api/email/templates` - Get email templates (admin)
 - `POST /api/notifications/web-push/subscribe` - Subscribe to web push
 - `DELETE /api/notifications/web-push/unsubscribe` - Unsubscribe from web push
+
+##### Email Configuration (Dev + Prod)
+- Development: If no SMTP credentials are set, the backend will create a Nodemailer Ethereal test account automatically and send contact emails through it. The API returns 200 and logs a preview URL to the server logs.
+- Production/Custom SMTP: Set the following env vars to use your SMTP provider:
+  - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE` (true for 465), `SMTP_USER`, `SMTP_PASS`, `SMTP_TLS_REJECT_UNAUTHORIZED`
+  - `FROM_EMAIL`, `FROM_NAME`, `SUPPORT_EMAIL`
+  - Use `GET /api/email/test-config` (if present) or check server logs for validation.
+ 
+Contact form delivery:
+- The contact form sends mail to `SUPPORT_EMAIL` (or `FROM_EMAIL` if not set) with `replyTo` set to the user’s entered email.
+- To receive messages yourself during testing, set `SUPPORT_EMAIL` to your inbox address.
 
 #### Social & Integrations
 - `GET /api/social/links` - Get social media links

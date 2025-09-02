@@ -39,7 +39,9 @@ export const useWebSocket = (): UseWebSocketReturn => {
     }
 
     try {
-      const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:3000', {
+      const fallbackBase = `${window.location.protocol}//${window.location.hostname}:3000`;
+      const baseUrl = import.meta.env.VITE_API_URL || fallbackBase;
+      const socket = io(baseUrl, {
         auth: {
           token
         },

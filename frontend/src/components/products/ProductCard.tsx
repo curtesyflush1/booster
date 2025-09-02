@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 
 import { apiClient } from '../../services/apiClient';
 import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface ProductCardProps {
   product: Product;
@@ -18,6 +19,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
   showWatchActions = true
 }) => {
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [isAddingToWatchlist, setIsAddingToWatchlist] = useState(false);
   const [isWatchAdded, setIsWatchAdded] = useState(false);
   const [watchId, setWatchId] = useState<string | null>(null);
@@ -108,6 +110,21 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
         setIsWatchAdded(true);
       } else if (errorObj?.code === 'MISSING_TOKEN' || errorObj?.statusCode === 401) {
         toast.error('Please log in to add products to your watchlist');
+      } else if (errorObj?.code === 'WATCH_LIMIT_REACHED' || (errorObj?.statusCode === 403 && /watch limit/i.test(errorObj?.message || ''))) {
+        const msg = errorObj?.message || 'Watch limit reached for your plan.';
+        toast.custom((t) => (
+          <div className="bg-gray-800 text-white px-4 py-3 rounded-lg shadow-lg border border-gray-700">
+            <div className="text-sm mb-2">{msg}</div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => { navigate('/pricing'); toast.dismiss(t.id); }}
+                className="px-3 py-1 bg-pokemon-electric text-background-primary rounded font-medium text-sm hover:bg-yellow-400"
+              >
+                Upgrade
+              </button>
+            </div>
+          </div>
+        ), { id: 'watch-limit', duration: 5000 });
       } else {
         toast.error('Failed to add to watchlist. Please try again.');
       }

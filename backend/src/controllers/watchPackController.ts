@@ -323,6 +323,22 @@ export class WatchPackController {
       }
 
       if (filteredWatches.length > 0) {
+        // Enforce watch limit for bulk creation
+        const { SubscriptionService } = await import('../services/subscriptionService');
+        const quota = await SubscriptionService.checkQuota(userId, 'watch_created');
+        if (quota.limit !== undefined && quota.limit !== null) {
+          const used = quota.used || 0;
+          const projected = used + filteredWatches.length;
+          if (projected > quota.limit) {
+            ResponseHelper.error(
+              res,
+              'WATCH_LIMIT_REACHED',
+              `Subscribing would exceed your watch limit (${quota.limit}). Remove some watches or upgrade your plan.`,
+              403
+            );
+            return;
+          }
+        }
         await Watch.bulkCreate(filteredWatches);
       }
 

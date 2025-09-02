@@ -188,6 +188,7 @@ export class SubscriptionService extends BaseModel<any> {
         billing_period: 'monthly',
         stripe_price_id: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || 'price_pro_monthly',
         features: [
+          'Up to 10 product watches',
           'Higher alert priority',
           'SMS & Discord notifications',
           'Auto-purchase (limited capacity)',
@@ -196,7 +197,7 @@ export class SubscriptionService extends BaseModel<any> {
           'Advanced filtering',
           'Browser extension access'
         ],
-        limits: { max_watches: null, max_alerts_per_day: null, api_rate_limit: null },
+        limits: { max_watches: 10, max_alerts_per_day: null, api_rate_limit: null },
         is_active: true,
         trial_days: 7
       },
@@ -209,6 +210,7 @@ export class SubscriptionService extends BaseModel<any> {
         billing_period: 'monthly',
         stripe_price_id: process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID || 'price_premium_monthly',
         features: [
+          'Unlimited product watches',
           'Highest queue priority + fastest alerts',
           'Auto-purchase (full capacity & priority)',
           'Full ML suite: price prediction, sellout risk, ROI',
@@ -219,6 +221,24 @@ export class SubscriptionService extends BaseModel<any> {
         limits: { max_watches: null, max_alerts_per_day: null, api_rate_limit: null },
         is_active: true,
         trial_days: 7
+      },
+      {
+        id: 'free',
+        name: 'Free',
+        slug: 'free',
+        description: 'Basic alerts for casual collectors',
+        price: 0.0,
+        billing_period: 'monthly',
+        stripe_price_id: '',
+        features: [
+          'Up to 2 product watches',
+          'Basic email alerts',
+          'Web push notifications',
+          'Community support'
+        ],
+        limits: { max_watches: 2, max_alerts_per_day: 50, api_rate_limit: 1000 },
+        is_active: true,
+        trial_days: 0
       }
     ];
   }
@@ -282,7 +302,19 @@ export class SubscriptionService extends BaseModel<any> {
         throw new Error('User not found');
       }
 
-      const plan = await this.getPlanBySlug(planSlug);
+      // Resolve plan from DB, with graceful fallback to defaults in dev
+      let plan: SubscriptionPlan | null = null;
+      try {
+        plan = await this.getPlanBySlug(planSlug);
+      } catch (e) {
+        logger.warn('Plan lookup failed; using default plans fallback', {
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
+      if (!plan) {
+        const defaults = this.getDefaultPlans();
+        plan = defaults.find(p => p.slug === planSlug) || null;
+      }
       if (!plan) {
         throw new Error('Plan not found');
       }
@@ -329,12 +361,19 @@ export class SubscriptionService extends BaseModel<any> {
         }
       };
 
-      // Add primary subscription line item
-      sessionData.line_items!.push({ price: plan.stripe_price_id, quantity: 1 });
+      // Add primary subscription line item (prefer env override if present for safety in dev)
+      let primaryPriceId = plan.stripe_price_id;
+      if (plan.slug === 'pro-monthly' && process.env.STRIPE_PRO_MONTHLY_PRICE_ID) {
+        primaryPriceId = process.env.STRIPE_PRO_MONTHLY_PRICE_ID;
+      }
+      if (plan.slug === 'premium-monthly' && process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID) {
+        primaryPriceId = process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID;
+      }
+      sessionData.line_items!.push({ price: primaryPriceId, quantity: 1 });
 
       // Optionally add a one-time setup fee for premium only
       // Use STRIPE_PREMIUM_SETUP_FEE_PRICE_ID to avoid charging setup fee to Pro
-      const premiumSetupFeePriceId = process.env.STRIPE_PREMIUM_SETUP_FEE_PRICE_ID;
+      const premiumSetupFeePriceId = process.env.STRIPE_PREMIUM_SETUP_FEE_PRICE_ID || process.env.STRIPE_SETUP_FEE_PRICE_ID;
       if (premiumSetupFeePriceId && plan.slug.startsWith('premium')) {
         sessionData.line_items!.push({ price: premiumSetupFeePriceId, quantity: 1 });
       }
@@ -557,38 +596,42 @@ export class SubscriptionService extends BaseModel<any> {
         return { allowed: false };
       }
 
-      // Free tier limits
-      if (user.subscription_tier === SubscriptionTier.FREE) {
-        const limits = {
-          watch_created: 5,
-          alert_sent: 50,
-          api_call: 1000
-        };
+      // Determine plan-specific limits
+      const planSlug = (user.subscription_plan_id || '').toLowerCase();
+      const tier = (user.subscription_tier || '').toLowerCase();
 
+      // Compute watch limits per plan
+      const resolveWatchLimit = (): number | null => {
+        if (planSlug === 'premium-monthly' || planSlug === 'pro-plus') return null; // unlimited
+        if (planSlug === 'pro-monthly' || planSlug === 'pro-yearly') return 10;
+        if (planSlug === 'free' || tier === 'free') return 2;
+        // Fallback by tier
+        if (tier === 'pro') return 10;
+        return 2;
+      };
+
+      if (usageType === 'watch_created') {
+        const limit = resolveWatchLimit();
+        if (limit === null) return { allowed: true };
+        // Count active watches for robust enforcement
+        const countResult = await this.db('watches')
+          .where({ user_id: userId })
+          .where('is_active', true)
+          .count('* as count');
+        const used = Number(countResult?.[0]?.count || 0);
+        return { allowed: used < limit, limit, used };
+      }
+
+      // Non-watch quotas (leave defaults unless specified)
+      if (user.subscription_tier === SubscriptionTier.FREE) {
+        const limits = { alert_sent: 50, api_call: 1000 } as const;
         const limit = limits[usageType as keyof typeof limits];
         if (limit && user.usage_stats) {
-          let used = 0;
-          switch (usageType) {
-            case 'watch_created':
-              used = user.usage_stats.watches_used || 0;
-              break;
-            case 'alert_sent':
-              used = user.usage_stats.alerts_sent || 0;
-              break;
-            case 'api_call':
-              used = user.usage_stats.api_calls || 0;
-              break;
-          }
-          
-          return {
-            allowed: used < limit,
-            limit,
-            used
-          };
+          const used = usageType === 'alert_sent' ? (user.usage_stats.alerts_sent || 0) : (user.usage_stats.api_calls || 0);
+          return { allowed: used < limit, limit, used };
         }
       }
 
-      // Pro tier has no limits
       return { allowed: true };
     } catch (error) {
       logger.error('Error checking quota:', error);

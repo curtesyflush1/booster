@@ -1,7 +1,7 @@
+import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { logger, loggerWithContext } from './utils/logger';
 import { correlationIdMiddleware } from './middleware/correlationId';
@@ -46,8 +46,7 @@ import { startWorker as startPurchaseWorker } from './services/PurchaseQueue';
 import { AvailabilityPollingService } from './services/availabilityPollingService';
 import { CronService } from './services/CronService';
 
-// Load environment variables
-dotenv.config();
+// Env vars are loaded via the side-effect import above
 
 const app = express();
 const PORT = process.env.PORT || PORTS.DEFAULT_API_PORT;

@@ -168,10 +168,10 @@ NODE_ENV=development
 
 **Features:**
 - Fake SMTP service for testing
-- Web-based email preview
-- No actual email delivery
+- Web-based email preview (the server logs print a preview URL after sending)
+- No actual email delivery to real inboxes
 - Perfect for development and testing
-- Automatic configuration
+- Automatic configuration (credentials generated at runtime)
 
 ### Custom SMTP (Third-party)
 Support for any SMTP provider (Gmail, Outlook, SendGrid, etc.).

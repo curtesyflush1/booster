@@ -18,6 +18,16 @@ Policy fields:
 - `historyDays`: Max price-history window (days). `-1` means unlimited (internally capped for safety)
 - `channels`: Access to premium channels `{ sms, discord }`
 
+## Watch Limits
+
+Active watch limits are enforced per plan as part of subscription policy:
+
+- Free: 2 active watches
+- Pro (monthly/yearly): 10 active watches
+- Premium (and Pro+): Unlimited active watches
+
+Enforcement point: `WatchController.createWatch` calls `SubscriptionService.checkQuota(userId, 'watch_created')`, which counts the user's active watches and compares against the plan limit. The same quota is exposed via `/api/subscription/status` and `/api/subscription/usage` for UI.
+
 ## Environment Variables
 
 Set the following in `.env` (or production secrets) to map Stripe prices → plan slugs:

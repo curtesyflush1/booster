@@ -134,6 +134,33 @@ npm run deploy:logs
 npm run deploy:health
 ```
 
+#### Plans and Watch Limits
+After a fresh deployment, ensure subscription plans exist and reflect the correct watch limits:
+
+- Free: max_watches = 2
+- Pro (monthly/yearly): max_watches = 10
+- Premium: max_watches = null (unlimited)
+
+Run migrations and seeds if needed:
+```bash
+docker-compose -f docker-compose.prod.yml exec app sh -c "cd backend && npm run migrate:up && npm run seed:dev"
+```
+
+Stripe environment variables to verify (production):
+- `STRIPE_PRO_MONTHLY_PRICE_ID`
+- `STRIPE_PRO_YEARLY_PRICE_ID` (optional)
+- `STRIPE_PREMIUM_MONTHLY_PRICE_ID`
+- `STRIPE_PREMIUM_SETUP_FEE_PRICE_ID` (for Premium setup fee)
+- `STRIPE_WEBHOOK_SECRET` (recommended)
+
+#### Email (Dev and Production)
+- Development:
+  - If you do not set SMTP variables, the backend will use a Nodemailer Ethereal test account automatically and print a preview URL to the server logs when sending contact emails.
+  - To test real SMTP in dev, set `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_TLS_REJECT_UNAUTHORIZED` in `backend/.env`.
+- Production:
+  - Set your SMTP provider credentials and `FROM_EMAIL`, `FROM_NAME`, `SUPPORT_EMAIL` in `.env.production`.
+  - Verify connectivity using your provider’s tools and check `/api/email` routes where applicable.
+
 ## Service Architecture
 
 The production deployment uses Docker Compose with these services:

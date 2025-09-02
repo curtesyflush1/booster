@@ -176,42 +176,41 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   };
 
   const isTopTier = (): boolean => {
-    if (!isProUser()) return false;
     const pid = state.subscription?.planId;
-    return pid === 'pro-yearly' || pid === 'pro-plus';
+    return pid === 'premium-monthly' || pid === 'pro-plus';
   };
 
   const canCreateWatch = (): boolean => {
-    if (isProUser()) return true;
-    
+    if (isTopTier()) return true; // Unlimited watches on premium or pro-plus
     const watchesUsed = state.usage?.watches_used || 0;
-    const watchLimit = state.quota?.limit || 5;
-    
+    const isPro = isProUser();
+    const defaultLimit = isPro ? 10 : 2;
+    const watchLimit = state.quota?.limit ?? defaultLimit;
     return watchesUsed < watchLimit;
   };
 
   const getRemainingWatches = (): number => {
-    if (isProUser()) return Infinity;
-    
-    const watchesUsed = state.usage?.watches_used || 0;
-    const watchLimit = state.quota?.limit || 5;
-    
-    return Math.max(0, watchLimit - watchesUsed);
+    if (isTopTier()) return Infinity;
+    const isPro = isProUser();
+    const defaultLimit = isPro ? 10 : 2;
+    const used = state.quota?.used ?? state.usage?.watches_used ?? 0;
+    const watchLimit = state.quota?.limit ?? defaultLimit;
+    return Math.max(0, watchLimit - used);
   };
 
   const getUsagePercentage = (type: 'watches' | 'alerts' | 'api'): number => {
-    if (isProUser()) return 0; // No limits for Pro users
-    
     if (!state.usage) return 0;
-    
     let used = 0;
     let limit = 0;
-    
     switch (type) {
-      case 'watches':
-        used = state.usage.watches_used;
-        limit = state.quota?.limit || 5;
+      case 'watches': {
+        const isPro = isProUser();
+        const defaultLimit = isPro ? 10 : 2;
+        limit = state.quota?.limit ?? defaultLimit;
+        if (isTopTier()) return 0; // Unlimited
+        used = state.quota?.used ?? state.usage.watches_used;
         break;
+      }
       case 'alerts':
         used = state.usage.alerts_sent;
         limit = 50; // Default alert limit for free tier
@@ -221,7 +220,6 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
         limit = 1000; // Default API limit for free tier
         break;
     }
-    
     return limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
   };
 

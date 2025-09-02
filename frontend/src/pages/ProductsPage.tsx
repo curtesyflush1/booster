@@ -62,7 +62,9 @@ const ProductsPage: React.FC = () => {
         );
         const list = (res.data as any)?.data?.products || [];
         const transformed = transformBackendProducts(list);
-        setProducts(transformed);
+        // Deduplicate by id for safety
+        const unique = Array.from(new Map(transformed.map(p => [p.id, p])).values());
+        setProducts(unique);
         setPagination({
           page: 1,
           limit: pagination.limit,
@@ -93,7 +95,10 @@ const ProductsPage: React.FC = () => {
         `/products/search?${params.toString()}`
       );
       const transformed = transformBackendProducts(response.data.data);
-      setProducts(prev => (append ? [...prev, ...transformed] : transformed));
+      setProducts(prev => {
+        const merged = append ? [...prev, ...transformed] : transformed;
+        return Array.from(new Map(merged.map(p => [p.id, p])).values());
+      });
       setPagination(response.data.pagination);
     } catch (e: any) {
       setError(e?.message || 'Failed to load products');

@@ -9,7 +9,7 @@ const WEBHOOK_PROCESSING_DELAY = 2000; // 2 seconds
 const SUPPORT_EMAIL = 'support@boosterbeacon.com';
 
 const PRO_FEATURES = [
-    'Unlimited product watches',
+    'Up to 10 product watches',
     'SMS & Discord alerts',
     'Priority alert delivery',
     'Price predictions & ROI',
@@ -18,7 +18,7 @@ const PRO_FEATURES = [
 ];
 
 const NEXT_STEPS = [
-    'Set up unlimited product watches for your favorite Pokémon TCG items',
+    'Set up up to 10 product watches for your favorite Pokémon TCG items',
     'Configure SMS and Discord notifications in your settings',
     'Explore price predictions and historical data for better purchasing decisions'
 ];

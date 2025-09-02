@@ -8,6 +8,7 @@ import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBoundary from './components/ErrorBoundary';
 import PWAUpdatePrompt from './components/PWAUpdatePrompt';
 import Footer from './components/layout/Footer';
+import { Toaster } from 'react-hot-toast';
 
 // Page Components (lazy loaded)
 const HomePage = React.lazy(() => import('./pages/HomePage'));
@@ -238,6 +239,8 @@ const App: React.FC = () => {
                 </Suspense>
                 <Footer />
                 <PWAUpdatePrompt />
+                {/* Global toast container */}
+                <Toaster position="top-right" />
               </div>
             </Router>
           </UIProvider>
