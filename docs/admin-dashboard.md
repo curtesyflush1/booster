@@ -335,3 +335,27 @@ Authorization: Bearer <admin_token>
 ---
 
 The Admin Dashboard system provides a comprehensive management interface for BoosterBeacon administrators, ensuring secure and efficient system administration with complete audit trails and real-time monitoring capabilities.
+GET /api/admin/ml/models/price/metadata
+
+Returns metadata for the active price model used by the heuristic/OLS runner.
+
+Response:
+{
+  "success": true,
+  "data": {
+    "trainedAt": "2025-09-02T11:40:00.000Z",
+    "features": ["bias","recent","prev","trend","msrp","popNorm"],
+    "coef": [1.23, 0.45, ...],
+    "file": {
+      "path": "/app/data/ml/price_model.json",
+      "sizeBytes": 512,
+      "modifiedAt": "2025-09-02T11:40:01.000Z"
+    }
+  }
+}
+
+Retraining Flow
+- POST /api/admin/ml/models/price/retrain triggers ETL + training synchronously and returns updated model record with metrics.
+- Metrics include at least:
+  - rows: number of training rows generated
+  - r2: training set R² approximation

@@ -210,6 +210,52 @@ wss://api.boosterbeacon.com/ws
 
 ## 🔧 Admin Endpoints
 
+### ML Model Management
+
+GET /api/admin/ml/models/price/metadata
+
+Returns metadata for the active price model used by the ML runner.
+
+Response:
+```
+{
+  "success": true,
+  "data": {
+    "trainedAt": "2025-09-02T11:40:00.000Z",
+    "features": ["bias","recent","prev","trend","msrp","popNorm"],
+    "coef": [1.23, 0.45, ...],
+    "file": {
+      "path": "/app/data/ml/price_model.json",
+      "sizeBytes": 512,
+      "modifiedAt": "2025-09-02T11:40:01.000Z"
+    }
+  }
+}
+```
+
+POST /api/admin/ml/models/price/retrain
+
+Triggers ETL + training synchronously and returns the updated model record with metrics.
+
+Response:
+```
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "name": "price",
+    "version": "v3",
+    "status": "active",
+    "metrics": { "rows": 12345, "r2": 0.82 },
+    "model_path": "/app/data/ml/price_model.json",
+    "training_started_at": "...",
+    "training_completed_at": "...",
+    "deployed_at": "..."
+  },
+  "message": "Model retraining completed"
+}
+```
+
 ### Catalog Management
 
 #### POST /api/admin/catalog/ingestion/dry-run

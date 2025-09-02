@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import { apiClient } from '../services/apiClient';
 
 interface DashboardStats {
   users: {
@@ -47,45 +49,98 @@ interface User {
 }
 
 const AdminDashboardPage: React.FC = () => {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'ml' | 'system'>('overview');
 
+  // ML model state
+  interface PriceModelMetadata {
+    trainedAt: string;
+    features: string[];
+    coef: number[];
+    file: { path: string; sizeBytes: number; modifiedAt: string };
+  }
+  const [priceModel, setPriceModel] = useState<PriceModelMetadata | null>(null);
+  const [mlLoading, setMlLoading] = useState(false);
+  const [mlError, setMlError] = useState<string | null>(null);
+  const [retraining, setRetraining] = useState(false);
+  const [retrainMetrics, setRetrainMetrics] = useState<{ rows?: number; r2?: number } | null>(null);
+
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       
       const [statsResponse, usersResponse] = await Promise.all([
-        fetch('/api/admin/dashboard/stats', {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        fetch('/api/admin/users?limit=10', {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+        apiClient.get<{ data: DashboardStats }>('/admin/dashboard/stats'),
+        apiClient.get<{ data: { users: User[] } }>('/admin/users', { params: { page: 1, limit: 10 } })
       ]);
 
-      if (!statsResponse.ok || !usersResponse.ok) {
-        throw new Error('Failed to fetch admin data');
-      }
-
-      const statsData = await statsResponse.json();
-      const usersData = await usersResponse.json();
-
-      setStats(statsData.data);
-      setUsers(usersData.data.users);
+      setStats(statsResponse.data.data);
+      setUsers(usersResponse.data.data.users);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  const loadPriceModelMetadata = useCallback(async () => {
+    try {
+      setMlLoading(true);
+      setMlError(null);
+      setRetrainMetrics(null);
+      const res = await apiClient.get<{ success: boolean; data: PriceModelMetadata }>(
+        '/admin/ml/models/price/metadata'
+      );
+      setPriceModel(res.data.data);
+    } catch (e) {
+      setMlError(e instanceof Error ? e.message : 'Failed to load model metadata');
+    } finally {
+      setMlLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'ml') {
+      loadPriceModelMetadata();
+    }
+  }, [activeTab, loadPriceModelMetadata]);
+
+  const handleRetrain = async () => {
+    try {
+      setRetraining(true);
+      setMlError(null);
+      setRetrainMetrics(null);
+      const res = await apiClient.post<{ success: boolean; data: { metrics?: { rows?: number; r2?: number } } }>(
+        '/admin/ml/models/price/retrain',
+        {},
+        { timeout: 120000 }
+      );
+      const metrics = res.data?.data?.metrics || null;
+      setRetrainMetrics(metrics);
+      await loadPriceModelMetadata();
+      if (metrics && (metrics.rows !== undefined || metrics.r2 !== undefined)) {
+        const rowsTxt = metrics.rows !== undefined ? `rows ${metrics.rows}` : '';
+        const r2Txt = metrics.r2 !== undefined ? `R² ${(Number(metrics.r2)).toFixed(4)}` : '';
+        const parts = [rowsTxt, r2Txt].filter(Boolean).join(', ');
+        toast.success(parts ? `Model retrained: ${parts}` : 'Model retrained successfully');
+      } else {
+        toast.success('Model retrained successfully');
+      }
+    } catch (e) {
+      setMlError(e instanceof Error ? e.message : 'Failed to retrain model');
+      toast.error('Retrain failed');
+    } finally {
+      setRetraining(false);
+    }
+  };
 
   const formatUptime = (seconds: number) => {
     const days = Math.floor(seconds / 86400);
@@ -354,19 +409,66 @@ const AdminDashboardPage: React.FC = () => {
         {activeTab === 'ml' && (
           <div className="bg-white shadow rounded-lg p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">ML Model Management</h3>
-            <p className="text-gray-600">ML model management interface would go here.</p>
-            <div className="mt-4 space-y-2">
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                <span className="font-medium">Price Prediction Model</span>
-                <span className="px-2 py-1 bg-green-100 text-green-800 text-sm rounded">Active</span>
+            {mlError && (
+              <div className="mb-4 p-3 rounded bg-red-50 text-red-700 text-sm">{mlError}</div>
+            )}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Metadata Card */}
+              <div className="lg:col-span-2">
+                <div className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-gray-900">Price Prediction Model</h4>
+                    <button
+                      onClick={loadPriceModelMetadata}
+                      className="text-sm text-blue-600 hover:underline disabled:text-gray-400"
+                      disabled={mlLoading || retraining}
+                    >
+                      Refresh
+                    </button>
+                  </div>
+                  {mlLoading ? (
+                    <div className="text-gray-600 text-sm">Loading model metadata…</div>
+                  ) : priceModel ? (
+                    <div className="space-y-2 text-sm">
+                      <div className="flex gap-2"><span className="text-gray-500 w-28">Trained At:</span><span className="text-gray-900">{new Date(priceModel.trainedAt).toLocaleString()}</span></div>
+                      <div className="flex gap-2"><span className="text-gray-500 w-28">Features:</span><span className="text-gray-900">{priceModel.features.join(', ')}</span></div>
+                      <div className="flex gap-2 items-start">
+                        <span className="text-gray-500 w-28">Coefficients:</span>
+                        <span className="text-gray-900">
+                          {priceModel.coef.slice(0, 6).map((c, i) => (
+                            <span key={i} className="inline-block mr-2">{c.toFixed(4)}</span>
+                          ))}
+                          {priceModel.coef.length > 6 && <span className="text-gray-500">… (+{priceModel.coef.length - 6} more)</span>}
+                        </span>
+                      </div>
+                      <div className="flex gap-2"><span className="text-gray-500 w-28">Model File:</span><span className="text-gray-900 break-all">{priceModel.file.path} • {(priceModel.file.sizeBytes/1024).toFixed(1)} KB</span></div>
+                    </div>
+                  ) : (
+                    <div className="text-gray-600 text-sm">No model metadata found.</div>
+                  )}
+                </div>
               </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                <span className="font-medium">Sellout Risk Model</span>
-                <span className="px-2 py-1 bg-green-100 text-green-800 text-sm rounded">Active</span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                <span className="font-medium">ROI Estimation Model</span>
-                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-sm rounded">Training</span>
+
+              {/* Actions Card */}
+              <div>
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Actions</h4>
+                  <button
+                    onClick={handleRetrain}
+                    disabled={retraining}
+                    className={`w-full py-2 px-3 rounded text-white ${retraining ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}`}
+                  >
+                    {retraining ? 'Retraining…' : 'Retrain Price Model'}
+                  </button>
+                  {retrainMetrics && (
+                    <div className="mt-4 text-sm">
+                      <div className="text-gray-500">Last Retrain Metrics</div>
+                      <div className="flex gap-2"><span className="w-20 text-gray-500">Rows:</span><span className="text-gray-900">{retrainMetrics.rows ?? '—'}</span></div>
+                      <div className="flex gap-2"><span className="w-20 text-gray-500">R²:</span><span className="text-gray-900">{retrainMetrics.r2 !== undefined ? Number(retrainMetrics.r2).toFixed(4) : '—'}</span></div>
+                    </div>
+                  )}
+                  <p className="mt-3 text-xs text-gray-500">Requires admin role with ML train permission.</p>
+                </div>
               </div>
             </div>
           </div>

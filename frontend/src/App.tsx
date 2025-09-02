@@ -28,6 +28,7 @@ const ContactPage = React.lazy(() => import('./pages/ContactPage'));
 const TermsPage = React.lazy(() => import('./pages/TermsPage'));
 const PrivacyPage = React.lazy(() => import('./pages/PrivacyPage'));
 const SiteMapPage = React.lazy(() => import('./pages/SiteMapPage'));
+const AdminDashboardPage = React.lazy(() => import('./pages/AdminDashboardPage'));
 
 // SEO-optimized landing pages
 const PokemonTCGAlertsPage = React.lazy(() => import('./pages/PokemonTCGAlertsPage'));
@@ -119,6 +120,8 @@ const routeConfig: RouteConfig[] = [
   { path: '/settings', element: SettingsPage, requiresAuth: true, requiresLayout: true },
   { path: '/subscription', element: SubscriptionPage, requiresAuth: true, requiresLayout: true },
   { path: '/subscription/success', element: SubscriptionSuccessPage, requiresAuth: true },
+  // Admin Route
+  { path: '/admin', element: AdminDashboardPage, requiresAuth: true },
 ];
 
 /**

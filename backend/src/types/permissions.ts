@@ -217,6 +217,7 @@ export const DefaultRoleConfigurations: Record<SystemRole, Permission[]> = {
     ...PermissionGroups.SECURITY_FULL,
     ...PermissionGroups.MONITORING_FULL,
     Permission.ML_MODEL_VIEW,
+    Permission.ML_MODEL_TRAIN,
     Permission.ML_DATA_VIEW,
     Permission.ML_PREDICTIONS_VIEW
   ],

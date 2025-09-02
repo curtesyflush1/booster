@@ -67,6 +67,11 @@ Notes:
 - ModelFactory returns a runner that reads cached insights; fallback to heuristic if stale or missing
 - Train a real model (ARIMA/XGBoost/etc.) and wrap in a `LearnedModelRunner`
 
+## Admin Endpoints
+
+- GET `/api/admin/ml/models/price/metadata` — returns current runner model metadata (trainedAt, features, coefficients) from `data/ml/price_model.json`.
+- POST `/api/admin/ml/models/price/retrain` — triggers ETL + training synchronously and updates `ml_models` with metrics `{ rows, r2 }`.
+
 ## Local Validation
 
 1. Start the stack:

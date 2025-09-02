@@ -9,12 +9,12 @@ export class AdminMLService {
    */
   static async getMLModels(): Promise<IMLModel[]> {
     try {
-      const models = await BaseModel.findAll<IMLModel>({
-        orderBy: 'created_at',
-        orderDirection: 'desc'
-      });
-
-      return models.data;
+      const knex = BaseModel.getKnex();
+      const rows = await knex<IMLModel>('ml_models')
+        .select('*')
+        .orderBy('created_at', 'desc')
+        .limit(500);
+      return rows as unknown as IMLModel[];
     } catch (error) {
       logger.error('Failed to get ML models', {
         error: error instanceof Error ? error.message : String(error)
@@ -28,7 +28,11 @@ export class AdminMLService {
    */
   static async getMLModel(modelId: string): Promise<IMLModel | null> {
     try {
-      return await BaseModel.findById<IMLModel>(modelId);
+      const knex = BaseModel.getKnex();
+      const row = await knex<IMLModel>('ml_models')
+        .where({ id: modelId })
+        .first();
+      return (row as unknown as IMLModel) || null;
     } catch (error) {
       logger.error('Failed to get ML model', {
         error: error instanceof Error ? error.message : String(error),
@@ -53,12 +57,15 @@ export class AdminMLService {
     userAgent?: string
   ): Promise<IMLModel> {
     try {
-      const newModel = await BaseModel.create<IMLModel>({
-        ...modelData,
-        status: 'training',
-        trained_by: adminUserId,
-        training_started_at: new Date()
-      });
+      const knex = BaseModel.getKnex();
+      const [newModel] = await knex<IMLModel>('ml_models')
+        .insert({
+          ...modelData,
+          status: 'training',
+          trained_by: adminUserId,
+          training_started_at: new Date()
+        })
+        .returning('*');
 
       await AdminAuditService.logAction(
         adminUserId,
@@ -114,7 +121,14 @@ export class AdminMLService {
         }
       }
 
-      const updated = await BaseModel.updateById<IMLModel>(modelId, updateData);
+      const knex = BaseModel.getKnex();
+      const [updated] = await knex<IMLModel>('ml_models')
+        .where({ id: modelId })
+        .update({
+          ...updateData,
+          updated_at: new Date()
+        })
+        .returning('*');
 
       if (updated) {
         await AdminAuditService.logAction(
@@ -134,7 +148,7 @@ export class AdminMLService {
         });
       }
 
-      return updated;
+      return (updated as unknown as IMLModel) || null;
     } catch (error) {
       logger.error('Failed to update ML model', {
         error: error instanceof Error ? error.message : String(error),
@@ -410,16 +424,76 @@ export class AdminMLService {
         userAgent
       );
 
-      // Here you would typically trigger the actual ML training process
-      // For now, we'll just log it
-      logger.info('ML model retraining triggered', {
+      // Execute ETL + training synchronously and compute basic metrics
+      const path = await import('path');
+      const fs = await import('fs');
+      const outDir = path.join(process.cwd(), 'data', 'ml');
+      const { MLTrainingETLService } = await import('./ml/MLTrainingETLService');
+      const { PricePredictionModelRunner } = await import('./ml/PricePredictionModelRunner');
+
+      const csvPath = await MLTrainingETLService.run(outDir);
+      const csvText = fs.readFileSync(csvPath, 'utf8').trim();
+      const lines = csvText.split(/\r?\n/);
+      const rowCount = Math.max(0, lines.length - 1);
+
+      const runner = new PricePredictionModelRunner();
+      await runner.train(csvPath);
+
+      // Load trained model and compute R^2 on training set
+      const modelPath = path.join(outDir, 'price_model.json');
+      const model = JSON.parse(fs.readFileSync(modelPath, 'utf8')) as { coef: number[]; features: string[]; trainedAt: string };
+      const header = lines[0].split(',');
+      const idx = (name: string) => header.indexOf(name);
+      const iRecent = idx('recent_avg');
+      const iPrev = idx('prev_avg');
+      const iTrend = idx('trend_pct');
+      const iMsrp = idx('msrp');
+      const iPop = idx('popularity');
+      const iLabel = idx('label_next7');
+      const y: number[] = [];
+      const yhat: number[] = [];
+      if ([iRecent, iPrev, iTrend, iMsrp, iPop, iLabel].some(n => n < 0)) {
+        throw new Error('Invalid header in training CSV');
+      }
+      for (let k = 1; k < lines.length; k++) {
+        const parts = lines[k].split(',');
+        if (parts.length !== header.length) continue;
+        const recent = Number(parts[iRecent]) || 0;
+        const prev = Number(parts[iPrev]) || 0;
+        const trend = Number(parts[iTrend]) || 0;
+        const msrp = Number(parts[iMsrp]) || 0;
+        const pop = Number(parts[iPop]) || 0;
+        const label = Number(parts[iLabel]) || 0;
+        const popNorm = pop / 1000;
+        const x = [1, recent, prev, trend, msrp, popNorm];
+        const pred = model.coef.reduce((s, v, i) => s + v * (x[i] || 0), 0);
+        y.push(label);
+        yhat.push(pred);
+      }
+      const ybar = y.length ? y.reduce((a, b) => a + b, 0) / y.length : 0;
+      const rss = y.reduce((s, v, i) => s + Math.pow(v - yhat[i], 2), 0);
+      const tss = y.reduce((s, v) => s + Math.pow(v - ybar, 2), 0);
+      const r2 = tss > 0 ? 1 - rss / tss : 1;
+
+      // Update model record with metrics and mark as active
+      const metrics = { rows: rowCount, r2 };
+      const updated = await this.updateMLModel(
+        adminUserId,
+        newModel.id,
+        { status: 'active', metrics, model_path: modelPath },
+        ipAddress,
+        userAgent
+      );
+
+      logger.info('ML model retraining completed', {
         adminUserId,
         modelName,
         version,
-        modelId: newModel.id
+        modelId: newModel.id,
+        metrics
       });
 
-      return newModel;
+      return updated || newModel;
     } catch (error) {
       logger.error('Failed to trigger retraining', {
         error: error instanceof Error ? error.message : String(error),

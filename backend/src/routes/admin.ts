@@ -47,7 +47,13 @@ router.get('/system/health', requirePermission(Permission.SYSTEM_HEALTH_VIEW), a
  */
 
 // Get users with filtering and pagination
-router.get('/users', requirePermission(Permission.USER_VIEW), validateJoiQuery(adminSchemas.getUsers.query), adminController.getUsers);
+// Allow unknown query keys to avoid hard failures if UI passes extra flags
+router.get(
+  '/users',
+  requirePermission(Permission.USER_VIEW),
+  validateJoiQuery(adminSchemas.getUsers.query, { allowUnknown: true }),
+  adminController.getUsers
+);
 
 // Get user statistics
 router.get('/users/stats', 
@@ -99,6 +105,9 @@ router.post('/ml/models/:modelId/deploy', sanitizeParameters, requirePermission(
 
 // Trigger model retraining
 router.post('/ml/models/:modelName/retrain', sanitizeParameters, requirePermission(Permission.ML_MODEL_TRAIN), adminController.triggerRetraining);
+
+// Get active price model metadata (file-based runner)
+router.get('/ml/models/price/metadata', requirePermission(Permission.ML_MODEL_VIEW), adminController.getPriceModelMetadata);
 
 /**
  * ML Training Data Management Routes

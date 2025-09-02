@@ -61,7 +61,7 @@ router.post('/ml/models/:modelId/deploy', requirePermission(Permission.ML_MODEL_
 ### 8. Role Configurations
 Pre-defined role configurations with appropriate permissions:
 - **Super Admin**: All permissions (50+)
-- **Admin**: 46 permissions (excludes super admin only)
+- **Admin**: 46+ permissions (excludes super admin only); includes ML model view and train by default
 - **User Manager**: 7 permissions (user management focused)
 - **Content Manager**: 15 permissions (product/retailer management)
 - **ML Engineer**: 14 permissions (ML operations focused)

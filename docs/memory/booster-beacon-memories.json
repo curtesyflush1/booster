@@ -641,6 +641,77 @@
         ]
       },
       "timestamp": ""
+    },
+    {
+      "title": "Limited vs Full ML + basicTrend field",
+      "type": "feature",
+      "tags": ["ml","pricing","tiering"],
+      "details": {
+        "backend": [
+          "backend/src/services/ml/PricePredictionModelRunner.ts (basicTrend in payload)",
+          "backend/src/services/dashboardService.ts (Pro tier returns basicTrend)"
+        ],
+        "frontend": [
+          "frontend/src/types/index.ts (MLPrediction.basicTrend)",
+          "frontend/src/pages/PricingPage.tsx (Limited ML vs Full ML copy)",
+          "frontend/src/pages/SubscriptionSuccessPage.tsx (Pro features copy)"
+        ],
+        "docs": [
+          "docs/ML_MODEL_RUNNER.md (basicTrend, tiers)",
+          "docs/user-dashboard.md (insights payload + tiers)",
+          "docs/api-reference.md (insights + tiers)"
+        ]
+      },
+      "timestamp": "${NOW}"
+    },
+    {
+      "title": "ETL time-shifted labels + admin retrain",
+      "type": "feature",
+      "tags": ["ml","etl","admin"],
+      "details": {
+        "files": [
+          "backend/src/services/ml/MLTrainingETLService.ts (daily aggregation, sliding windows, forward label)",
+          "backend/scripts/run-ml-pipeline.ts (rows + R²)",
+          "backend/src/services/adminMLService.ts (synchronous ETL+train, metrics update)",
+          "backend/src/controllers/adminController.ts (getPriceModelMetadata, retrain response)",
+          "backend/src/routes/admin.ts (endpoints wired)"
+        ],
+        "endpoints": [
+          "GET /api/admin/ml/models/price/metadata",
+          "POST /api/admin/ml/models/price/retrain"
+        ],
+        "metrics": ["rows","r2"],
+        "notes": "Maintains compatibility with existing OLS runner and file model"
+      },
+      "timestamp": "${NOW}"
+    },
+    {
+      "title": "In-house unlocker provider (proxy)",
+      "type": "architecture",
+      "tags": ["unlocker","proxy","http"],
+      "details": {
+        "files": [
+          "backend/src/services/HttpFetcherService.ts (provider: direct|proxy|browser; sessions + retries)",
+          "docs/http-fetcher.md (UNLOCKER_* env + behavior)",
+          "backend/.env.example, .env.production (UNLOCKER_* placeholders)"
+        ],
+        "summary": "Removed vendor-specific naming; 'brightdata' kept as deprecated alias mapping to 'proxy'",
+        "env": ["HTTP_FETCH_PROVIDER","UNLOCKER_API_URL","UNLOCKER_API_TOKEN"]
+      },
+      "timestamp": "${NOW}"
+    }
+    ,
+    {
+      "title": "RBAC: Admin defaults include ML train",
+      "type": "change",
+      "tags": ["rbac","permissions","admin"],
+      "details": {
+        "file": "backend/src/types/permissions.ts",
+        "before": "Admin role had ML_MODEL_VIEW, ML_DATA_VIEW, ML_PREDICTIONS_VIEW",
+        "after": "Admin role now also includes ML_MODEL_TRAIN by default",
+        "effect": "Admins can access ML retraining endpoints without manual permission grants"
+      },
+      "timestamp": "${NOW}"
     }
   ]
 }

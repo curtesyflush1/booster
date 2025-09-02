@@ -7,6 +7,8 @@ import { AdminAuditService } from '../services/adminAuditService';
 import { logger } from '../utils/logger';
 import { IUser } from '../types/database';
 import { CatalogIngestionService } from '../services/catalogIngestionService';
+import fs from 'fs';
+import path from 'path';
 
 // Validation schemas
 const userFiltersSchema = Joi.object({
@@ -14,6 +16,7 @@ const userFiltersSchema = Joi.object({
   role: Joi.string().valid('user', 'admin', 'super_admin').optional(),
   subscription_tier: Joi.string().valid('free', 'pro').optional(),
   email_verified: Joi.boolean().optional(),
+  is_active: Joi.boolean().optional(),
   created_after: Joi.date().optional(),
   created_before: Joi.date().optional(),
   page: Joi.number().integer().min(1).default(1),
@@ -64,7 +67,8 @@ export const getDashboardStats = async (req: Request, res: Response, next: NextF
  */
 export const getUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { error, value } = userFiltersSchema.validate(req.query);
+    // Accept unknown query params to avoid hard failures from stray flags
+    const { error, value } = userFiltersSchema.unknown(true).validate(req.query);
     if (error) {
       res.status(400).json({
         error: {
@@ -614,7 +618,43 @@ export const triggerRetraining = async (req: Request, res: Response, next: NextF
     res.status(201).json({
       success: true,
       data: model,
-      message: 'Model retraining triggered successfully'
+      message: 'Model retraining completed'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get current price model metadata from file
+ */
+export const getPriceModelMetadata = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const modelPath = path.join(process.cwd(), 'data', 'ml', 'price_model.json');
+    if (!fs.existsSync(modelPath)) {
+      res.status(404).json({
+        error: {
+          code: 'MODEL_NOT_FOUND',
+          message: 'Price model file not found',
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+    const stat = fs.statSync(modelPath);
+    const model = JSON.parse(fs.readFileSync(modelPath, 'utf8')) as { coef: number[]; features: string[]; trainedAt: string };
+    res.status(200).json({
+      success: true,
+      data: {
+        trainedAt: model.trainedAt,
+        features: model.features,
+        coef: model.coef,
+        file: {
+          path: modelPath,
+          sizeBytes: stat.size,
+          modifiedAt: stat.mtime.toISOString()
+        }
+      }
     });
   } catch (error) {
     next(error);

@@ -45,7 +45,8 @@
     "ts-node": "ts-node",
     "ml:pipeline": "ts-node scripts/run-ml-pipeline.ts",
     "ml": "npm run ml:pipeline",
-    "ml:etl": "ts-node scripts/run-ml-training-etl.ts"
+    "ml:etl": "ts-node scripts/run-ml-training-etl.ts",
+    "admin:set-password": "ts-node scripts/admin-set-password.ts"
   },
   "keywords": [
     "pokemon",
