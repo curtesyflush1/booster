@@ -57,11 +57,13 @@ This document describes the pluggable ML model runner used to power predictive i
 
 ## Pushing Memories
 
-- Bundle: `docs/memory/booster-beacon-memories.json`
-- Push via REST:
+- Preferred: `npm run memories:push`
   - `export OPENMEMORY_API_KEY="<key>"`
-  - `curl -sS -X POST "https://api.openmemory.dev/projects/booster-beacon-proj-001/memories" \
+  - Optional: `export OPENMEMORY_MEMORIES_URL="https://app.openmemory.dev/memories"`
+  - Optional: `export OPENMEMORY_APP_NAME="booster-beacon"`
+
+- Direct REST (single memory example):
+  - `curl -sS -X POST "https://app.openmemory.dev/memories" \
      -H "Authorization: Bearer $OPENMEMORY_API_KEY" \
      -H "Content-Type: application/json" \
-     --data-binary @docs/memory/booster-beacon-memories.json`
-
+     --data '{"memory":"Deployed heuristic model runner","categories":["ml","deploy"],"app_name":"booster-beacon","metadata":{"stage":"dev"}}'`

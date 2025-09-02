@@ -70,6 +70,12 @@ This endpoint aggregates data from three existing endpoints:
           "confidence": 0.76
         },
         "hypeScore": 89,
+        "purchaseSignals": {
+          "averagePaidPrice": 139.99,
+          "avgDeltaToMsrpPct": 0.07,
+          "averageLeadTimeHours": 18.5,
+          "sampleSize": 12
+        },
         "updatedAt": "2025-08-28T18:30:00Z"
       }
     ],
@@ -167,3 +173,8 @@ curl -H "Authorization: Bearer <token>" "http://localhost:3000/api/dashboard/con
 2. **Streaming**: Consider Server-Sent Events for real-time dashboard updates
 3. **Compression**: Implement response compression for large datasets
 4. **Pagination**: Add pagination support for large insight datasets
+
+### Purchase Signals & Privacy
+
+- **Signals**: Insights now include `purchaseSignals` derived from user-reported purchases: `averagePaidPrice`, `avgDeltaToMsrpPct`, `averageLeadTimeHours`, and `sampleSize`.
+- **Privacy**: We only store price and non-identifying metadata (product, retailer, quantity, salted hash of user ID). No personal information is collected or stored.

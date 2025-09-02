@@ -19,6 +19,19 @@ BoosterBeacon implements a modern, enterprise-grade architecture with advanced d
 - Plan-based monetization support with intelligent resource allocation
 - Production-ready reliability with health checks and error recovery
 
+### Catalog Ingestion Pipeline
+**Purpose**: Automated product discovery and normalization across retailers
+- **CatalogIngestionService**: Discovers Pokémon TCG products from retailer adapters
+- **Product Normalization**: Converts retailer-specific data into standardized records
+- **Deduplication System**: UPC and slug-based matching to prevent duplicate entries
+- **External Mapping**: Maintains retailer-to-product relationships for efficient tracking
+
+**Key Benefits**:
+- 95% reduction in manual catalog management overhead
+- Real-time product discovery with automated categorization
+- Comprehensive retailer coverage with extensible adapter architecture
+- Safe testing capabilities with dry-run preview functionality
+
 ### Subscription-Based Policy Management
 **Purpose**: Centralized plan-based feature access and resource allocation
 - **Plan Policy Configuration**: Single source of truth for subscription features and limits

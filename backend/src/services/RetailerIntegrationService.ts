@@ -77,7 +77,7 @@ export class RetailerIntegrationService {
         slug: 'best-buy',
         type: 'api',
         baseUrl: 'https://api.bestbuy.com/v1',
-        apiKey: process.env.BEST_BUY_API_KEY,
+        apiKey: process.env.BEST_BUY_API_KEY || process.env.BESTBUY_API_KEY,
         rateLimit: {
           requestsPerMinute: RATE_LIMITING.BEST_BUY_RPM,
           requestsPerHour: RATE_LIMITING.BEST_BUY_RPH
@@ -87,7 +87,7 @@ export class RetailerIntegrationService {
           maxRetries: RETRY_CONFIG.API_MAX_RETRIES,
           retryDelay: RETRY_CONFIG.API_RETRY_DELAY
         },
-        isActive: !!process.env.BEST_BUY_API_KEY
+        isActive: !!(process.env.BEST_BUY_API_KEY || process.env.BESTBUY_API_KEY)
       },
       {
         id: 'walmart',

@@ -39,6 +39,7 @@
     "db:backup": "pg_dump $DATABASE_URL > backups/backup-$(date +%Y%m%d-%H%M%S).sql",
     "kms:test": "ts-node scripts/simple-kms-test.ts",
     "kms:test-integration": "ts-node scripts/test-kms-integration.ts",
+    "catalog:ingest": "ts-node scripts/run-catalog-ingestion.ts",
     "alerts:generate-test": "ts-node scripts/generate-test-alerts.ts",
     "alerts": "npm run alerts:generate-test",
     "ts-node": "ts-node"

@@ -6,8 +6,20 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 MEMORY_FILE="$REPO_ROOT/docs/memory/booster-beacon-memories.json"
-API_URL_DEFAULT="https://api.openmemory.dev"
-API_URL="${OPENMEMORY_API_URL:-$API_URL_DEFAULT}"
+DEFAULT_MEMORIES_ENDPOINT="https://app.openmemory.dev/memories"
+# Prefer explicit full endpoint if provided
+if [[ -n "${OPENMEMORY_MEMORIES_URL:-}" ]]; then
+  MEMORIES_ENDPOINT="$OPENMEMORY_MEMORIES_URL"
+elif [[ -n "${OPENMEMORY_API_URL:-}" ]]; then
+  # If OPENMEMORY_API_URL already looks like a full /memories endpoint, use it as-is
+  if [[ "$OPENMEMORY_API_URL" == */memories ]]; then
+    MEMORIES_ENDPOINT="$OPENMEMORY_API_URL"
+  else
+    MEMORIES_ENDPOINT="$OPENMEMORY_API_URL/memories"
+  fi
+else
+  MEMORIES_ENDPOINT="$DEFAULT_MEMORIES_ENDPOINT"
+fi
 
 if [[ -z "${OPENMEMORY_API_KEY:-}" ]]; then
   echo "ERROR: OPENMEMORY_API_KEY is not set." >&2
@@ -22,7 +34,7 @@ fi
 
 APP_NAME="${OPENMEMORY_APP_NAME:-${OPENMEMORY_PROJECT_ID:-booster-beacon}}"
 
-echo "Pushing memories (per-item) to $API_URL/api/v1/memories/ for app '$APP_NAME' ..."
+echo "Pushing memories (per-item) to $MEMORIES_ENDPOINT for app '$APP_NAME' ..."
 
 # Generate per-item memory payloads and push sequentially
 TMP_MEMS="$(mktemp)"
@@ -56,11 +68,18 @@ MEMORY_FILE_PATH="$MEMORY_FILE" OPENMEMORY_APP_NAME="$APP_NAME" node -e '
 ' > "$TMP_MEMS"
 
 OK=0; FAIL=0
+HEADERS=(-H "Content-Type: application/json")
+if [[ -n "${OPENMEMORY_API_KEY:-}" ]]; then
+  HEADERS+=( -H "Authorization: Bearer $OPENMEMORY_API_KEY" )
+fi
+if [[ -n "${OPENMEMORY_COOKIE:-}" ]]; then
+  HEADERS+=( -H "Cookie: $OPENMEMORY_COOKIE" )
+fi
+
 while IFS= read -r line; do
   if [[ -z "$line" ]]; then continue; fi
-  HTTP_STATUS=$(curl -sS -o /tmp/mem.out -w "%{http_code}" -X POST "$API_URL/api/v1/memories/" \
-    -H "Authorization: Bearer $OPENMEMORY_API_KEY" \
-    -H "Content-Type: application/json" \
+  HTTP_STATUS=$(curl -sS -o /tmp/mem.out -w "%{http_code}" -X POST "$MEMORIES_ENDPOINT" \
+    "${HEADERS[@]}" \
     --data-binary "$line" || true)
   if [[ "$HTTP_STATUS" == "200" || "$HTTP_STATUS" == "201" ]]; then
     OK=$((OK+1)); printf ".";

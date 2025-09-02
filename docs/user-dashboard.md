@@ -15,6 +15,7 @@ The User Dashboard provides a comprehensive overview of a user's BoosterBeacon a
 - **Sell-out Risk Assessment**: Risk scoring with confidence intervals
 - **ROI Estimation**: Short-term and long-term return on investment analysis
 - **Hype Meter**: Community engagement and viral potential scoring
+ - **Purchase Signals**: Aggregated user-reported purchase data (average paid price, delta vs MSRP, average lead time) with strict privacy
 
 ### Portfolio Tracking
 - **Collection Value**: Total portfolio value and change tracking
@@ -97,6 +98,12 @@ Returns ML-powered predictions for specified products or user's watched products
         "confidence": 0.65
       },
       "hypeScore": 78,
+      "purchaseSignals": {
+        "averagePaidPrice": 94.10,
+        "avgDeltaToMsrpPct": 0.06,
+        "averageLeadTimeHours": 22.4,
+        "sampleSize": 8
+      },
       "updatedAt": "2024-08-26T14:30:22Z"
     }
   ]
@@ -335,6 +342,7 @@ export const DashboardContext = createContext<DashboardContextType | null>(null)
 - **Data Minimization**: Only necessary data included in responses
 - **Sensitive Information**: No sensitive data exposed in dashboard APIs
 - **Audit Logging**: All dashboard access logged for security monitoring
+ - **Purchase Reporting**: When users report purchases, we only record the price paid and non-identifying metadata (product, retailer, quantity, and a salted hash of the user ID) to produce aggregate insights. No personal information is stored.
 
 ## Error Handling
 

@@ -17,6 +17,8 @@ BoosterBeacon is a production-ready, real-time monitoring and alerting system th
 - **📱 PWA mobile app** - Barcode scanning and offline capability
 - **💳 Subscription management** - Stripe integration with plan-based feature access
 - **📊 Real-time dashboard** - WebSocket-powered live updates and portfolio tracking
+- **🔄 Automated catalog ingestion** - Continuous product discovery and normalization across retailers
+- **🛠️ Admin management tools** - Comprehensive catalog management with dry-run capabilities
 
 ## 🏗️ Architecture
 
@@ -28,6 +30,8 @@ BoosterBeacon implements modern architectural patterns including Repository Patt
 - **Enhanced ML System**: Top-tier access control with comprehensive prediction endpoints
 - **Real-Time Dashboard**: WebSocket-powered live updates with lazy loading
 - **Background Service Infrastructure**: Automated operations with intelligent prioritization
+- **Catalog Ingestion Pipeline**: Automated product discovery and normalization across retailers
+- **Admin Management System**: Comprehensive catalog management with safe testing capabilities
 
 ```
 booster/
@@ -591,6 +595,18 @@ When running locally, services are available at:
 - `GET /api/dashboard/insights` - Get predictive insights for watched products
 - `GET /api/dashboard/portfolio` - Get portfolio tracking data with collection analysis
 - `GET /api/dashboard/updates` - Get real-time dashboard updates since timestamp
+
+#### Catalog Ingestion
+- Automated discovery of Pokémon TCG products across retailers
+  - Service: `CatalogIngestionService` (runs every 3 hours via cron)
+  - Populates `products` and `product_availability`
+  - Feeds `price_history` hourly for ML and investment tools
+  - Docs: `backend/docs/CATALOG_INGESTION.md`
+
+#### Transactions & Purchases
+- `POST /api/purchases/report` - Report a successful purchase for a product
+  - Body: `{ productId, retailerSlug, pricePaid, qty?, alertAt? }`
+  - Privacy: Only the price you paid is used in analytics. We store non-identifying metadata (product, retailer, quantity, and a salted hash of your user ID) to derive aggregate insights. No personal information is stored.
 
 #### Admin Dashboard (Admin/Super Admin Only)
 - `GET /api/admin/dashboard/stats` - Get comprehensive dashboard statistics
@@ -1181,6 +1197,42 @@ This project is **feature complete** with **27 of 27 major systems completed** (
 - **[Alert Management Summary](ALERT_MANAGEMENT_SUMMARY.md)** - Alert system implementation details
 - **[Dashboard Controller Improvements](DASHBOARD_CONTROLLER_IMPROVEMENTS.md)** - Dashboard optimization details
 - **[Price Comparison System Guide](backend/docs/PRICE_COMPARISON_SYSTEM.md)** - Cross-retailer price comparison and deal identification system
+
+### MCP Servers (VS Code) & OpenMemory
+
+- Configure MCP servers in VS Code by adding the following to `.vscode/settings.json` (this file is git-ignored in this repo):
+
+```
+{
+  "mcpServers": {
+    "fetch": {
+      "command": "uvx",
+      "args": ["mcp-server-fetch"],
+      "env": {},
+      "disabled": false,
+      "autoApprove": []
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    },
+    "openmemory": {
+      "command": "npx",
+      "args": ["-y", "openmemory"],
+      "env": {
+        "OPENMEMORY_API_KEY": "<your_api_key>",
+        "CLIENT_NAME": "cursor"
+      }
+    }
+  }
+}
+```
+
+- Push/pull project memories with OpenMemory:
+  - Export API key: `export OPENMEMORY_API_KEY='<your_api_key>'`
+  - Optional app name: `export OPENMEMORY_APP_NAME='booster-beacon'`
+  - Push: `npm run memories:push`
+  - Pull latest (summary stored in `docs/memory/openmemory-pulled-summary.txt`): `npm run memories:pull`
 
 ### Project History
 - **[Changelog](docs/CHANGELOG.md)** - Detailed release history and feature updates

@@ -90,6 +90,10 @@ This performs:
 - Service deployment
 - Health checks
 - Rollback on failure
+\n+Additional automation:
+- If `backend/data/products.csv` exists on the server, the deploy script runs the CSV importer automatically to upsert your catalog.
+- If `boosterbeacon.com-ssl-bundle.zip` is present at repo root, it extracts to `nginx/ssl/` (requires `unzip` installed on server).
+- If `DOMAIN` env var is provided when invoking the script, it substitutes `server_name your-domain.com;` in `nginx/nginx.conf` with your domain.
 
 #### Quick Deployment (for code changes)
 ```bash
@@ -154,7 +158,7 @@ ssh derek@82.180.162.48
 # Install SSL certificate
 sudo certbot --nginx -d your-domain.com
 
-# Update nginx configuration if needed
+# Update nginx configuration if needed (or pass DOMAIN when deploying)
 sudo nano /opt/booster/nginx/nginx.conf
 ```
 

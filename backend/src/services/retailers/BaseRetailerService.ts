@@ -162,11 +162,12 @@ export abstract class BaseRetailerService extends IBaseRetailerService {
     if (this.config.apiKey) {
       // Different retailers use different authentication methods
       switch (this.config.id) {
+        case 'best-buy':
         case 'bestbuy':
           if (config.params) {
-            config.params.apikey = this.config.apiKey;
+            (config.params as any).apiKey = this.config.apiKey;
           } else {
-            config.params = { apikey: this.config.apiKey };
+            config.params = { apiKey: this.config.apiKey } as any;
           }
           break;
         case 'walmart':
@@ -299,28 +300,28 @@ export abstract class BaseRetailerService extends IBaseRetailerService {
    * Common utility to check if a product is Pokemon TCG related
    */
   protected isPokemonTcgProduct(name: string, additionalText: string = ''): boolean {
-    const searchText = `${name} ${additionalText}`.toLowerCase();
-    
-    const pokemonKeywords = [
-      'pokemon', 'pokémon', 'tcg', 'trading card', 'booster', 
-      'elite trainer', 'battle deck', 'starter deck', 'theme deck',
-      'collection box', 'tin', 'premium collection'
+    const text = `${name} ${additionalText}`.toLowerCase();
+
+    // Must mention Pokémon and a TCG-specific term
+    const mustHaveAll = [
+      ['pokemon', 'pokémon'],
+      ['tcg', 'trading card', 'booster', 'elite trainer', 'etb', 'deck', 'collection', 'collection box', 'tin', 'box']
     ];
-    
-      const excludeKeywords = [
-    'video game', 'plush', 'figure', 'clothing', 
-    'accessory', 'keychain', 'backpack', 'lunch box'
-  ];
-    
-    const hasPokemonKeyword = pokemonKeywords.some(keyword => 
-      searchText.includes(keyword)
-    );
-    
-    const hasExcludeKeyword = excludeKeywords.some(keyword => 
-      searchText.includes(keyword)
-    );
-    
-    return hasPokemonKeyword && !hasExcludeKeyword;
+
+    const excluded = [
+      // Generic non-TCG merchandise
+      'gift card', 'popsocket', 'popgrip', 'phone grip', 'magSafe', 'mouse pad', 'keyboard', 'headset', 'controller',
+      'case', 'charger', 'cable', 'screen protector', 'bag', 'backpack', 'lunch box', 'wallet', 'mug', 'bottle',
+      'plush', 'figure', 'funko', 'lego', 'construction set', 'mega ', 'megablocks', 'nanoblock',
+      // Completely irrelevant items that can appear on fuzzy search
+      'water flosser', 'toothbrush', 'aquasonic', 'appliance'
+    ];
+
+    const hasAllMust = mustHaveAll.every(group => group.some(k => text.includes(k)));
+    if (!hasAllMust) return false;
+
+    const hitExcluded = excluded.some(k => text.includes(k));
+    return !hitExcluded;
   }
 
   /**

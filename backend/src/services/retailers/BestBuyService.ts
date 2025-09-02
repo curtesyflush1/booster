@@ -147,10 +147,11 @@ export class BestBuyService extends BaseRetailerService {
     try {
       logger.info(`Searching Best Buy products for: ${query}`);
       
-      const response = await this.makeRequest('/products', {
+      // Best Buy v1 API expects filters in the path parentheses, and apiKey as 'apiKey'
+      const encoded = encodeURIComponent(query);
+      const response = await this.makeRequest(`/products(search=${encoded})`, {
         params: {
-          apikey: this.config.apiKey,
-          q: query,
+          apiKey: this.config.apiKey,
           format: 'json',
           show: 'sku,name,regularPrice,salePrice,onSale,url,addToCartUrl,inStoreAvailability,onlineAvailability,image,categoryPath',
           pageSize: 20
@@ -228,15 +229,16 @@ export class BestBuyService extends BaseRetailerService {
 
   private async getProductBySku(sku: string): Promise<BestBuyProduct | null> {
     try {
-      const response = await this.makeRequest(`/products/${sku}`, {
+      const response = await this.makeRequest(`/products(sku=${encodeURIComponent(sku)})`, {
         params: {
-          apikey: this.config.apiKey,
+          apiKey: this.config.apiKey,
           format: 'json',
           show: 'sku,name,regularPrice,salePrice,onSale,url,addToCartUrl,inStoreAvailability,onlineAvailability,image,categoryPath'
         }
       });
       
-      return response.data || null;
+      const products = response.data?.products || [];
+      return products.length ? products[0] : null;
     } catch (error) {
       if ((error as any).response?.status === 404) {
         return null;
@@ -247,11 +249,10 @@ export class BestBuyService extends BaseRetailerService {
 
   private async getProductByUpc(upc: string): Promise<BestBuyProduct | null> {
     try {
-      const response = await this.makeRequest('/products', {
+      const response = await this.makeRequest(`/products(upc=${encodeURIComponent(upc)})`, {
         params: {
-          apikey: this.config.apiKey,
+          apiKey: this.config.apiKey,
           format: 'json',
-          upc: upc,
           show: 'sku,name,regularPrice,salePrice,onSale,url,addToCartUrl,inStoreAvailability,onlineAvailability,image,categoryPath',
           pageSize: 1
         }

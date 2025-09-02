@@ -302,6 +302,22 @@ deploy_application() {
         # Copy production environment
         cp .env.production .env
         
+        # Prepare SSL bundle if provided
+        mkdir -p nginx/ssl || true
+        if [[ -f boosterbeacon.com-ssl-bundle.zip ]]; then
+            echo "Found SSL bundle: boosterbeacon.com-ssl-bundle.zip"
+            if command -v unzip >/dev/null 2>&1; then
+              unzip -o boosterbeacon.com-ssl-bundle.zip -d nginx/ssl || true
+            else
+              echo "Warning: unzip not found on server; skipping SSL unzip. Install unzip to auto-extract."
+            fi
+        fi
+        
+        # Update nginx server_name if DOMAIN env is provided
+        if [[ -n "$DOMAIN" && -f nginx/nginx.conf ]]; then
+            sed -i "s/server_name your-domain.com;/server_name $DOMAIN;/g" nginx/nginx.conf || true
+        fi
+        
         # Stop existing services gracefully
         log_info "Stopping existing services..."
         docker-compose -f docker-compose.prod.yml down --timeout 30 || true
@@ -320,6 +336,14 @@ deploy_application() {
         # Run database migrations
         log_info "Running database migrations..."
         docker-compose -f docker-compose.prod.yml exec -T app sh -c "cd backend && npm run migrate:up" || true
+        
+        # Optional: import products from CSV if present on server
+        if [[ -f backend/data/products.csv ]]; then
+          echo "Found backend/data/products.csv; running importer"
+          docker-compose -f docker-compose.prod.yml exec -T app sh -c "cd backend && npm run import:products" || true
+        else
+          echo "No backend/data/products.csv found; skipping import"
+        fi
 EOF
     
     # Health check

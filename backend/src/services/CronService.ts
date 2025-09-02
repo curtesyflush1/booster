@@ -35,6 +35,18 @@ export class CronService {
       }
     });
 
+    // Every 3 hours: catalog discovery & ingestion (Pokemon TCG)
+    cron.schedule('0 */3 * * *', async () => {
+      try {
+        const { CatalogIngestionService } = await import('./catalogIngestionService');
+        logger.info('[Cron] Catalog ingestion started');
+        await CatalogIngestionService.discoverAndIngest();
+        logger.info('[Cron] Catalog ingestion completed');
+      } catch (error) {
+        logger.error('[Cron] Catalog ingestion failed', { error: error instanceof Error ? error.message : String(error) });
+      }
+    });
+
     // Daily at 02:30: cleanup watches and other maintenance
     cron.schedule('30 2 * * *', async () => {
       try {
@@ -49,4 +61,3 @@ export class CronService {
     logger.info('CronService scheduled jobs initialized');
   }
 }
-

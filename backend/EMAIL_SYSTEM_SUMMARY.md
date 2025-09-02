@@ -152,6 +152,29 @@ FROM_EMAIL=alerts@boosterbeacon.com
 FROM_NAME=BoosterBeacon
 ```
 
+### Development via Docker Compose
+
+For local development using Docker Compose, the `api` service is pre-configured to read SMTP settings. Do NOT hardcode your password in compose; export it in your shell so Compose injects it at runtime.
+
+Compose snippet (already in `docker-compose.dev.yml`):
+
+```
+SMTP_HOST=smtp.porkbun.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=admin@boosterbeacon.com
+SMTP_PASS=${SMTP_PASS}
+SMTP_TLS_REJECT_UNAUTHORIZED=true
+FROM_EMAIL=admin@boosterbeacon.com
+FROM_NAME=BoosterBeacon
+SUPPORT_EMAIL=support@boosterbeacon.com
+```
+
+Usage:
+- macOS/Linux: `export SMTP_PASS='your_smtp_password'`
+- Windows (PowerShell): `$env:SMTP_PASS='your_smtp_password'`
+- Then: `docker compose -f docker-compose.dev.yml up -d`
+
 ## Testing Coverage
 
 ### Unit Tests

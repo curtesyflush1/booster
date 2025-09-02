@@ -205,4 +205,14 @@ router.post(
   res.json({ queued: true, job });
 });
 
+/**
+ * Catalog ingestion dry-run (no writes)
+ * Requires PRODUCT_BULK_IMPORT permission
+ */
+router.post(
+  '/catalog/ingestion/dry-run',
+  requirePermission(Permission.PRODUCT_BULK_IMPORT),
+  adminController.catalogIngestionDryRun
+);
+
 export default router;

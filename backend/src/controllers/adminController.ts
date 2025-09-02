@@ -6,6 +6,7 @@ import { createAdminSystemService } from '../services/adminSystemService';
 import { AdminAuditService } from '../services/adminAuditService';
 import { logger } from '../utils/logger';
 import { IUser } from '../types/database';
+import { CatalogIngestionService } from '../services/catalogIngestionService';
 
 // Validation schemas
 const userFiltersSchema = Joi.object({
@@ -295,6 +296,25 @@ export const deleteUser = async (req: Request, res: Response, next: NextFunction
       success: true,
       message: 'User deleted successfully'
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Catalog ingestion dry-run with diffs (admin-only)
+ * POST /api/admin/catalog/ingestion/dry-run
+ * Optional: body { queries?: string[] }
+ */
+export const catalogIngestionDryRun = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const queries = Array.isArray(req.body?.queries)
+      ? (req.body.queries as string[]).filter(q => typeof q === 'string' && q.trim().length > 0)
+      : undefined;
+
+    const result = await CatalogIngestionService.dryRunDiscover({ queries });
+
+    res.status(200).json({ success: true, data: result });
   } catch (error) {
     next(error);
   }
