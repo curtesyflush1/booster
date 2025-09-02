@@ -28,6 +28,7 @@
     "lint:fix": "echo 'Fixing backend code...'",
     "migrate:up": "knex migrate:latest",
     "migrate:down": "knex migrate:rollback",
+    "migrate:status": "knex migrate:status",
     "migrate": "npm run migrate:up",
     "rbac:init": "ts-node scripts/initialize-rbac.ts",
     "rbac:validate": "ts-node scripts/initialize-rbac.ts -- --validate",

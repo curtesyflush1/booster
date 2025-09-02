@@ -319,22 +319,22 @@ deploy_application() {
         fi
         
         # Stop existing services gracefully
-        log_info "Stopping existing services..."
+        echo "Stopping existing services..."
         docker-compose -f docker-compose.prod.yml down --timeout 30 || true
         
         # Clean up unused Docker resources
         docker system prune -f || true
         
         # Build and start services
-        log_info "Building and starting services..."
+        echo "Building and starting services..."
         docker-compose -f docker-compose.prod.yml up -d --build
         
         # Wait for services to initialize
-        log_info "Waiting for services to initialize..."
+        echo "Waiting for services to initialize..."
         sleep 45
         
         # Run database migrations
-        log_info "Running database migrations..."
+        echo "Running database migrations..."
         docker-compose -f docker-compose.prod.yml exec -T app sh -c "cd backend && npm run migrate:up" || true
         
         # Optional: import products from CSV if present on server
@@ -351,8 +351,8 @@ EOF
         log_success "Deployment completed successfully"
         
         # Show deployment status
-        ssh "$DEPLOY_USER@$DEPLOY_HOST" << 'EOF'
-            cd /opt/booster
+        ssh "$DEPLOY_USER@$DEPLOY_HOST" << EOF
+            cd "$DEPLOY_PATH"
             echo "=== Deployment Status ==="
             docker-compose -f docker-compose.prod.yml ps
             echo ""
@@ -434,8 +434,8 @@ EOF
 get_status() {
     log_info "Getting deployment status..."
     
-    ssh "$DEPLOY_USER@$DEPLOY_HOST" << 'EOF'
-        cd /opt/booster-beacon
+    ssh "$DEPLOY_USER@$DEPLOY_HOST" << EOF
+        cd "$DEPLOY_PATH"
         
         echo "=== Docker Services ==="
         docker-compose -f docker-compose.prod.yml ps

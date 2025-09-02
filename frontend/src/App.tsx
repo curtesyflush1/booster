@@ -29,15 +29,13 @@ const TermsPage = React.lazy(() => import('./pages/TermsPage'));
 const PrivacyPage = React.lazy(() => import('./pages/PrivacyPage'));
 const SiteMapPage = React.lazy(() => import('./pages/SiteMapPage'));
 const AdminDashboardPage = React.lazy(() => import('./pages/AdminDashboardPage'));
+const VerifyEmailPage = React.lazy(() => import('./pages/VerifyEmailPage'));
 
 // SEO-optimized landing pages
 const PokemonTCGAlertsPage = React.lazy(() => import('./pages/PokemonTCGAlertsPage'));
 const LocationBasedPage = React.lazy(() => import('./pages/LocationBasedPage'));
 
 // Types
-interface RouteWrapperProps {
-  children: React.ReactNode;
-}
 interface RouteWrapperProps {
   children: React.ReactNode;
 }
@@ -102,6 +100,7 @@ const routeConfig: RouteConfig[] = [
   { path: '/terms', element: TermsPage },
   { path: '/privacy', element: PrivacyPage },
   { path: '/sitemap', element: SiteMapPage },
+  { path: '/verify-email', element: VerifyEmailPage },
 
   // SEO-optimized landing pages
   { path: '/pokemon-tcg-alerts', element: PokemonTCGAlertsPage },

@@ -169,7 +169,7 @@ describe('SEO Utilities', () => {
         sku: 'TEST123'
       };
 
-      const data = generateProductStructuredData(product);
+      const data = generateProductStructuredData(product) as any;
 
       expect(data['@context']).toBe('https://schema.org');
       expect(data['@type']).toBe('Product');
@@ -185,7 +185,7 @@ describe('SEO Utilities', () => {
         image: 'https://example.com/image.jpg'
       };
 
-      const data = generateProductStructuredData(product);
+      const data = generateProductStructuredData(product) as any;
 
       expect(data.offers).toBeUndefined();
     });
@@ -199,7 +199,7 @@ describe('SEO Utilities', () => {
         { name: 'Test Product', url: 'https://example.com/products/test' }
       ];
 
-      const data = generateBreadcrumbStructuredData(breadcrumbs);
+      const data = generateBreadcrumbStructuredData(breadcrumbs) as any;
 
       expect(data['@context']).toBe('https://schema.org');
       expect(data['@type']).toBe('BreadcrumbList');
@@ -216,7 +216,7 @@ describe('SEO Utilities', () => {
         { question: 'How does it work?', answer: 'It works great.' }
       ];
 
-      const data = generateFAQStructuredData(faqs);
+      const data = generateFAQStructuredData(faqs) as any;
 
       expect(data['@context']).toBe('https://schema.org');
       expect(data['@type']).toBe('FAQPage');

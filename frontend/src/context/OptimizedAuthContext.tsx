@@ -282,11 +282,19 @@ export const OptimizedAuthProvider: React.FC<AuthProviderProps> = ({ children })
       dispatch({ type: 'AUTH_START' });
 
       const response = await apiClient.post('/auth/login', credentials);
-      const { user, token } = response.data;
+      const raw = (response?.data as any)?.data || (response?.data as any) || {};
+      const user = raw.user;
+      const t = raw.tokens || raw.token || {};
+      const token: AuthToken = {
+        accessToken: t.access_token || t.accessToken,
+        refreshToken: t.refresh_token || t.refreshToken || '',
+        expiresAt: new Date(Date.now() + Number(t.expires_in || 3600) * 1000).toISOString(),
+        tokenType: (t.token_type || 'Bearer') as 'Bearer',
+      };
 
       // Store tokens
       tokenStorage.setTokens(token.accessToken, token.refreshToken, credentials.rememberMe || false);
-      apiClient.setAuthToken(token.accessToken, credentials.rememberMe);
+      apiClient.setAuthToken(token.accessToken, Boolean(credentials.rememberMe));
 
       dispatch({
         type: 'AUTH_SUCCESS',
@@ -307,7 +315,15 @@ export const OptimizedAuthProvider: React.FC<AuthProviderProps> = ({ children })
       dispatch({ type: 'AUTH_START' });
 
       const response = await apiClient.post('/auth/register', data);
-      const { user, token } = response.data;
+      const raw = (response?.data as any)?.data || (response?.data as any) || {};
+      const user = raw.user;
+      const t = raw.tokens || raw.token || {};
+      const token: AuthToken = {
+        accessToken: t.access_token || t.accessToken,
+        refreshToken: t.refresh_token || t.refreshToken || '',
+        expiresAt: new Date(Date.now() + Number(t.expires_in || 3600) * 1000).toISOString(),
+        tokenType: (t.token_type || 'Bearer') as 'Bearer',
+      };
 
       // Store tokens
       tokenStorage.setTokens(token.accessToken, token.refreshToken, false);
@@ -350,7 +366,7 @@ export const OptimizedAuthProvider: React.FC<AuthProviderProps> = ({ children })
   const updateUser = useCallback(async (userData: Partial<User>): Promise<void> => {
     try {
       const response = await apiClient.put('/users/profile', userData);
-      const updatedUser = response.data.user;
+      const updatedUser = (response?.data as any)?.data?.user || (response?.data as any)?.user;
 
       dispatch({
         type: 'AUTH_UPDATE_USER',

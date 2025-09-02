@@ -4,7 +4,6 @@
  */
 
 import React, { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
 import { CheckCircle, ArrowRight, ArrowLeft, Star, Bell, Search, Zap } from 'lucide-react';
 
 interface OnboardingStep {
@@ -28,8 +27,6 @@ interface OnboardingStepProps {
 
 const OnboardingFlow: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
-
-
   const [steps, setSteps] = useState<OnboardingStep[]>([
     {
       id: 'welcome',

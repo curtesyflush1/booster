@@ -19,7 +19,7 @@ interface RetryConfig {
 class OptimizedApiClient {
   private client: AxiosInstance;
   private cache: RequestCache = {};
-  private requestQueue: Map<string, Promise<AxiosResponse<unknown>>> = new Map();
+  private requestQueue: Map<string, Promise<AxiosResponse<any>>> = new Map();
   private readonly defaultCacheTTL = 5 * 60 * 1000; // 5 minutes
   private readonly defaultRetryConfig: RetryConfig = {
     retries: 3,
@@ -186,7 +186,7 @@ class OptimizedApiClient {
    */
   async put<T = any>(
     url: string, 
-    data?: Record<string, unknown>, 
+    data?: any, 
     config?: AxiosRequestConfig & { retry?: Partial<RetryConfig> }
   ): Promise<AxiosResponse<T>> {
     return this.executeWithRetry(

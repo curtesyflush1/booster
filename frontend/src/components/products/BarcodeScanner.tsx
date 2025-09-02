@@ -97,8 +97,8 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
     try {
       const track = stream.getVideoTracks()[0];
       await track.applyConstraints({
-        advanced: [{ torch: !flashEnabled } as { torch: boolean }]
-      });
+        advanced: [{ torch: !flashEnabled }] as any
+      } as any);
       setFlashEnabled(!flashEnabled);
     } catch (err) {
       console.error('Failed to toggle flash:', err);

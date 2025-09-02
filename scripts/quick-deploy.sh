@@ -77,8 +77,8 @@ quick_deploy() {
     
     # Restart services
     log_info "Restarting services..."
-    ssh "$DEPLOY_USER@$DEPLOY_HOST" << 'EOF'
-        cd /opt/booster
+    ssh "$DEPLOY_USER@$DEPLOY_HOST" << EOF
+        cd "$DEPLOY_PATH"
         
         # Copy production environment
         cp .env.production .env

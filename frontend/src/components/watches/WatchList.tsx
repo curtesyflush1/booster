@@ -3,7 +3,7 @@ import {
   Eye, Download, Upload, 
   Filter, Search, AlertCircle, CheckCircle, Clock
 } from 'lucide-react';
-import { Watch, PaginatedResponse, Product } from '../../types';
+import { Watch, Product } from '../../types';
 import { apiClient } from '../../services/apiClient';
 import LoadingSpinner from '../LoadingSpinner';
 import { WatchCard } from './WatchCard';
@@ -79,7 +79,7 @@ export const WatchList: React.FC<WatchListProps> = ({ onWatchSelect }) => {
             name: 'Product',
             sku: '',
             upc: '',
-            category: { id: '' },
+            category: { id: '', name: 'Unknown', slug: 'unknown' },
             set: '',
             series: '',
             releaseDate: '',
@@ -87,7 +87,7 @@ export const WatchList: React.FC<WatchListProps> = ({ onWatchSelect }) => {
             imageUrl: '',
             thumbnailUrl: '',
             description: '',
-            metadata: {},
+            metadata: { packType: 'booster', language: 'en', region: 'US', tags: [] },
             availability: [],
             createdAt: '',
             updatedAt: ''
@@ -152,8 +152,10 @@ export const WatchList: React.FC<WatchListProps> = ({ onWatchSelect }) => {
 
   const loadStats = async () => {
     try {
-      const response = await apiClient.get('/watches/stats');
-      setStats(response.data);
+      const response = await apiClient.get<{ total: number; active: number; inactive: number; alertsToday: number }>(
+        '/watches/stats'
+      );
+      setStats(response.data as any);
     } catch (err) {
       console.error('Failed to load watch stats:', err);
     }
@@ -229,11 +231,11 @@ export const WatchList: React.FC<WatchListProps> = ({ onWatchSelect }) => {
 
   const handleExport = async () => {
     try {
-      const response = await apiClient.get('/watches/export', {
+      const response = await apiClient.get<Blob>('/watches/export', {
         responseType: 'blob'
       });
       
-      const blob = new Blob([response.data], { type: 'text/csv' });
+      const blob = response.data;
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -382,7 +384,7 @@ export const WatchList: React.FC<WatchListProps> = ({ onWatchSelect }) => {
         {showFilters && (
           <WatchFilters
             filters={filters}
-            onFiltersChange={setFilters}
+            onFiltersChange={(next) => setFilters(prev => ({ ...prev, ...next }))}
           />
         )}
 

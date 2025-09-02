@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useDebounce } from '../hooks/useDebounce';
 import { Camera, Package } from 'lucide-react';
 import { Product, PaginatedResponse, SearchFilters } from '../types';
-import { ProductSearch } from '../components/products/ProductSearch';
 import { ProductDetail } from '../components/products/ProductDetail';
 import { BarcodeScanner } from '../components/products/BarcodeScanner';
 import { ProductGrid } from '../components/products/ProductGrid';

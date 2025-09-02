@@ -872,8 +872,8 @@ verify_deployment() {
     fi
     
     # Check file permissions
-    ssh "$DEPLOY_USER@$DEPLOY_HOST" << 'EOF'
-        cd /opt/booster-beacon
+    ssh "$DEPLOY_USER@$DEPLOY_HOST" << EOF
+        cd "$DEPLOY_PATH"
         
         # Check critical file permissions
         if [[ -r .env && -r package.json && -x backend/dist/index.js ]]; then
@@ -994,7 +994,7 @@ get_deployment_status() {
         docker-compose -f docker-compose.prod.yml logs --tail=10 app 2>/dev/null || echo "Could not retrieve logs"
         
         echo -e "\n=== Available Backups ==="
-        ls -la /opt/booster-beacon/backups/ 2>/dev/null | tail -5 || echo "No backups found"
+        ls -la "$BACKUP_PATH" 2>/dev/null | tail -5 || echo "No backups found"
 EOF
 }
 
@@ -1025,8 +1025,8 @@ monitor_deployment() {
 cleanup_old_deployments() {
     log_step "Cleaning up old deployments and backups..."
     
-    ssh "$DEPLOY_USER@$DEPLOY_HOST" << 'EOF'
-        cd /opt/booster-beacon/backups
+    ssh "$DEPLOY_USER@$DEPLOY_HOST" << EOF
+        cd "$BACKUP_PATH"
         
         # Keep last 10 backups
         echo "Cleaning up old backups..."

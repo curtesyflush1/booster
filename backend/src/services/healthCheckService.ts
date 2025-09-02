@@ -1,7 +1,7 @@
 import { logger, loggerWithContext } from '../utils/logger';
 import { db } from '../config/database';
 import { RETRY_CONFIG, MONITORING_THRESHOLDS, DEFAULT_VALUES, TIME_PERIODS } from '../constants';
-// import Redis from 'ioredis';
+import { redisService } from './redisService';
 
 export interface HealthCheckResult {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -48,7 +48,6 @@ export interface SystemMetrics {
 }
 
 class HealthCheckService {
-  private redis: any | null = null;
   private requestMetrics = {
     total: 0,
     errors: 0,
@@ -59,22 +58,7 @@ class HealthCheckService {
     failed: 0
   };
 
-  constructor() {
-    // Initialize Redis connection for health checks
-    if (process.env.REDIS_URL) {
-      try {
-        const Redis = require('ioredis');
-        this.redis = new Redis(process.env.REDIS_URL, {
-          retryDelayOnFailover: RETRY_CONFIG.WEBHOOK_RETRY_DELAY_MIN,
-          maxRetriesPerRequest: 3,
-          lazyConnect: true
-        });
-      } catch (error) {
-        // Redis not available, will be handled in health checks
-        this.redis = null;
-      }
-    }
-  }
+  constructor() {}
 
   /**
    * Perform comprehensive health check
@@ -198,23 +182,19 @@ class HealthCheckService {
   private async checkRedis(): Promise<HealthCheck> {
     const startTime = Date.now();
     
-    if (!this.redis) {
+    if (process.env.DISABLE_REDIS === 'true') {
       return {
         status: 'warn',
         responseTime: 0,
-        message: 'Redis not configured'
+        message: 'Redis disabled via DISABLE_REDIS'
       };
     }
     
     try {
-      await this.redis.ping();
+      // If not ready yet, ping will trigger an error which we capture
+      await redisService.ping();
       const responseTime = Date.now() - startTime;
-      
-      return {
-        status: 'pass',
-        responseTime
-      };
-      
+      return { status: 'pass', responseTime };
     } catch (error) {
       return {
         status: 'fail',

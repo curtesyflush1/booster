@@ -67,6 +67,20 @@ router.post('/change-password', authenticate, validateBody(authSchemas.changePas
 router.post('/verify-email', validateBody(authSchemas.emailVerification), authController.verifyEmail);
 
 /**
+ * @route   GET /api/auth/verify-email/:token
+ * @desc    Verify email via link
+ * @access  Public
+ */
+router.get('/verify-email/:token', authController.verifyEmailFromLink);
+
+/**
+ * @route   POST /api/auth/resend-verification
+ * @desc    Resend email verification
+ * @access  Public
+ */
+router.post('/resend-verification', validateBody(authSchemas.resendVerification), authController.resendVerificationEmail);
+
+/**
  * @route   POST /api/auth/logout
  * @desc    Logout user
  * @access  Private

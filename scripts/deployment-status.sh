@@ -6,6 +6,7 @@
 # Configuration
 DEPLOY_USER="${DEPLOY_USER:-derek}"
 DEPLOY_HOST="${DEPLOY_HOST:-82.180.162.48}"
+DEPLOY_PATH="${DEPLOY_PATH:-/opt/booster}"
 
 # Colors
 GREEN='\033[0;32m'
@@ -24,8 +25,8 @@ if ! ssh -o ConnectTimeout=5 "$DEPLOY_USER@$DEPLOY_HOST" "echo 'Connected'" &> /
 fi
 
 # Get status from server
-ssh "$DEPLOY_USER@$DEPLOY_HOST" << 'EOF'
-cd /opt/booster 2>/dev/null || { echo -e "\033[0;31m❌ Deployment directory not found\033[0m"; exit 1; }
+ssh "$DEPLOY_USER@$DEPLOY_HOST" << EOF
+cd "$DEPLOY_PATH" 2>/dev/null || { echo -e "\033[0;31m❌ Deployment directory not found\033[0m"; exit 1; }
 
 echo -e "\033[0;34m📊 Docker Services Status\033[0m"
 echo "------------------------"

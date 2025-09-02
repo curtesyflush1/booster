@@ -1,17 +1,15 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { Eye, Package, Grid as GridIcon, List as ListIcon } from 'lucide-react';
-import { Product, Watch } from '../types';
-import { WatchList } from '../components/watches/WatchList';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Eye, Package } from 'lucide-react';
+import { Product } from '../types';
 import { WatchPacks } from '../components/watches/WatchPacks';
 import { ProductGrid } from '../components/products/ProductGrid';
 import { ProductDetail } from '../components/products/ProductDetail';
 import { apiClient } from '../services/apiClient';
-import { transformBackendProduct, transformBackendProducts, BackendProduct } from '../utils/fieldMapping';
+import { transformBackendProducts, BackendProduct } from '../utils/fieldMapping';
 
 const WatchesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'watches' | 'packs'>('watches');
   // Default to grid view per Step 4 requirement (reuse ProductGrid)
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
 
   // State for grid view
   const [products, setProducts] = useState<Product[]>([]);
@@ -56,9 +54,7 @@ const WatchesPage: React.FC = () => {
     }
   }, [activeTab, loadWatchedProducts]);
 
-  const handleWatchSelect = (_watch: Watch) => {
-    // TODO: Open watch edit modal
-  };
+  // Future: open edit modal for a selected watch
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

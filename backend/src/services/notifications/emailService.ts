@@ -72,14 +72,91 @@ export class EmailService {
     }
   }
 
-  static async sendWelcomeEmail(_user: any): Promise<{ success: boolean; error?: string }> {
-    console.log('Email service disabled for deployment');
+  static async sendVerificationEmail(user: { email: string; first_name?: string; last_name?: string }, token: string): Promise<{ success: boolean; error?: string; previewUrl?: string }> {
+    const transporter = await this.getTransporter();
+    const baseFrontend = process.env.FRONTEND_URL;
+    const baseBackend = process.env.BACKEND_PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
+    const verifyUrl = baseBackend
+      ? `${baseBackend.replace(/\/$/, '')}/api/auth/verify-email/${encodeURIComponent(token)}`
+      : `${(baseFrontend || '').replace(/\/$/, '')}/verify-email?token=${encodeURIComponent(token)}`;
+
+    const subject = 'Verify your email for BoosterBeacon';
+    const text = `Welcome to BoosterBeacon!\n\nPlease verify your email by visiting this link:\n${verifyUrl}\n\nIf you did not create an account, please ignore this email.`;
+    const html = `
+      <div style="font-family:Arial,sans-serif; line-height:1.6;">
+        <h2>Welcome to BoosterBeacon!</h2>
+        <p>Hi ${user.first_name || ''}, please verify your email address to activate your account.</p>
+        <p><a href="${verifyUrl}" style="display:inline-block;padding:10px 16px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none">Verify Email</a></p>
+        <p>Or copy and paste this URL in your browser:</p>
+        <p style="word-break:break-all;color:#555;">${verifyUrl}</p>
+      </div>
+    `;
+
+    if (!transporter) {
+      // Dev mode fallback
+      console.log('Dev: verification email (no SMTP):', { to: user.email, verifyUrl });
+      return { success: true };
+    }
+
+    try {
+      const cfg = EmailConfigService.getCurrentConfiguration();
+      const info = await transporter.sendMail({
+        from: `${cfg.fromName} <${cfg.fromEmail}>`,
+        to: user.email,
+        subject,
+        text,
+        html
+      });
+      const previewUrl = nodemailer.getTestMessageUrl(info) || undefined;
+      return { success: true, previewUrl };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to send verification email' };
+    }
+  }
+
+  static async sendWelcomeEmail(user: any): Promise<{ success: boolean; error?: string }> {
+    // Alias to verification email if token present
+    if (user?.verification_token) {
+      const res = await this.sendVerificationEmail(user, user.verification_token);
+      return { success: res.success, error: res.error };
+    }
     return { success: true };
   }
 
-  static async sendPasswordResetEmail(_user: any, _token: string): Promise<{ success: boolean; error?: string }> {
-    console.log('Email service disabled for deployment');
-    return { success: true };
+  static async sendPasswordResetEmail(user: { email: string; first_name?: string }, token: string): Promise<{ success: boolean; error?: string; previewUrl?: string }> {
+    const transporter = await this.getTransporter();
+    const baseFrontend = process.env.FRONTEND_URL;
+    const resetUrl = `${(baseFrontend || '').replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}`;
+    const subject = 'Reset your BoosterBeacon password';
+    const text = `We received a request to reset your password.\n\nReset link: ${resetUrl}\n\nIf you did not request this, you can ignore this email.`;
+    const html = `
+      <div style="font-family:Arial,sans-serif; line-height:1.6;">
+        <h2>Password Reset</h2>
+        <p>Hi ${user.first_name || ''}, click the button below to reset your password.</p>
+        <p><a href="${resetUrl}" style="display:inline-block;padding:10px 16px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none">Reset Password</a></p>
+        <p>Or copy and paste this URL in your browser:</p>
+        <p style="word-break:break-all;color:#555;">${resetUrl}</p>
+      </div>
+    `;
+
+    if (!transporter) {
+      console.log('Dev: password reset email (no SMTP):', { to: user.email, resetUrl });
+      return { success: true };
+    }
+    try {
+      const cfg = EmailConfigService.getCurrentConfiguration();
+      const info = await transporter.sendMail({
+        from: `${cfg.fromName} <${cfg.fromEmail}>`,
+        to: user.email,
+        subject,
+        text,
+        html
+      });
+      const previewUrl = nodemailer.getTestMessageUrl(info) || undefined;
+      return { success: true, previewUrl };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to send reset email' };
+    }
   }
 
   static async sendAlert(_alert: any, _user: any): Promise<ChannelDeliveryResult> {

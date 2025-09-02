@@ -136,7 +136,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         refreshToken: state.token.refreshToken,
       });
 
-      const { token } = response.data;
+      const raw = (response?.data as any) || {};
+      const t = raw.tokens || raw.token || raw;
+      const accessToken = t.access_token || t.accessToken;
+      const refreshTokenVal = t.refresh_token || t.refreshToken || state.token.refreshToken;
+      const expiresIn = t.expires_in || t.expiresIn || 3600;
+      const tokenType = (t.token_type || t.tokenType || 'Bearer') as 'Bearer';
+      const token: AuthToken = {
+        accessToken,
+        refreshToken: refreshTokenVal,
+        expiresAt: new Date(Date.now() + Number(expiresIn) * 1000).toISOString(),
+        tokenType,
+      };
+
       apiClient.setAuthToken(token.accessToken, true);
 
       dispatch({
@@ -196,7 +208,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Verify token with server and get user data
       const response = await apiClient.get('/auth/profile');
-      const user = response.data.data.user;
+      const user = (response?.data as any)?.data?.user || (response?.data as any)?.user;
 
       // Create token object (in real app, you'd parse the JWT)
       const token: AuthToken = {
@@ -224,14 +236,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       dispatch({ type: 'AUTH_START' });
 
       const response = await apiClient.post('/auth/login', credentials);
-      const { user, tokens } = response.data.data;
+      const raw = (response?.data as any)?.data || (response?.data as any) || {};
+      const user = raw.user;
+      const t = raw.tokens || raw.token || {};
+      const token: AuthToken = {
+        accessToken: t.access_token || t.accessToken,
+        refreshToken: t.refresh_token || t.refreshToken || '',
+        expiresAt: new Date(Date.now() + Number(t.expires_in || 3600) * 1000).toISOString(),
+        tokenType: (t.token_type || 'Bearer') as 'Bearer',
+      };
 
       // Store token
-      apiClient.setAuthToken(tokens.access_token, credentials.rememberMe);
+      apiClient.setAuthToken(token.accessToken, Boolean(credentials.rememberMe));
 
       dispatch({
         type: 'AUTH_SUCCESS',
-        payload: { user, tokens },
+        payload: { user, token },
       });
     } catch (error: any) {
       const errorMessage = error.message || 'Login failed. Please try again.';
@@ -258,14 +278,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
 
       const response = await apiClient.post('/auth/register', apiData);
-      const { user, tokens } = response.data.data;
+      const raw = (response?.data as any)?.data || (response?.data as any) || {};
+      const user = raw.user;
+      const t = raw.tokens || raw.token || {};
+      const token: AuthToken = {
+        accessToken: t.access_token || t.accessToken,
+        refreshToken: t.refresh_token || t.refreshToken || '',
+        expiresAt: new Date(Date.now() + Number(t.expires_in || 3600) * 1000).toISOString(),
+        tokenType: (t.token_type || 'Bearer') as 'Bearer',
+      };
 
       // Store token
-      apiClient.setAuthToken(tokens.access_token, false);
+      apiClient.setAuthToken(token.accessToken, false);
 
       dispatch({
         type: 'AUTH_SUCCESS',
-        payload: { user, tokens },
+        payload: { user, token },
       });
     } catch (error: any) {
       const errorMessage = error.message || 'Registration failed. Please try again.';
@@ -297,7 +325,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updateUser = async (userData: Partial<User>): Promise<void> => {
     try {
       const response = await apiClient.put('/users/profile', userData);
-      const updatedUser = response.data.user;
+      const updatedUser = (response?.data as any)?.data?.user || (response?.data as any)?.user;
 
       dispatch({
         type: 'AUTH_UPDATE_USER',

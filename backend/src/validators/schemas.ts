@@ -117,6 +117,13 @@ export const authSchemas = {
     token: Joi.string().required().messages({
       'any.required': 'Verification token is required'
     })
+  }),
+
+  resendVerification: Joi.object({
+    email: Joi.string().email().required().messages({
+      'string.email': 'Must be a valid email address',
+      'any.required': 'Email is required'
+    })
   })
 };
 

@@ -28,8 +28,9 @@ const mockProduct: Product = {
   name: 'Test Pokémon Booster Pack',
   sku: 'TEST-001',
   upc: '123456789012',
-  category: 'booster-packs' as const,
+  category: { id: 'booster-packs', name: 'Booster Packs', slug: 'booster-packs' },
   set: 'Test Set',
+  series: 'Test Series',
   releaseDate: '2024-01-01',
   msrp: 4.99,
   imageUrl: 'https://example.com/image.jpg',
@@ -52,7 +53,9 @@ const mockProduct: Product = {
     language: 'en',
     region: 'US',
     tags: ['pokemon', 'tcg', 'booster-pack']
-  }
+  },
+  createdAt: '2024-01-01T00:00:00Z',
+  updatedAt: '2024-01-02T00:00:00Z'
 };
 
 /**

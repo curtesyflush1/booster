@@ -86,9 +86,17 @@ export class AuthService {
   async register(userData: IUserRegistration): Promise<{ user: Omit<IUser, 'password_hash'>, tokens: IAuthToken }> {
     try {
       await this.validateRegistrationData(userData);
-      const user = await this.createUserWithVerification(userData);
+      const { user, verificationToken } = await this.createUserWithVerification(userData);
       const tokens = await this.generateTokens(user.id);
       const userWithoutPassword = this.sanitizeUserResponse(user);
+
+      // Best-effort verification email (non-blocking)
+      try {
+        const { EmailService } = await import('./notifications/emailService');
+        await EmailService.sendVerificationEmail(userWithoutPassword, verificationToken);
+      } catch (e) {
+        this.logger.warn('Verification email send failed (non-blocking)', { error: e instanceof Error ? e.message : String(e) });
+      }
 
       this.logger.info('User registered successfully', { userId: user.id, email: user.email });
 
@@ -121,13 +129,33 @@ export class AuthService {
   /**
    * Create user and set verification token
    */
-  private async createUserWithVerification(userData: IUserRegistration): Promise<IUser> {
+  private async createUserWithVerification(userData: IUserRegistration): Promise<{ user: IUser; verificationToken: string }> {
     const user = await this.userRepository.createUser(userData);
     const verificationToken = this.generateVerificationToken();
     await this.userRepository.updateById<IUser>(user.id, {
       verification_token: verificationToken
     });
-    return user;
+    return { user, verificationToken };
+  }
+
+  /** Resend email verification to an email address */
+  async resendVerificationEmail(email: string): Promise<void> {
+    this.validateEmail(email);
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) {
+      return; // do not reveal
+    }
+    if (user.email_verified) {
+      return;
+    }
+    const token = this.generateVerificationToken();
+    await this.userRepository.updateById<IUser>(user.id, { verification_token: token });
+    try {
+      const { EmailService } = await import('./notifications/emailService');
+      await EmailService.sendVerificationEmail(this.sanitizeUserResponse(user), token);
+    } catch (e) {
+      this.logger.warn('Resend verification email failed', { error: e instanceof Error ? e.message : String(e) });
+    }
   }
 
   /**

@@ -245,6 +245,49 @@ export const verifyEmail = async (req: Request, res: Response, next: NextFunctio
 };
 
 /**
+ * Verify email via link (GET with token param)
+ */
+export const verifyEmailFromLink = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const token = req.params.token;
+    await authService.verifyEmail(token);
+
+    // Optionally redirect to frontend
+    const frontend = process.env.FRONTEND_URL;
+    if (frontend) {
+      res.redirect(`${frontend.replace(/\/$/, '')}/login?verified=1`);
+      return;
+    }
+    res.status(200).send('Email verified successfully. You may close this window.');
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Invalid verification token') {
+      res.status(400).send('Invalid or expired verification token');
+      return;
+    }
+    next(error);
+  }
+};
+
+/**
+ * Resend verification email
+ */
+export const resendVerificationEmail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { email } = req.body || {};
+    if (!email || typeof email !== 'string') {
+      res.status(400).json({
+        error: { code: 'INVALID_INPUT', message: 'Valid email is required', timestamp: new Date().toISOString() }
+      });
+      return;
+    }
+    await authService.resendVerificationEmail(email);
+    res.json({ message: 'If an account exists for this email, a verification link has been sent.' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Logout user by blacklisting tokens
  */
 export const logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
