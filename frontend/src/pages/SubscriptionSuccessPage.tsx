@@ -12,7 +12,7 @@ const PRO_FEATURES = [
     'Up to 10 product watches',
     'SMS & Discord alerts',
     'Priority alert delivery',
-    'Price predictions & ROI',
+    'Limited ML predictions (basic trend + weekly forecast)',
     'Historical data access',
     'Premium support'
 ];
@@ -20,7 +20,7 @@ const PRO_FEATURES = [
 const NEXT_STEPS = [
     'Set up up to 10 product watches for your favorite Pokémon TCG items',
     'Configure SMS and Discord notifications in your settings',
-    'Explore price predictions and historical data for better purchasing decisions'
+    'Explore basic ML trend hints and historical data for better purchasing decisions'
 ];
 
 const SubscriptionSuccessPage: React.FC = () => {

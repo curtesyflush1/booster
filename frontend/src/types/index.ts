@@ -334,6 +334,11 @@ export interface MLPrediction {
     nextMonth: number;
     confidence: number;
   };
+  basicTrend?: {
+    direction: 'up' | 'down' | 'flat';
+    percent: number;
+    window?: string;
+  };
   selloutRisk: {
     score: number; // 0-100
     timeframe: string;

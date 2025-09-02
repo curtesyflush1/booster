@@ -15,8 +15,8 @@ const PricingPage: React.FC = memo(() => {
 
     useDocumentTitle({
         title: 'Pricing',
-        description: 'Choose the perfect plan. Free includes 2 watches, Pro includes 10 watches and advanced features, Premium offers unlimited.',
-        keywords: ['pokemon tcg pricing', 'collector alerts pricing', 'pokemon card alerts cost', 'tcg monitoring subscription']
+        description: 'Free: 2 watches. Pro: 10 watches + Limited ML. Premium: Unlimited + Full ML.',
+        keywords: ['pokemon tcg pricing', 'collector alerts pricing', 'pokemon card alerts cost', 'tcg monitoring subscription', 'ml predictions']
     });
 
     useEffect(() => {
@@ -97,7 +97,18 @@ const PricingPage: React.FC = memo(() => {
                           if (max === null) return 'Unlimited product watches';
                           return `Up to ${max} product watches`;
                         })();
-                        const featureList = [computedWatchFeature, ...((plan.features || []).filter(f => !/product watches/i.test(f)))]
+                        // Inject clearer ML copy per tier
+                        const mlCopy = (() => {
+                          const slug = planSlug.toLowerCase();
+                          if (slug.startsWith('premium') || slug === 'pro-plus') return 'Full ML suite (Premium)';
+                          if (slug.startsWith('pro')) return 'Limited ML predictions (Pro)';
+                          return null;
+                        })();
+                        const featureList = [
+                          computedWatchFeature,
+                          ...((plan.features || []).filter(f => !/product watches/i.test(f))),
+                          ...(mlCopy ? [mlCopy] : [])
+                        ]
                         
                         return (
                             <div

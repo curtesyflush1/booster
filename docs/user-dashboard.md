@@ -87,6 +87,11 @@ Returns ML-powered predictions for specified products or user's watched products
         "nextMonth": 98.75,
         "confidence": 0.78
       },
+      "basicTrend": {
+        "direction": "up",
+        "percent": 5.2,
+        "window": "7d_vs_prev_7d"
+      },
       "selloutRisk": {
         "score": 85,
         "timeframe": "2-3 days",
@@ -109,6 +114,10 @@ Returns ML-powered predictions for specified products or user's watched products
   ]
 }
 ```
+
+Note on access tiers:
+- Pro (Limited ML): Responses include `basicTrend` and a weekly forecast; some advanced fields may be hidden in the UI.
+- Premium (Full ML): All predictive fields are available and the Dashboard’s Predictive Insights tab is enabled.
 
 ### Get Portfolio Data
 ```http

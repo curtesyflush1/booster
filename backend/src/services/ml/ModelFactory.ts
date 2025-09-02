@@ -1,5 +1,6 @@
 import { IModelRunner } from './IModelRunner';
 import { HeuristicModelRunner } from './HeuristicModelRunner';
+import { PricePredictionModelRunner } from './PricePredictionModelRunner';
 
 /**
  * Provides the active model runner. Today this returns the heuristic
@@ -10,7 +11,11 @@ export class ModelFactory {
 
   static getActiveRunner(): IModelRunner {
     if (!this.singleton) {
-      this.singleton = new HeuristicModelRunner();
+      try {
+        this.singleton = new PricePredictionModelRunner();
+      } catch {
+        this.singleton = new HeuristicModelRunner();
+      }
     }
     return this.singleton;
   }

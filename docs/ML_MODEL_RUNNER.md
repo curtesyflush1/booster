@@ -22,6 +22,7 @@ This document describes the pluggable ML model runner used to power predictive i
     - Recent alert velocity (last 7 days)
     - Product popularity score
   - Produces:
+    - Basic trend summary (`basicTrend`): direction and percent change week-over-week
     - Price forecast (next week / next month) from baseline × trend scale
     - Sellout risk from alert velocity + popularity
     - ROI estimates from trend and discount vs MSRP
@@ -36,6 +37,29 @@ This document describes the pluggable ML model runner used to power predictive i
 - Uses deterministic calculations (no randomness) to ensure predictable results
 - Confidence bounds derive from history depth and alert velocity
 - Falls back to MSRP when price history is sparse
+
+### Response Shape (key fields)
+
+```
+{
+  productId: string,
+  productName: string,
+  priceForcast: { nextWeek: number, nextMonth: number, confidence: number },
+  basicTrend?: { direction: 'up'|'down'|'flat', percent: number, window?: string },
+  selloutRisk: { score: number, timeframe: string, confidence: number },
+  roiEstimate: { shortTerm: number, longTerm: number, confidence: number },
+  hypeScore: number,
+  updatedAt: string
+}
+```
+
+Notes:
+- `basicTrend` explicitly surfaces the week-over-week change the model already computes; this is included for clarity and UI hints. It is optional to preserve backward compatibility.
+
+### Access Tiers
+
+- Pro: Limited ML — `basicTrend` and a weekly forecast are available in payloads (UI may hide the full ML tab for Pro).
+- Premium: Full ML — all fields available (forecasts, ROI, sellout risk, hype).
 
 ## Roadmap
 

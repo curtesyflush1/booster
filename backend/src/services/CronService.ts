@@ -2,6 +2,9 @@ import cron from 'node-cron';
 import { logger } from '../utils/logger';
 import { AvailabilityPollingService } from './availabilityPollingService';
 import { DataCollectionService } from './dataCollectionService';
+import { PriceDropAlertService } from './priceDropAlertService';
+import { MLTrainingETLService } from './ml/MLTrainingETLService';
+import { PricePredictionModelRunner } from './ml/PricePredictionModelRunner';
 import { WatchMonitoringService } from './watchMonitoringService';
 
 export class CronService {
@@ -47,6 +50,17 @@ export class CronService {
       }
     });
 
+    // Every 10 minutes: monitor price changes and send price-drop alerts
+    cron.schedule('*/10 * * * *', async () => {
+      try {
+        logger.info('[Cron] Price drop monitoring started');
+        await PriceDropAlertService.monitorPriceChanges();
+        logger.info('[Cron] Price drop monitoring completed');
+      } catch (error) {
+        logger.error('[Cron] Price drop monitoring failed', { error: error instanceof Error ? error.message : String(error) });
+      }
+    });
+
     // Daily at 02:30: cleanup watches and other maintenance
     cron.schedule('30 2 * * *', async () => {
       try {
@@ -55,6 +69,20 @@ export class CronService {
         logger.info('[Cron] Watch cleanup completed');
       } catch (error) {
         logger.error('[Cron] Watch cleanup failed', { error: error instanceof Error ? error.message : String(error) });
+      }
+    });
+
+    // Daily at 00:00: ML ETL + model training
+    cron.schedule('0 0 * * *', async () => {
+      try {
+        logger.info('[Cron] ML ETL started');
+        await MLTrainingETLService.run();
+        logger.info('[Cron] ML ETL completed; training model');
+        const runner = new PricePredictionModelRunner();
+        await runner.train();
+        logger.info('[Cron] ML training completed');
+      } catch (error) {
+        logger.error('[Cron] ML pipeline failed', { error: error instanceof Error ? error.message : String(error) });
       }
     });
 

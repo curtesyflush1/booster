@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosRequestConfig } from 'axios';
+import { HttpFetcherService } from '../HttpFetcherService';
 import { BaseRetailerService as IBaseRetailerService, RetailerConfig, ProductAvailabilityRequest, ProductAvailabilityResponse, RetailerHealthStatus, StoreLocation, RetailerError } from '../../types/retailer';
 import { logger } from '../../utils/logger';
 import { RETAILER_RATE_LIMITS } from '../../constants';
@@ -9,6 +10,7 @@ import { RETAILER_RATE_LIMITS } from '../../constants';
  */
 export abstract class BaseRetailerService extends IBaseRetailerService {
   protected httpClient: AxiosInstance;
+  protected httpFetcher: HttpFetcherService;
   protected lastRequestTime: number = 0;
   protected readonly minRequestInterval: number;
 
@@ -20,6 +22,7 @@ export abstract class BaseRetailerService extends IBaseRetailerService {
     
     // Initialize HTTP client with common configuration
     this.httpClient = this.createHttpClient();
+    this.httpFetcher = new HttpFetcherService();
     
     // Setup common interceptors
     this.setupRequestInterceptors();
@@ -191,9 +194,40 @@ export abstract class BaseRetailerService extends IBaseRetailerService {
    */
   protected async makeRequest(url: string, options: any = {}): Promise<AxiosResponse> {
     try {
-      return await this.httpClient.get(url, options);
+      // Enforce polite delay and rate limits (interceptors also handle, but we double-guard here)
+      if (!this.checkRateLimit()) {
+        throw this.createRetailerError('Rate limit exceeded', 'RATE_LIMIT', 429, true);
+      }
+      await this.enforcePoliteDelay();
+
+      // Build absolute URL when relative path provided
+      const fullUrl = url.startsWith('http') ? url : `${this.config.baseUrl || ''}${url}`;
+
+      // Apply auth/headers
+      const reqConfig: AxiosRequestConfig = {
+        headers: { ...(options.headers || {}) },
+        params: options.params || {}
+      };
+      this.addAuthenticationHeaders(reqConfig);
+
+      const res = await this.httpFetcher.get(fullUrl, {
+        params: reqConfig.params as any,
+        headers: reqConfig.headers as any,
+        timeout: this.config.timeout,
+        render: options.render === true
+      });
+
+      // Emulate AxiosResponse shape minimally for callers
+      const fakeAxiosResponse: AxiosResponse = {
+        data: res.data,
+        status: res.status,
+        statusText: String(res.status),
+        headers: res.headers as any,
+        config: reqConfig,
+        request: {}
+      } as any;
+      return fakeAxiosResponse;
     } catch (error) {
-      // Log the error for debugging
       logger.error(`HTTP request failed for ${this.config.id}:`, {
         url,
         error: error instanceof Error ? error.message : 'Unknown error',

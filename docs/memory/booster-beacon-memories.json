@@ -616,6 +616,31 @@
         ]
       },
       "timestamp": ""
+    },
+    {
+      "title": "Provider-agnostic HTTP fetch layer",
+      "type": "architecture",
+      "tags": [
+        "scraping",
+        "unlocker",
+        "browser",
+        "resilience"
+      ],
+      "details": {
+        "files": [
+          "backend/src/services/HttpFetcherService.ts",
+          "backend/src/services/retailers/BaseRetailerService.ts"
+        ],
+        "summary": "Added HttpFetcherService with provider selection (direct/brightdata/browser) and refactored BaseRetailerService to use it for all external requests.",
+        "env": [
+          "HTTP_FETCH_PROVIDER",
+          "BRIGHTDATA_API_URL",
+          "BRIGHTDATA_API_TOKEN",
+          "BROWSER_API_URL",
+          "BROWSER_API_TOKEN"
+        ]
+      },
+      "timestamp": ""
     }
   ]
 }

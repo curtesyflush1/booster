@@ -315,8 +315,8 @@ Designed for serious collectors:
 - **10 Active Watches**: Monitor up to 10 products
 - **All Notification Channels**: Web push, email, SMS, and Discord
 - **Priority Alerts**: Faster notification delivery
-- **Advanced Analytics**: Detailed insights and predictions
-- **ML Predictions**: Price forecasting and ROI estimates
+- **Limited ML**: Basic trend + weekly forecast (UI shows light ML hints)
+- **Advanced Analytics**: Detailed insights beyond ML
 - **Priority Support**: Direct email support
 - **Early Access**: Beta features and new retailer integrations
 
@@ -324,7 +324,9 @@ Designed for serious collectors:
 For power users and dropship operators:
 - **Unlimited Watches**: No limit on active watches
 - **Highest Priority**: Fastest delivery and queue priority
-- **Full ML Suite**: All predictive features unlocked
+- **Full ML (Premium)**: Forecasts, ROI, sellout risk, hype + confidence
+
+UI hint: The Dashboard’s “Predictive Insights” tab appears for Premium. Pro surfaces basic trend information inline where applicable.
 
 ### Upgrading Your Plan
 1. Go to **Account Settings** → **Subscription**

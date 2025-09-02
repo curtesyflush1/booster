@@ -189,7 +189,7 @@ class SubscriptionService {
         'Up to 10 product watches',
         'SMS & Discord alerts',
         'Priority alert delivery',
-        'Price predictions & ROI',
+        'Limited ML predictions (basic trend + weekly forecast)',
         'Historical data access',
         'Premium support'
       ]

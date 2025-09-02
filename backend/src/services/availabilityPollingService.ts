@@ -81,6 +81,13 @@ export class AvailabilityPollingService extends BaseModel<any> {
         for (const res of responses) {
           const dbRetailerId = slugToId.get(res.retailerId);
           if (!dbRetailerId) continue;
+          // Load previous availability to detect transitions
+          const prev = await this.db('product_availability')
+            .select('in_stock', 'availability_status')
+            .where({ product_id: product.id, retailer_id: dbRetailerId })
+            .first();
+
+          const wentInStock = !!res.inStock && prev && (prev.in_stock === false || prev.availability_status === 'out_of_stock');
 
           await this.upsertAvailability({
             product_id: product.id,
@@ -95,6 +102,52 @@ export class AvailabilityPollingService extends BaseModel<any> {
             store_locations: JSON.stringify(res.storeLocations ?? []),
             last_checked: new Date(),
           });
+
+          // Trigger restock alerts on transition into stock
+          if (wentInStock) {
+            try {
+              const { AlertProcessingService } = await import('./alertProcessingService');
+              // Fetch active watches for this product; filter to retailer when specified on watch
+              const watches = await this.db('watches')
+                .select('id', 'user_id', 'retailer_ids', 'is_active')
+                .where({ product_id: product.id, is_active: true });
+
+              const targetWatches = (watches || []).filter((w: any) => {
+                if (Array.isArray(w.retailer_ids) && w.retailer_ids.length > 0) {
+                  return w.retailer_ids.includes(dbRetailerId);
+                }
+                return true;
+              });
+
+              const payloadData = {
+                availability_status: 'in_stock',
+                product_url: res.productUrl,
+                cart_url: res.cartUrl ?? undefined,
+                price: res.price ?? undefined,
+                stock_level: res.stockLevel ?? undefined,
+                timestamp: new Date().toISOString()
+              } as any;
+
+              await Promise.allSettled(
+                targetWatches.map((w: any) =>
+                  AlertProcessingService.generateAlert({
+                    userId: w.user_id,
+                    productId: product.id,
+                    retailerId: dbRetailerId,
+                    watchId: w.id,
+                    type: 'restock',
+                    data: payloadData
+                  })
+                )
+              );
+            } catch (e) {
+              logger.warn('Failed to generate restock alerts', {
+                productId: product.id,
+                retailerId: dbRetailerId,
+                error: e instanceof Error ? e.message : String(e)
+              });
+            }
+          }
         }
       } catch (err) {
         logger.warn('Availability check failed for product', {
@@ -135,4 +188,3 @@ export class AvailabilityPollingService extends BaseModel<any> {
     }
   }
 }
-

@@ -11,8 +11,21 @@ const router = Router();
 
 // Apply authentication to all ML routes
 router.use(authenticate);
-// Highest tier access only, centralized in subscriptionService
-router.use(requirePlan(TOP_TIER_PLAN_SLUGS));
+
+// Allow Pro (limited) or Premium (full) access helper
+const requireProOrPremium = (req: any, res: any, next: any) => {
+  const user = req.user;
+  if (!user) {
+    return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required', timestamp: new Date().toISOString() } });
+  }
+  const planId = (user as any).subscription_plan_id || '';
+  const tier = (user as any).subscription_tier || '';
+  const proPlans = ['pro-monthly', 'pro-yearly'];
+  if (tier === 'pro' || proPlans.includes(String(planId)) || TOP_TIER_PLAN_SLUGS.includes(String(planId))) {
+    return next();
+  }
+  return res.status(403).json({ error: { code: 'INSUFFICIENT_PLAN', message: 'Pro or Premium plan required for this endpoint', timestamp: new Date().toISOString() } });
+};
 
 // Apply rate limiting for ML endpoints (more restrictive due to computational cost)
 const mlRateLimit = createRateLimit({
@@ -24,15 +37,22 @@ const mlRateLimit = createRateLimit({
 router.use(mlRateLimit);
 
 // Individual product ML endpoints
-router.get('/products/:productId/price-prediction', sanitizeParameters, validate(mlSchemas.getPricePrediction), MLController.getPricePrediction);
-router.get('/products/:productId/sellout-risk', sanitizeParameters, validate(mlSchemas.getSelloutRisk), MLController.getSelloutRisk);
-router.get('/products/:productId/roi-estimate', sanitizeParameters, validate(mlSchemas.getROIEstimate), MLController.getROIEstimate);
-router.get('/products/:productId/hype-meter', sanitizeParameters, validate(mlSchemas.getHypeMeter), MLController.getHypeMeter);
-router.get('/products/:productId/market-insights', sanitizeParameters, validate(mlSchemas.getMarketInsights), MLController.getMarketInsights);
-router.get('/products/:productId/analysis', sanitizeParameters, validate(mlSchemas.getComprehensiveAnalysis), MLController.getComprehensiveAnalysis);
+// Premium-only (full predictions)
+router.get('/products/:productId/price-prediction', requirePlan(TOP_TIER_PLAN_SLUGS), sanitizeParameters, validate(mlSchemas.getPricePrediction), MLController.getPricePrediction);
+// Pro or Premium (limited for Pro)
+router.get('/products/:productId/sellout-risk', requireProOrPremium, sanitizeParameters, validate(mlSchemas.getSelloutRisk), MLController.getSelloutRisk);
+// Premium-only
+router.get('/products/:productId/roi-estimate', requirePlan(TOP_TIER_PLAN_SLUGS), sanitizeParameters, validate(mlSchemas.getROIEstimate), MLController.getROIEstimate);
+// Pro or Premium
+router.get('/products/:productId/hype-meter', requireProOrPremium, sanitizeParameters, validate(mlSchemas.getHypeMeter), MLController.getHypeMeter);
+// Premium-only (full history)
+router.get('/products/:productId/market-insights', requirePlan(TOP_TIER_PLAN_SLUGS), sanitizeParameters, validate(mlSchemas.getMarketInsights), MLController.getMarketInsights);
+// Premium-only (comprehensive)
+router.get('/products/:productId/analysis', requirePlan(TOP_TIER_PLAN_SLUGS), sanitizeParameters, validate(mlSchemas.getComprehensiveAnalysis), MLController.getComprehensiveAnalysis);
 
 // Aggregate ML endpoints
-router.get('/trending-products', validate(mlSchemas.getTrendingProducts), MLController.getTrendingProducts);
-router.get('/high-risk-products', validate(mlSchemas.getHighRiskProducts), MLController.getHighRiskProducts);
+// Premium-only aggregates
+router.get('/trending-products', requirePlan(TOP_TIER_PLAN_SLUGS), validate(mlSchemas.getTrendingProducts), MLController.getTrendingProducts);
+router.get('/high-risk-products', requirePlan(TOP_TIER_PLAN_SLUGS), validate(mlSchemas.getHighRiskProducts), MLController.getHighRiskProducts);
 
 export default router;

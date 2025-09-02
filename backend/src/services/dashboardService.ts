@@ -15,6 +15,12 @@ export interface ProductInsights {
     nextMonth: number;
     confidence: number;
   };
+  // Simple week-over-week trend to aid UI clarity and Pro-tier limited ML
+  basicTrend?: {
+    direction: 'up' | 'down' | 'flat';
+    percent: number; // percent change vs previous 7d window
+    window?: string; // e.g., '7d_vs_prev_7d'
+  };
   selloutRisk: {
     score: number;
     timeframe: string;
@@ -138,6 +144,12 @@ export class DashboardService {
    */
   static async getPredictiveInsights(userId: string, productIds?: string[]): Promise<ProductInsights[]> {
     try {
+      // Determine user's plan for gating
+      const user = await User.findById<any>(userId);
+      const planId = String(user?.subscription_plan_id || '').toLowerCase();
+      const tier = String(user?.subscription_tier || '').toLowerCase();
+      const isPremium = planId.startsWith('premium') || planId === 'pro-plus';
+      const isPro = tier === 'pro' || planId === 'pro-monthly' || planId === 'pro-yearly';
       let targetProductIds: string[] = [];
 
       if (productIds && productIds.length > 0) {
@@ -156,7 +168,27 @@ export class DashboardService {
       // Generate predictive insights for each product
       const insights = await Promise.all(
         targetProductIds.map(async (productId) => {
-          return this.generateProductInsights(productId);
+          const ins = await this.generateProductInsights(productId);
+          if (!ins) return null;
+          // Trim for Pro (limited) unless Premium
+          if (isPro && !isPremium) {
+            return {
+              productId: ins.productId,
+              productName: ins.productName,
+              priceForcast: {
+                nextWeek: ins.priceForcast.nextWeek,
+                nextMonth: ins.priceForcast.nextWeek, // basic trend only
+                confidence: ins.priceForcast.confidence
+              },
+              basicTrend: ins.basicTrend,
+              selloutRisk: ins.selloutRisk,
+              // Omit ROI and purchase signals for Pro tier
+              roiEstimate: undefined as any,
+              hypeScore: 0,
+              updatedAt: ins.updatedAt
+            } as ProductInsights;
+          }
+          return ins;
         })
       );
 

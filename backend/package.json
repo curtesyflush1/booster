@@ -42,7 +42,10 @@
     "catalog:ingest": "ts-node scripts/run-catalog-ingestion.ts",
     "alerts:generate-test": "ts-node scripts/generate-test-alerts.ts",
     "alerts": "npm run alerts:generate-test",
-    "ts-node": "ts-node"
+    "ts-node": "ts-node",
+    "ml:pipeline": "ts-node scripts/run-ml-pipeline.ts",
+    "ml": "npm run ml:pipeline",
+    "ml:etl": "ts-node scripts/run-ml-training-etl.ts"
   },
   "keywords": [
     "pokemon",
