@@ -11,8 +11,11 @@ import * as adminController from '../controllers/adminController';
 import * as rbacController from '../controllers/rbacController';
 import { sanitizeParameters } from '../middleware/parameterSanitization';
 import { contentSanitizationMiddleware } from '../utils/contentSanitization';
-import { validateJoi, validateJoiBody, validateJoiQuery, validateJoiParams, adminSchemas } from '../validators';
+import { validateJoi, validateJoiBody, validateJoiQuery, validateJoiParams, adminSchemas, transactionsSchemas } from '../validators';
 import { addJob as enqueuePurchase } from '../services/PurchaseQueue';
+import { Product } from '../models/Product';
+import { AlertProcessingService } from '../services/alertProcessingService';
+import { transactionService } from '../services/transactionService';
 
 const router = Router();
 
@@ -222,6 +225,84 @@ router.post(
   '/catalog/ingestion/dry-run',
   requirePermission(Permission.PRODUCT_BULK_IMPORT),
   adminController.catalogIngestionDryRun
+);
+
+/**
+ * Admin test route to simulate a restock alert and exercise the auto-purchase pipeline
+ */
+router.post(
+  '/test-alert/restock',
+  (process.env.NODE_ENV === 'development' ? (_req, _res, next) => next() : requirePermission(Permission.SYSTEM_HEALTH_VIEW)),
+  validateJoiBody(adminSchemas.testRestockAlert.body),
+  async (req, res) => {
+    try {
+      const { userId, productId, retailerSlug, price, productUrl, watchId } = req.body || {};
+      const product = await Product.findById<any>(productId);
+      if (!product) {
+        return res.status(404).json({
+          error: {
+            code: 'PRODUCT_NOT_FOUND',
+            message: 'Product not found',
+            timestamp: new Date().toISOString()
+          }
+        });
+      }
+
+      const retailerNames: Record<string, string> = {
+        'best-buy': 'Best Buy',
+        'walmart': 'Walmart',
+        'costco': 'Costco',
+        'sams-club': "Sam's Club",
+      };
+      const retailerWebsites: Record<string, string> = {
+        'best-buy': 'https://www.bestbuy.com',
+        'walmart': 'https://www.walmart.com',
+        'costco': 'https://www.costco.com',
+        'sams-club': 'https://www.samsclub.com',
+      };
+
+      const url = productUrl || `${retailerWebsites[retailerSlug] || 'https://example.com'}/${product.slug || productId}`;
+      const data = {
+        product_name: product.name,
+        retailer_name: retailerNames[retailerSlug] || retailerSlug,
+        product_url: url,
+        ...(price !== undefined ? { price: Number(price) } : {})
+      };
+
+      const result = await AlertProcessingService.generateAlert({
+        userId,
+        productId,
+        retailerId: retailerSlug,
+        watchId,
+        type: 'restock',
+        data
+      });
+
+      return res.json({ success: true, data: result });
+    } catch (error) {
+      return res.status(500).json({
+        error: {
+          code: 'TEST_RESTOCK_FAILED',
+          message: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
+  }
+);
+
+/**
+ * Admin: recent transactions for quick validation
+ */
+router.get(
+  '/purchases/transactions/recent',
+  (process.env.NODE_ENV === 'development' ? (_req, _res, next) => next() : requirePermission(Permission.SYSTEM_HEALTH_VIEW)),
+  validateJoiQuery(transactionsSchemas.recent.query),
+  async (req, res) => {
+    const { limit = 50 } = req.query as any;
+    const rows = await transactionService.getRecentTransactions(Number(limit));
+    res.json({ success: true, data: rows });
+  }
 );
 
 export default router;

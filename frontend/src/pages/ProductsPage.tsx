@@ -11,6 +11,7 @@ import { BackendProduct, transformBackendProducts } from '../utils/fieldMapping'
 
 const ProductsPage: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [activeTab, setActiveTab] = useState<'search' | 'detail'>('search');
   const [discoverMode, setDiscoverMode] = useState<'recent' | 'popular'>('recent');
@@ -36,6 +37,7 @@ const ProductsPage: React.FC = () => {
 
   const handleProductSelect = (product: Product) => {
     setSelectedProduct(product);
+    setSelectedProductId(product.id);
     setActiveTab('detail');
   };
 
@@ -46,7 +48,14 @@ const ProductsPage: React.FC = () => {
 
   const handleBackToSearch = () => {
     setSelectedProduct(null);
+    setSelectedProductId(null);
     setActiveTab('search');
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('productId');
+      url.searchParams.delete('slug');
+      window.history.replaceState({}, '', url.toString());
+    } catch {}
   };
 
   const loadProducts = useCallback(async (page = 1, append = false) => {
@@ -117,6 +126,33 @@ const ProductsPage: React.FC = () => {
     // Initial fetch
     loadProducts(1, false);
   }, [loadProducts]);
+
+  // Support deep-linking to product detail via ?productId=
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      const pid = url.searchParams.get('productId');
+      const slug = url.searchParams.get('slug');
+      if (pid) {
+        setSelectedProductId(pid);
+        setActiveTab('detail');
+      } else if (slug) {
+        // Resolve slug to product ID, then open detail
+        (async () => {
+          try {
+            const res = await apiClient.get<any>(`/products/slug/${encodeURIComponent(slug)}`);
+            const product = (res.data as any)?.data?.product || (res.data as any)?.product || res.data;
+            if (product?.id) {
+              setSelectedProductId(product.id);
+              setActiveTab('detail');
+            }
+          } catch {
+            // ignore
+          }
+        })();
+      }
+    } catch {}
+  }, []);
 
   // When discover mode changes and there is no active search query, reload
   useEffect(() => {
@@ -255,9 +291,9 @@ const ProductsPage: React.FC = () => {
           showWatchActions={true}
           onLoadMore={loadMore}
         />
-      ) : selectedProduct ? (
+      ) : selectedProductId ? (
         <ProductDetail 
-          productId={selectedProduct.id}
+          productId={selectedProductId}
           onClose={handleBackToSearch}
         />
       ) : null}

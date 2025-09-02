@@ -643,3 +643,23 @@ interface AutofillData {
 **Made with ❤️ for Pokémon TCG collectors**
 
 This automated checkout system represents a significant advancement in collector tools, providing secure, efficient, and ethical automation while maintaining user control and retailer compliance.
+## Backend Orchestration (Scaffolded)
+
+### End-to-End Flow
+- A restock event generates an alert tied to a user/watch.
+- If the watch has `auto_purchase.enabled` and constraints match (retailer, price cap), a job is enqueued.
+- The prioritized queue dispatches to `PurchaseOrchestrator`, which calls a pluggable `BrowserApiService` to perform cart/purchase.
+- Results are recorded in the `transactions` table for analytics and validation.
+
+### Dev/Test Endpoints
+- Simulate a restock alert:
+  - `POST /api/admin/test-alert/restock`
+  - Body: `{ userId, productId, retailerSlug, watchId?, price?, productUrl? }`
+- Fetch recent transactions:
+  - `GET /api/admin/purchases/transactions/recent?limit=50`
+
+### Configuration
+- Optional remote browser integration:
+  - `BROWSER_API_URL`, `BROWSER_API_TOKEN`, `BROWSER_API_TIMEOUT_MS`
+
+Note: When Browser API env vars are not set, the service simulates outcomes for development.

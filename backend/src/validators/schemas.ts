@@ -568,7 +568,15 @@ export const watchSchemas = {
       'number.min': 'Radius must be between 1 and 500 miles',
       'number.max': 'Radius must be between 1 and 500 miles'
     }),
-    alert_preferences: Joi.object().optional()
+    alert_preferences: Joi.object().optional(),
+    auto_purchase: Joi.object({
+      enabled: Joi.boolean().required(),
+      max_price: Joi.number().min(0).optional(),
+      qty: Joi.number().integer().min(1).max(10).optional(),
+      retailers: Joi.array().items(Joi.string().min(1).max(100)).optional(),
+      mode: Joi.string().valid('cart', 'purchase').optional(),
+      confirm_over: Joi.number().min(0).optional()
+    }).optional()
   }),
 
   update: {
@@ -582,6 +590,14 @@ export const watchSchemas = {
       zip_code: Joi.string().pattern(/^\d{5}(-\d{4})?$/).optional(),
       radius_miles: Joi.number().integer().min(1).max(500).optional(),
       alert_preferences: Joi.object().optional(),
+      auto_purchase: Joi.object({
+        enabled: Joi.boolean().required(),
+        max_price: Joi.number().min(0).optional(),
+        qty: Joi.number().integer().min(1).max(10).optional(),
+        retailers: Joi.array().items(Joi.string().min(1).max(100)).optional(),
+        mode: Joi.string().valid('cart', 'purchase').optional(),
+        confirm_over: Joi.number().min(0).optional()
+      }).optional(),
       is_active: commonSchemas.booleanFlag
     })
   },
@@ -1091,6 +1107,28 @@ export const adminSchemas = {
       maxPrice: Joi.number().min(0).optional(),
       qty: Joi.number().integer().min(1).max(10).default(1),
       alertAt: Joi.string().isoDate().optional()
+    })
+  }
+  ,
+  // Admin simulation of a restock alert for end-to-end testing
+  testRestockAlert: {
+    body: Joi.object({
+      userId: commonSchemas.uuid.required(),
+      productId: commonSchemas.uuid.required(),
+      retailerSlug: Joi.string()
+        .valid('best-buy', 'walmart', 'costco', 'sams-club')
+        .required(),
+      watchId: commonSchemas.optionalUuid,
+      price: Joi.number().min(0).optional(),
+      productUrl: Joi.string().uri().optional()
+    })
+  }
+};
+
+export const transactionsSchemas = {
+  recent: {
+    query: Joi.object({
+      limit: Joi.number().integer().min(1).max(200).default(50)
     })
   }
 };

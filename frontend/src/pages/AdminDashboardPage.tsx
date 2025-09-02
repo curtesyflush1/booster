@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
+import AdminRecentTransactionsPanel from '../components/admin/AdminRecentTransactionsPanel';
 
 interface DashboardStats {
   users: {
@@ -54,7 +55,7 @@ const AdminDashboardPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'ml' | 'system'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'ml' | 'system' | 'purchases'>('overview');
 
   // ML model state
   interface PriceModelMetadata {
@@ -212,11 +213,12 @@ const AdminDashboardPage: React.FC = () => {
               { key: 'overview', label: 'Overview' },
               { key: 'users', label: 'Users' },
               { key: 'ml', label: 'ML Models' },
+              { key: 'purchases', label: 'Purchases' },
               { key: 'system', label: 'System Health' }
             ].map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key as 'overview' | 'users' | 'ml' | 'system')}
+                onClick={() => setActiveTab(tab.key as 'overview' | 'users' | 'ml' | 'system' | 'purchases')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === tab.key
                     ? 'border-blue-500 text-blue-600'
@@ -403,6 +405,11 @@ const AdminDashboardPage: React.FC = () => {
               </table>
             </div>
           </div>
+        )}
+
+        {/* Purchases Tab */}
+        {activeTab === 'purchases' && (
+          <AdminRecentTransactionsPanel />
         )}
 
         {/* ML Models Tab */}

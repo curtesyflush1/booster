@@ -28,10 +28,11 @@ The Admin Dashboard and Management Tools system has been successfully implemente
 ### Frontend Implementation
 
 #### AdminDashboardPage Component
-- **Tabbed Interface**: Four main sections (Overview, Users, ML Models, System Health)
+- **Tabbed Interface**: Five main sections (Overview, Users, ML Models, Purchases, System Health)
 - **Real-Time Statistics**: Live dashboard with key performance indicators
 - **User Management Interface**: Advanced user table with search, filtering, and pagination
 - **System Health Monitoring**: Visual system metrics and service status
+- **Purchases View**: Minimal recent transactions panel with limit filter
 - **Responsive Design**: Mobile-optimized interface with modern React patterns
 
 #### Key Features
@@ -107,6 +108,13 @@ Full ML pipeline management with training controls and data review.
 GET /api/admin/system/health
 ```
 Real-time system monitoring with performance metrics and service status.
+
+### Testing & Validation (Dev/Admin)
+```http
+POST /api/admin/test-alert/restock
+GET  /api/admin/purchases/transactions/recent?limit=50
+```
+Simulate a restock alert to exercise the auto-purchase pipeline and fetch recent transaction records for quick validation.
 
 ### Audit Logging
 ```http

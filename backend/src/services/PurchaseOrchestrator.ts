@@ -1,5 +1,6 @@
 import { transactionService } from './transactionService';
 import { logger } from '../utils/logger';
+import { BrowserApiService } from './BrowserApiService';
 
 export interface PurchaseJob {
   userId: string;
@@ -33,12 +34,18 @@ export class PurchaseOrchestrator {
       alert_at: job.alertAt ?? new Date().toISOString(),
     });
 
-    // Simulate checkout time (1–2s)
-    await new Promise((resolve) => setTimeout(resolve, 1000 + Math.floor(Math.random() * 1000)));
+    // Execute checkout via the Browser API stub (or simulate if not configured)
+    const browser = new BrowserApiService();
+    const result = await browser.executeCheckout({
+      userId: job.userId,
+      productId: job.productId,
+      retailerSlug: job.retailerSlug,
+      qty: job.qty ?? 1,
+      maxPrice: job.maxPrice,
+      sessionFingerprint: job.sessionFingerprint,
+    });
 
-    const succeed = Math.random() < 0.7; // 70% success for demo
-    if (succeed) {
-      const purchasedAt = new Date();
+    if (result.success) {
       await transactionService.recordPurchaseSuccess({
         product_id: job.productId,
         retailer_slug: job.retailerSlug,
@@ -49,11 +56,11 @@ export class PurchaseOrchestrator {
         region: job.region,
         session_fingerprint: job.sessionFingerprint,
         alert_at: job.alertAt ?? new Date(startedAt).toISOString(),
-        added_to_cart_at: new Date(startedAt + 500).toISOString(),
-        purchased_at: purchasedAt.toISOString(),
-        price_paid: job.maxPrice ?? job.msrp ?? 0,
+        added_to_cart_at: result.addedToCartAt || new Date(startedAt + 500).toISOString(),
+        purchased_at: result.purchasedAt || new Date().toISOString(),
+        price_paid: result.pricePaid ?? job.maxPrice ?? job.msrp ?? 0,
       });
-      logger.info('Simulated purchase succeeded', { retailer: job.retailerSlug, productId: job.productId });
+      logger.info('Purchase succeeded', { retailer: job.retailerSlug, productId: job.productId });
     } else {
       await transactionService.recordPurchaseFailure({
         product_id: job.productId,
@@ -65,12 +72,11 @@ export class PurchaseOrchestrator {
         region: job.region,
         session_fingerprint: job.sessionFingerprint,
         alert_at: job.alertAt ?? new Date(startedAt).toISOString(),
-        failure_reason: 'SIMULATED_OUT_OF_STOCK',
+        failure_reason: result.failureReason || 'CHECKOUT_FAILED',
       });
-      logger.warn('Simulated purchase failed', { retailer: job.retailerSlug, productId: job.productId });
+      logger.warn('Purchase failed', { retailer: job.retailerSlug, productId: job.productId });
     }
   }
 }
 
 export const purchaseOrchestrator = new PurchaseOrchestrator();
-

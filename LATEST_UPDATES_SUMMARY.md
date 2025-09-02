@@ -140,3 +140,39 @@ This represents a major milestone in BoosterBeacon's evolution toward a fully au
 **Status**: Production Ready
 **Next Phase**: Enhanced ML Models and Advanced Analytics
 
+---
+
+## ⚙️ Auto-Purchase Pipeline Scaffolding
+
+### Overview
+A new end-to-end backend pipeline connects restock alerts to purchase execution. Users can opt in at the watch level via `auto_purchase` rules; on qualifying restock alerts, a prioritized job is enqueued and executed by an orchestrator wired to a pluggable Browser API.
+
+### Key Components
+- Watch rules: `watches.auto_purchase` JSONB with fields: `enabled`, `max_price`, `qty`, `retailers`, `mode`, `confirm_over`.
+- Alert trigger: When a `restock` alert is generated, `auto_purchase` is evaluated; matching rules enqueue a job.
+- Queue + Orchestrator: Plan-prioritized queue drains to `PurchaseOrchestrator`, which calls `BrowserApiService` (remote or stub).
+- Transactions: Attempts/success/failure recorded to `transactions` for validation/analytics.
+
+### New Admin Endpoints
+- Simulate restock alert (dev-friendly): `POST /api/admin/test-alert/restock`
+  - Body: `userId`, `productId`, `retailerSlug`, optional `watchId`, `price`, `productUrl`
+- Recent transactions (quick validation): `GET /api/admin/purchases/transactions/recent?limit=50`
+
+### Configuration
+- Optional Browser API integration:
+  - `BROWSER_API_URL`, `BROWSER_API_TOKEN`, `BROWSER_API_TIMEOUT_MS`
+
+### Files Touched
+- Migration: `backend/migrations/20250902140000_add_watch_auto_purchase.js`
+- Types/Validation/Controller: `src/types/database.ts`, `src/validators/schemas.ts`, `src/controllers/watchController.ts`
+- Pipeline: `src/services/alertProcessingService.ts`, `src/services/PurchaseQueue.ts`, `src/services/PurchaseOrchestrator.ts`, `src/services/BrowserApiService.ts`, `src/services/transactionService.ts`
+- Admin Routes: `src/routes/admin.ts`
+
+### Frontend
+- Admin dashboard Purchases tab with recent transactions panel + limit filter
+  - `frontend/src/pages/AdminDashboardPage.tsx`
+  - `frontend/src/components/admin/AdminRecentTransactionsPanel.tsx`
+
+### Status
+- Backend end-to-end flow complete; Browser API calls stubbed unless configured.
+- Next: Add frontend UI to manage `auto_purchase` rules and a simple admin view of recent transactions.

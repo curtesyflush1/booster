@@ -89,6 +89,13 @@ export class Watch extends BaseModel<IWatch> {
       sanitized.alert_preferences = {};
     }
 
+    // Ensure auto_purchase is an object
+    if (!sanitized.hasOwnProperty('auto_purchase') || sanitized.auto_purchase === undefined || sanitized.auto_purchase === null) {
+      (sanitized as any).auto_purchase = {};
+    } else if (typeof (sanitized as any).auto_purchase !== 'object') {
+      (sanitized as any).auto_purchase = {};
+    }
+
     // Set default values
     if (sanitized.is_active === undefined) {
       sanitized.is_active = true;

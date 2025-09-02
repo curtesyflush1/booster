@@ -83,7 +83,29 @@ export class TransactionService {
     await eventBusService.emit('purchase_failure', row);
     return row.id || null;
   }
+
+  async getRecentTransactions(limit: number = 50): Promise<any[]> {
+    const n = Math.max(1, Math.min(200, Math.floor(limit)));
+    return this.knex(this.table)
+      .select(
+        'id',
+        'product_id',
+        'retailer_slug',
+        'status',
+        'price_paid',
+        'msrp',
+        'qty',
+        'alert_at',
+        'added_to_cart_at',
+        'purchased_at',
+        'failure_reason',
+        'region',
+        'session_fingerprint',
+        'created_at'
+      )
+      .orderBy('created_at', 'desc')
+      .limit(n);
+  }
 }
 
 export const transactionService = new TransactionService();
-

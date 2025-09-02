@@ -205,10 +205,21 @@ export interface IWatch {
   radius_miles?: number;
   is_active: boolean;
   alert_preferences: Record<string, any>;
+  // Auto-purchase configuration for this watch (scaffolded)
+  auto_purchase?: IAutoPurchaseRule;
   last_alerted?: Date;
   alert_count: number;
   created_at: Date;
   updated_at: Date;
+}
+
+export interface IAutoPurchaseRule {
+  enabled: boolean;
+  max_price?: number; // override for this rule; fallback to watch.max_price if undefined
+  qty?: number; // 1-10
+  retailers?: string[]; // restrict to specific retailer ids/slugs used by integration
+  mode?: 'cart' | 'purchase'; // cart-only or full purchase attempt
+  confirm_over?: number; // require confirm if price exceeds this
 }
 
 export interface IWatchPack {

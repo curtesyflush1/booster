@@ -153,6 +153,17 @@ export class AlertProcessingService {
 
       const alert = transactionResult.alert;
 
+      // Attempt auto-purchase enqueue if user configured it
+      try {
+        await this.maybeEnqueueAutoPurchase(alertData, alert);
+      } catch (e) {
+        logger.warn('Auto-purchase enqueue skipped due to error', {
+          error: e instanceof Error ? e.message : 'Unknown error',
+          userId: alertData.userId,
+          productId: alertData.productId,
+        });
+      }
+
       // Check quiet hours and schedule accordingly
       const quietHoursService = createQuietHoursService();
       const quietHoursCheck = await quietHoursService.isQuietTime(alertData.userId);
@@ -201,6 +212,52 @@ export class AlertProcessingService {
       });
       throw error;
     }
+  }
+
+  /**
+   * If the associated watch has auto_purchase enabled and alert matches conditions,
+   * enqueue a purchase job.
+   */
+  private static async maybeEnqueueAutoPurchase(
+    alertData: AlertGenerationData,
+    createdAlert: IAlert
+  ): Promise<void> {
+    // Only proceed for restock alerts
+    if (alertData.type !== 'restock') return;
+
+    // Must be tied to a watch
+    const watch = alertData.watchId
+      ? await Watch.findById<IWatch>(alertData.watchId)
+      : await Watch.findUserProductWatch(alertData.userId, alertData.productId);
+    if (!watch || !watch.is_active) return;
+
+    const rule = (watch as any).auto_purchase || {};
+    if (!rule || rule.enabled !== true) return;
+
+    // Retailer filter: if specified, must include this alert's retailer
+    if (Array.isArray(rule.retailers) && rule.retailers.length > 0) {
+      if (!rule.retailers.includes(alertData.retailerId)) return;
+    }
+
+    // Price check (if both alert price and rule max_price present)
+    const alertPrice = typeof alertData.data?.price === 'number' ? Number(alertData.data.price) : undefined;
+    const cap = typeof rule.max_price === 'number' ? Number(rule.max_price) : (typeof watch.max_price === 'number' ? Number(watch.max_price) : undefined);
+    if (cap !== undefined && alertPrice !== undefined && alertPrice > cap) {
+      return; // over cap
+    }
+
+    // Build purchase job
+    const qty = Number.isInteger(rule.qty) ? Math.min(Math.max(rule.qty, 1), 10) : 1;
+    const { addJob } = await import('../services/PurchaseQueue');
+    addJob({
+      userId: alertData.userId,
+      productId: alertData.productId,
+      retailerSlug: alertData.retailerId,
+      ruleId: alertData.watchId,
+      qty,
+      maxPrice: cap,
+      alertAt: new Date().toISOString(),
+    });
   }
 
   /**

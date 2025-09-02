@@ -112,7 +112,8 @@ export class WatchController {
         availability_type = 'both',
         zip_code,
         radius_miles,
-        alert_preferences = {}
+        alert_preferences = {},
+        auto_purchase
       } = req.body;
 
       // Validate required fields
@@ -161,6 +162,7 @@ export class WatchController {
         availability_type,
         zip_code,
         alert_preferences,
+        ...(auto_purchase ? { auto_purchase } : {}),
         is_active: true
       };
 
@@ -227,6 +229,7 @@ export class WatchController {
         zip_code,
         radius_miles,
         alert_preferences,
+        auto_purchase,
         is_active
       } = req.body;
 
@@ -257,6 +260,11 @@ export class WatchController {
       }
       if (alert_preferences !== undefined) {
         updateData.alert_preferences = { ...existingWatch.alert_preferences, ...alert_preferences };
+      }
+      if (auto_purchase !== undefined) {
+        // merge shallowly to preserve unspecified fields
+        const existingAuto = (existingWatch as any).auto_purchase || {};
+        (updateData as any).auto_purchase = { ...existingAuto, ...auto_purchase };
       }
       if (is_active !== undefined) {
         updateData.is_active = Boolean(is_active);

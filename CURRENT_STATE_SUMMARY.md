@@ -12,6 +12,7 @@ BoosterBeacon has achieved a major milestone with a production-ready, scalable, 
 - **4e2bbc5**: Fixed backend issues and improved system stability
 - **c4eebf2**: Added Joi validation for admin test-purchase route
 - **44c05fd**: Finished foundation for auto-purchase functionality
+ - **(new)**: Auto-purchase scaffolding (watch rules, alert trigger, queue/orchestrator wiring, admin test routes)
 
 ### Files Modified in Recent Changes
 - **Backend**: 25+ files including services, controllers, routes, and validators
@@ -89,6 +90,8 @@ BoosterBeacon has achieved a major milestone with a production-ready, scalable, 
 - ✅ Comprehensive documentation
 - ✅ Consistent coding patterns
 - ✅ Easy testing and debugging
+ - ✅ Admin test route to simulate restock alerts for end-to-end validation
+ - ✅ Recent transactions endpoint for quick verification
 
 ## 📚 Documentation Status
 
@@ -98,6 +101,7 @@ BoosterBeacon has achieved a major milestone with a production-ready, scalable, 
 - ✅ Subscription Policies (new)
 - ✅ API Reference (comprehensive)
 - ✅ Deployment Guide (updated)
+ - ✅ Auto-Purchase Pipeline (scaffolded) added to Latest Updates; dev test endpoints documented
 
 ### Technical Documentation
 - ✅ Database Schema

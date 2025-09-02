@@ -712,6 +712,85 @@
         "effect": "Admins can access ML retraining endpoints without manual permission grants"
       },
       "timestamp": "${NOW}"
+    },
+    {
+      "title": "Auto-purchase pipeline scaffolding (backend)",
+      "type": "feature",
+      "tags": ["auto-purchase","alerts","queue","transactions"],
+      "details": {
+        "summary": "End-to-end pipeline from restock alert to queued purchase and transaction recording",
+        "files": [
+          "backend/migrations/20250902140000_add_watch_auto_purchase.js (watches.auto_purchase JSONB)",
+          "backend/src/types/database.ts (IAutoPurchaseRule, IWatch.auto_purchase)",
+          "backend/src/validators/schemas.ts (watchSchemas create/update with auto_purchase)",
+          "backend/src/controllers/watchController.ts (accept/merge auto_purchase)",
+          "backend/src/services/alertProcessingService.ts (maybeEnqueueAutoPurchase)",
+          "backend/src/services/PurchaseQueue.ts (priority queue)",
+          "backend/src/services/PurchaseOrchestrator.ts (wired to BrowserApiService)",
+          "backend/src/services/BrowserApiService.ts (stubbed remote browser contract)",
+          "backend/src/services/transactionService.ts (record + recent)"
+        ]
+      },
+      "timestamp": "${NOW}"
+    },
+    {
+      "title": "Admin test route: simulate restock alert",
+      "type": "runbook",
+      "tags": ["admin","testing","alerts"],
+      "details": {
+        "endpoint": "POST /api/admin/test-alert/restock",
+        "body": {
+          "userId": "uuid",
+          "productId": "uuid",
+          "retailerSlug": "best-buy|walmart|costco|sams-club",
+          "watchId": "uuid (optional)",
+          "price": "number (optional)",
+          "productUrl": "uri (optional)"
+        },
+        "effect": "Generates restock alert, evaluates auto_purchase, enqueues purchase job"
+      },
+      "timestamp": "${NOW}"
+    },
+    {
+      "title": "BrowserApiService contract (stub)",
+      "type": "architecture",
+      "tags": ["browser","checkout","api"],
+      "details": {
+        "file": "backend/src/services/BrowserApiService.ts",
+        "method": "executeCheckout(CheckoutRequest)",
+        "env": ["BROWSER_API_URL","BROWSER_API_TOKEN","BROWSER_API_TIMEOUT_MS"],
+        "behavior": "Calls remote /checkout if configured, otherwise simulates"
+      },
+      "timestamp": "${NOW}"
+    },
+    {
+      "title": "Admin endpoint: recent transactions",
+      "type": "feature",
+      "tags": ["admin","transactions","validation"],
+      "details": {
+        "endpoint": "GET /api/admin/purchases/transactions/recent?limit=50",
+        "schema": "transactionsSchemas.recent.query",
+        "returns": "Most recent transaction rows for quick validation",
+        "files": [
+          "backend/src/services/transactionService.ts (getRecentTransactions)",
+          "backend/src/routes/admin.ts (route wiring)",
+          "backend/src/validators/schemas.ts (transactionsSchemas.recent)"
+        ]
+      },
+      "timestamp": "${NOW}"
+    },
+    {
+      "title": "Admin UI: Recent transactions panel",
+      "type": "feature",
+      "tags": ["frontend","admin","transactions"],
+      "details": {
+        "files": [
+          "frontend/src/pages/AdminDashboardPage.tsx (added Purchases tab)",
+          "frontend/src/components/admin/AdminRecentTransactionsPanel.tsx (limit filter + table)"
+        ],
+        "summary": "Simple Purchases tab for quick validation of auto-purchase pipeline"
+      },
+      "timestamp": "${NOW}"
     }
   ]
 }
