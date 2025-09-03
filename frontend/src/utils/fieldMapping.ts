@@ -39,6 +39,40 @@ export interface FrontendProduct {
   updatedAt: string;
 }
 
+// Transform backend availability rows to frontend ProductAvailability shape
+export function transformBackendAvailability(list: any[] | undefined): any[] {
+  if (!Array.isArray(list)) return [];
+  return list.map((a: any) => {
+    const stores = Array.isArray(a.store_locations)
+      ? a.store_locations.map((s: any) => ({
+          id: s.store_id || s.id,
+          name: s.store_name || s.name,
+          address: s.address,
+          city: s.city,
+          state: s.state,
+          zipCode: s.zip_code || s.zipCode,
+          phone: s.phone,
+          inStock: s.in_stock ?? s.inStock ?? false,
+          quantity: s.stock_level ?? s.quantity
+        }))
+      : a.storeLocations;
+    return {
+      id: a.id,
+      productId: a.product_id || a.productId,
+      retailerId: a.retailer_id || a.retailerId,
+      retailerName: a.retailer_name || a.retailerName,
+      inStock: a.in_stock ?? a.inStock ?? false,
+      price: typeof a.price === 'string' ? parseFloat(a.price) : a.price,
+      originalPrice: a.original_price ?? a.originalPrice,
+      url: a.product_url || a.url,
+      cartUrl: a.cart_url || a.cartUrl,
+      lastChecked: (a.last_checked ? new Date(a.last_checked).toISOString() : a.lastChecked) || new Date().toISOString(),
+      storeLocations: stores,
+      metadata: a.metadata || {}
+    };
+  });
+}
+
 export function transformBackendProduct(backendProduct: BackendProduct): FrontendProduct {
   return {
     id: backendProduct.id,
@@ -54,7 +88,7 @@ export function transformBackendProduct(backendProduct: BackendProduct): Fronten
     thumbnailUrl: backendProduct.thumbnail_url || backendProduct.image_url, // Fallback to image_url if thumbnail_url is not available
     description: backendProduct.description,
     metadata: backendProduct.metadata,
-    availability: undefined, // Not provided by search endpoint
+    availability: undefined, // Enriched later via /products/by-ids
     createdAt: backendProduct.created_at,
     updatedAt: backendProduct.updated_at
   };
@@ -62,4 +96,18 @@ export function transformBackendProduct(backendProduct: BackendProduct): Fronten
 
 export function transformBackendProducts(backendProducts: BackendProduct[]): FrontendProduct[] {
   return backendProducts.map(transformBackendProduct);
+}
+
+export function mergeAvailabilityIntoProducts(products: FrontendProduct[], detailed: any[]): FrontendProduct[] {
+  if (!Array.isArray(detailed) || detailed.length === 0) return products;
+  const availMap = new Map<string, any[]>();
+  for (const p of detailed) {
+    const id = p.id;
+    const availability = transformBackendAvailability(p.availability);
+    availMap.set(id, availability);
+  }
+  return products.map(p => ({
+    ...p,
+    availability: availMap.get(p.id) ?? p.availability ?? []
+  }));
 }

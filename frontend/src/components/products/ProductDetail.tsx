@@ -36,11 +36,64 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   const [watchLoading, setWatchLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'availability' | 'history'>('overview');
 
+  const normalizeProduct = (raw: any): Product => {
+    const p = raw || {};
+    const availability = Array.isArray(p.availability) ? p.availability.map((a: any) => {
+      const stores = Array.isArray(a.store_locations)
+        ? a.store_locations.map((s: any) => ({
+            id: s.store_id || s.id,
+            name: s.store_name || s.name,
+            address: s.address,
+            city: s.city,
+            state: s.state,
+            zipCode: s.zip_code || s.zipCode,
+            phone: s.phone,
+            inStock: s.in_stock ?? s.inStock ?? false,
+            quantity: s.stock_level ?? s.quantity
+          }))
+        : a.storeLocations;
+      const meta = (a.metadata || {}) as Record<string, unknown>;
+      return {
+        id: a.id,
+        productId: a.product_id || a.productId || p.id,
+        retailerId: a.retailer_id || a.retailerId,
+        retailerName: a.retailer_name || a.retailerName,
+        inStock: a.in_stock ?? a.inStock ?? false,
+        price: a.price ?? 0,
+        originalPrice: a.original_price ?? a.originalPrice,
+        url: a.product_url || a.url,
+        cartUrl: a.cart_url || a.cartUrl,
+        lastChecked: (a.last_checked ? new Date(a.last_checked).toISOString() : a.lastChecked) || new Date().toISOString(),
+        storeLocations: stores,
+        metadata: meta
+      } as ProductAvailability;
+    }) : [];
+    return {
+      id: p.id,
+      name: p.name,
+      sku: p.sku,
+      upc: p.upc,
+      category: (p.category as any) || (p.category_id ? { id: p.category_id, name: '', slug: '' } as any : undefined),
+      set: p.set || p.set_name,
+      series: p.series,
+      releaseDate: (p.releaseDate || p.release_date) ? new Date(p.releaseDate || p.release_date).toISOString() : undefined as any,
+      msrp: p.msrp,
+      imageUrl: p.imageUrl || p.image_url,
+      thumbnailUrl: p.thumbnailUrl || p.image_url,
+      description: p.description,
+      metadata: p.metadata || {},
+      availability,
+      createdAt: (p.created_at || p.createdAt || new Date()).toString(),
+      updatedAt: (p.updated_at || p.updatedAt || new Date()).toString()
+    } as unknown as Product;
+  };
+
   const loadProduct = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get<Product>(`/products/${productId}`);
-      setProduct(response.data);
+      const response = await apiClient.get<any>(`/products/${productId}`);
+      const p = (response.data && (response.data as any).product) || response.data;
+      setProduct(normalizeProduct(p));
     } catch (err: unknown) {
       const errorMessage = err && typeof err === 'object' && 'message' in err ? err.message as string : 'Failed to load product';
       setError(errorMessage);
@@ -54,8 +107,15 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
     
     try {
       setPriceHistoryLoading(true);
-      const response = await apiClient.get<PriceHistoryData[]>(`/products/${productId}/price-history`);
-      setPriceHistory((response.data as any) || []);
+      const response = await apiClient.get<any>(`/products/${productId}/price-history`);
+      const list = (response.data && (response.data as any).priceHistory) || response.data || [];
+      const mapped = (list as any[]).map((r: any) => ({
+        date: (r.date || r.recorded_at || r.created_at) ? new Date(r.date || r.recorded_at || r.created_at).toISOString() : new Date().toISOString(),
+        price: Number(r.price || 0),
+        retailer: r.retailer || r.retailer_name || 'Retailer',
+        inStock: r.inStock ?? r.in_stock ?? true
+      })) as PriceHistoryData[];
+      setPriceHistory(mapped);
     } catch (err) {
       console.error('Failed to load price history:', err);
     } finally {

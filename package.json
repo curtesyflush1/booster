@@ -80,7 +80,10 @@
     "memories": "bash ./scripts/push-memories.sh",
     "memories:push": "bash ./scripts/push-memories.sh",
     "memories:pull": "bash ./scripts/pull-memories.sh",
-    "retailers:smoke": "cd backend && npm run retailers:smoke"
+    "retailers:smoke": "cd backend && npm run retailers:smoke",
+    "logs:api": "docker compose -f docker-compose.dev.yml logs -f api",
+    "logs:all": "docker compose -f docker-compose.dev.yml logs -f",
+    "dev:frontend:docker": "concurrently \"npm run logs:api\" \"cd frontend && VITE_API_URL=http://localhost:3000 npm run dev\""
   },
   "keywords": [
     "pokemon",

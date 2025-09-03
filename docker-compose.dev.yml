@@ -78,7 +78,9 @@ services:
       JWT_SECRET: dev_jwt_secret_key_change_in_production
       JWT_REFRESH_SECRET: dev_jwt_refresh_secret_key_change_in_production
       LOG_LEVEL: debug
-      FRONTEND_URL: http://localhost:5173
+      # Allow both localhost and LAN Vite origins in dev (CORS)
+      FRONTEND_URLS: http://localhost:5173,http://192.168.1.238:5173
+      FRONTEND_ORIGIN_REGEX: ^http://192\.168\.1\.\d+:5173$
       # SMTP configuration (dev points to your SMTP provider). Do NOT hardcode the password here.
       # Export SMTP_PASS in your shell before `docker compose up`, and it will be injected.
       # Example (bash/zsh): export SMTP_PASS='your_smtp_password'

@@ -57,8 +57,31 @@ const server = createServer(app);
 
 // Security middleware
 app.use(helmet());
+
+// CORS: allow multiple origins via FRONTEND_URLS (comma-separated),
+// fallback to FRONTEND_URL, and optional regex FRONTEND_ORIGIN_REGEX
+const allowedOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || `http://localhost:${PORTS.DEFAULT_FRONTEND_PORT}`)
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+let originRegex: RegExp | null = null;
+if (process.env.FRONTEND_ORIGIN_REGEX) {
+  try {
+    originRegex = new RegExp(process.env.FRONTEND_ORIGIN_REGEX);
+  } catch {
+    originRegex = null;
+  }
+}
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || `http://localhost:${PORTS.DEFAULT_FRONTEND_PORT}`,
+  origin: (origin, cb) => {
+    // Allow tools/curl/no-origin requests
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    if (originRegex && originRegex.test(origin)) return cb(null, true);
+    return cb(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 

@@ -6,7 +6,7 @@ import { ProductDetail } from '../components/products/ProductDetail';
 import { BarcodeScanner } from '../components/products/BarcodeScanner';
 import { ProductGrid } from '../components/products/ProductGrid';
 import { apiClient } from '../services/apiClient';
-import { BackendProduct, transformBackendProducts } from '../utils/fieldMapping';
+import { BackendProduct, transformBackendProducts, mergeAvailabilityIntoProducts } from '../utils/fieldMapping';
 
 const ProductsPage: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -69,7 +69,14 @@ const ProductsPage: React.FC = () => {
           `/products/${endpoint}?limit=${pagination.limit}`
         );
         const list = (res.data as any)?.data?.products || [];
-        const transformed = transformBackendProducts(list);
+        let transformed = transformBackendProducts(list);
+        // Enrich with availability via batch endpoint
+        try {
+          const ids = transformed.map(p => p.id);
+          const dres = await apiClient.post<any>('/products/by-ids', { ids });
+          const detailed = (dres.data && (dres.data as any).data?.products) || (dres.data as any)?.products || [];
+          transformed = mergeAvailabilityIntoProducts(transformed, detailed);
+        } catch {}
         // Deduplicate by id for safety
         const unique = Array.from(new Map(transformed.map(p => [p.id, p])).values());
         setProducts(unique);
@@ -102,7 +109,14 @@ const ProductsPage: React.FC = () => {
       const response = await apiClient.get<PaginatedResponse<BackendProduct>>(
         `/products/search?${params.toString()}`
       );
-      const transformed = transformBackendProducts(response.data.data);
+      let transformed = transformBackendProducts(response.data.data);
+      // Enrich with availability via batch endpoint
+      try {
+        const ids = transformed.map(p => p.id);
+        const dres = await apiClient.post<any>('/products/by-ids', { ids });
+        const detailed = (dres.data && (dres.data as any).data?.products) || (dres.data as any)?.products || [];
+        transformed = mergeAvailabilityIntoProducts(transformed, detailed);
+      } catch {}
       setProducts(prev => {
         const merged = append ? [...prev, ...transformed] : transformed;
         return Array.from(new Map(merged.map(p => [p.id, p])).values());
