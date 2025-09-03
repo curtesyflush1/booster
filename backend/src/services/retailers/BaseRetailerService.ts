@@ -24,9 +24,10 @@ export abstract class BaseRetailerService extends IBaseRetailerService {
     // Choose a stable User-Agent per instance for scraping retailers
     this.scrapeUserAgent = this.pickScrapingUserAgent();
     
+    // Initialize fetcher before HTTP client (headers may depend on session key)
+    this.httpFetcher = new HttpFetcherService();
     // Initialize HTTP client with common configuration
     this.httpClient = this.createHttpClient();
-    this.httpFetcher = new HttpFetcherService();
     
     // Setup common interceptors
     this.setupRequestInterceptors();
@@ -78,7 +79,7 @@ export abstract class BaseRetailerService extends IBaseRetailerService {
         'DNT': '1',
         'Connection': 'keep-alive',
         'Upgrade-Insecure-Requests': '1',
-        'User-Agent': this.scrapeUserAgent
+        'User-Agent': this.getSessionUserAgent()
       };
     }
 
@@ -99,6 +100,22 @@ export abstract class BaseRetailerService extends IBaseRetailerService {
       'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
     ];
     const hash = Array.from(this.config.id).reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 997, 7);
+    return pool[hash % pool.length]!;
+  }
+
+  // Slight UA variance per session while staying realistic
+  private getSessionUserAgent(): string {
+    if (this.config.type !== 'scraping') return 'BoosterBeacon/1.0';
+    const pool = [
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
+    ];
+    const sessionKey = this.httpFetcher?.getSessionKey?.() || '';
+    const seed = `${this.config.id}:${sessionKey}`;
+    const hash = Array.from(seed).reduce((h, c) => (h * 33 + c.charCodeAt(0)) % 4099, 13);
     return pool[hash % pool.length]!;
   }
 
@@ -260,7 +277,8 @@ export abstract class BaseRetailerService extends IBaseRetailerService {
         params: reqConfig.params as any,
         headers: fetchHeaders,
         timeout: this.config.timeout,
-        render: options.render === true
+        render: options.render === true,
+        retailerId: this.config.id,
       });
 
       // Emulate AxiosResponse shape minimally for callers
@@ -288,6 +306,7 @@ export abstract class BaseRetailerService extends IBaseRetailerService {
               ...(options.headers || {})
             },
             timeout: this.config.timeout,
+            retailerId: this.config.id,
           });
           const fakeAxiosResponse: AxiosResponse = {
             data: retryRes.data,
@@ -310,6 +329,7 @@ export abstract class BaseRetailerService extends IBaseRetailerService {
                 ...(options.headers || {})
               },
               timeout: Math.max(this.config.timeout, 30000),
+              retailerId: this.config.id,
             });
             const fakeAxiosResponse: AxiosResponse = {
               data: browserRes.data,
@@ -497,6 +517,106 @@ export abstract class BaseRetailerService extends IBaseRetailerService {
     }
     
     return 'in_stock';
+  }
+
+  // -------- Shipping/Delivery Helpers (shared) --------
+  protected parseShippingDate(text: string): string | null {
+    if (!text) return null;
+    const t = text.toLowerCase();
+    const now = new Date();
+
+    // Relative terms
+    if (/\btoday\b/.test(t)) {
+      const d = new Date(); d.setHours(0,0,0,0);
+      return d.toISOString();
+    }
+    if (/\btomorrow\b/.test(t)) {
+      const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(0,0,0,0);
+      return d.toISOString();
+    }
+
+    // Day-of-week (with optional prefixes "this"/"next")
+    const dowNames = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+    const mDow = t.match(/\b(?:this|next)?\s*(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/);
+    if (mDow) {
+      const want = dowNames.indexOf(mDow[1]);
+      if (want >= 0) {
+        const current = now.getDay();
+        let offset = (want - current + 7) % 7;
+        if (offset === 0 && /\bnext\b/.test(t)) offset = 7; // "next <dow>" means following week
+        const d = new Date(now); d.setDate(now.getDate() + offset); d.setHours(0,0,0,0);
+        return d.toISOString();
+      }
+    }
+
+    // Numeric date: MM/DD or M/D
+    const mNum = t.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
+    if (mNum) {
+      const mm = parseInt(mNum[1], 10) - 1; // 0-based
+      const dd = parseInt(mNum[2], 10);
+      let yy = now.getFullYear();
+      if (mNum[3]) {
+        const y = parseInt(mNum[3], 10);
+        yy = y < 100 ? 2000 + y : y;
+      }
+      const candidate = new Date(yy, mm, dd);
+      if (!mNum[3] && candidate.getTime() < new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) {
+        candidate.setFullYear(yy + 1);
+      }
+      candidate.setHours(0,0,0,0);
+      return candidate.toISOString();
+    }
+
+    // Month name + day (e.g., Arrives Fri, Oct 4)
+    const monthMap: Record<string, number> = {
+      jan: 0, january: 0,
+      feb: 1, february: 1,
+      mar: 2, march: 2,
+      apr: 3, april: 3,
+      may: 4,
+      jun: 5, june: 5,
+      jul: 6, july: 6,
+      aug: 7, august: 7,
+      sep: 8, sept: 8, september: 8,
+      oct: 9, october: 9,
+      nov: 10, november: 10,
+      dec: 11, december: 11
+    };
+    const m = t.match(/\b(?:arrives|get it by|get it on|ships by|shipping arrives|delivery by|delivers by|estimated (?:delivery|ship)s?)\b[^A-Za-z0-9]*?(?:[a-z]+,\s*)?([a-z]{3,9})\s+(\d{1,2})/i);
+    if (m) {
+      const monName = m[1].toLowerCase();
+      const dayNum = parseInt(m[2], 10);
+      const mon = monthMap[monName];
+      if (mon !== undefined && !isNaN(dayNum)) {
+        let year = now.getFullYear();
+        const candidate = new Date(year, mon, dayNum);
+        const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        if (candidate.getTime() < todayMid.getTime()) year += 1;
+        const finalDate = new Date(year, mon, dayNum);
+        finalDate.setHours(0,0,0,0);
+        return finalDate.toISOString();
+      }
+    }
+
+    return null;
+  }
+
+  protected findShippingInfoInElement($: any, $el: any): { text?: string; dateIso?: string } {
+    try {
+      const sel = [
+        '[data-test*="fulfillment"], [data-test*="shipping"], [data-test*="delivery"]',
+        '.availability, .fulfillment, .shipping, .delivery',
+        '.a-color-success, .a-text-bold, .a-color-base',
+        ':contains("Arrives"), :contains("arrives"), :contains("Get it by"), :contains("get it by"), :contains("Get it on"), :contains("get it on"), :contains("delivery"), :contains("Delivery"), :contains("Ships"), :contains("ships"), :contains("Release Date"), :contains("release date")'
+      ].join(',');
+      const node = $el.find(sel).first();
+      const text = (node.text() || '').trim();
+      if (!text) return {};
+      const dateIso = this.parseShippingDate(text) || undefined;
+      return { text, dateIso };
+    } catch {
+      return {};
+    }
   }
 
   /**

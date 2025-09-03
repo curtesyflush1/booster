@@ -62,9 +62,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {/* Logo and Brand */}
             <div className="flex items-center space-x-4">
               <Link to="/dashboard" className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-pokemon rounded-lg flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-white" />
-                </div>
+                <img
+                  src="/images/brand/boosterbeacon-icon.svg"
+                  alt="BoosterBeacon"
+                  className="h-8 w-8 animate-glow drop-shadow-[0_0_6px_rgba(247,208,44,0.6)]"
+                />
                 <span className="text-xl font-display font-bold text-white">
                   BoosterBeacon
                 </span>

@@ -147,6 +147,7 @@ export interface ProductAvailability {
   cartUrl?: string;
   lastChecked: string;
   storeLocations?: StoreLocation[];
+  metadata?: Record<string, unknown>;
 }
 
 export interface StoreLocation {

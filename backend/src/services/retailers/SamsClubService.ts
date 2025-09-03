@@ -15,6 +15,8 @@ interface SamsClubProduct {
   description?: string | undefined;
   isOnSale: boolean;
   memberPrice?: number | undefined;
+  shippingText?: string;
+  shippingDateIso?: string;
 }
 
 export class SamsClubService extends BaseRetailerService {
@@ -98,6 +100,7 @@ export class SamsClubService extends BaseRetailerService {
           const url = $product.find('a').attr('href');
           const imageUrl = $product.find('img').attr('src') || $product.find('img').attr('data-src');
           const itemNumber = $product.attr('data-automation-id') || $product.find('[data-automation-id]').attr('data-automation-id');
+          const shipInfo = this.findShippingInfoInElement($ as any, $product as any);
 
           if (name && priceText && url && this.isPokemonTcgProduct(name)) {
             const price = this.parsePrice(priceText);
@@ -109,7 +112,9 @@ export class SamsClubService extends BaseRetailerService {
                 url: url.startsWith('http') ? url : `https://www.samsclub.com${url}`,
                 imageUrl: imageUrl?.startsWith('http') ? imageUrl : `https://www.samsclub.com${imageUrl}`,
                 availability: 'Available', // Would need to check individual product pages
-                isOnSale: $product.find('.sc-price-was, .Price-was').length > 0
+                isOnSale: $product.find('.sc-price-was, .Price-was').length > 0,
+                shippingText: shipInfo.text,
+                shippingDateIso: shipInfo.dateIso
               });
             }
           }
@@ -167,7 +172,9 @@ export class SamsClubService extends BaseRetailerService {
         memberPrice: product.memberPrice,
         regularPrice: product.price,
         image: product.imageUrl,
-        description: product.description
+        description: product.description,
+        shippingText: product.shippingText,
+        shippingDateIso: product.shippingDateIso
       }
     };
   }

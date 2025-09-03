@@ -11,6 +11,7 @@ export interface FetchOptions {
   render?: boolean; // request via headless/browser when supported
   country?: string; // preferred country/geo
   useSession?: boolean; // keep session sticky across retries
+  retailerId?: string; // optional retailer context for per-retailer creds
 }
 
 export class HttpFetcherService {
@@ -24,6 +25,21 @@ export class HttpFetcherService {
     // Back-compat: map deprecated 'brightdata' to our internal 'proxy' provider
     this.provider = raw === 'brightdata' ? 'proxy' : raw;
     this.forwardUsername = process.env.FORWARD_PROXY_USERNAME;
+  }
+
+  // Expose a stable session key to allow upstreams to vary headers per session
+  public getSessionKey(): string {
+    switch (this.provider) {
+      case 'forward':
+        return this.forwardUsername || process.env.FORWARD_PROXY_USERNAME || 'forward:default';
+      case 'proxy':
+        return this.brightSession?.id || 'proxy:none';
+      case 'browser':
+        return 'browser';
+      case 'direct':
+      default:
+        return 'direct';
+    }
   }
 
   async get(url: string, options: FetchOptions = {}): Promise<{ data: any; status: number; headers: Record<string, any> }> {
@@ -135,11 +151,22 @@ export class HttpFetcherService {
 
   // Raw forward proxy (e.g., Oxylabs, Smartproxy) via CONNECT using a proxy agent
   private async fetchViaForwardProxy(url: string, options: FetchOptions): Promise<{ data: any; status: number; headers: Record<string, any> }> {
-    const host = process.env.FORWARD_PROXY_HOST;
-    const port = Number(process.env.FORWARD_PROXY_PORT || 0);
-    const username = this.forwardUsername || process.env.FORWARD_PROXY_USERNAME;
-    const password = process.env.FORWARD_PROXY_PASSWORD;
-    const protocol = process.env.FORWARD_PROXY_PROTOCOL || 'http';
+    const envForRetailer = (key: string, retailerId?: string): string | undefined => {
+      if (retailerId) {
+        const suffix = retailerId.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+        const v = process.env[`${key}_${suffix}`];
+        if (v !== undefined) return v;
+      }
+      return process.env[key];
+    };
+
+    const host = envForRetailer('FORWARD_PROXY_HOST', options.retailerId) || process.env.FORWARD_PROXY_HOST;
+    const portStr = envForRetailer('FORWARD_PROXY_PORT', options.retailerId) || process.env.FORWARD_PROXY_PORT;
+    const port = Number(portStr || 0);
+    const configuredUsername = envForRetailer('FORWARD_PROXY_USERNAME', options.retailerId) || process.env.FORWARD_PROXY_USERNAME;
+    const username = configuredUsername || this.forwardUsername;
+    const password = envForRetailer('FORWARD_PROXY_PASSWORD', options.retailerId) || process.env.FORWARD_PROXY_PASSWORD;
+    const protocol = (envForRetailer('FORWARD_PROXY_PROTOCOL', options.retailerId) || process.env.FORWARD_PROXY_PROTOCOL || 'http').toLowerCase();
 
     if (!host || !port || !username || !password) {
       // Fallback to direct if not configured

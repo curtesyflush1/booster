@@ -9,6 +9,8 @@ import { TargetService } from './retailers/TargetService';
 import { BarnesNobleService } from './retailers/BarnesNobleService';
 import { AmazonService } from './retailers/AmazonService';
 import { WalgreensService } from './retailers/WalgreensService';
+import { MacysService } from './retailers/MacysService';
+import { HenryScheinService } from './retailers/HenryScheinService';
 import { logger } from '../utils/logger';
 import { 
   HTTP_TIMEOUTS, 
@@ -84,6 +86,10 @@ export class RetailerIntegrationService {
         return new AmazonService(config);
       case 'walgreens':
         return new WalgreensService(config);
+      case 'macys':
+        return new MacysService(config);
+      case 'henry-schein':
+        return new HenryScheinService(config);
       default:
         throw new Error(`Unknown retailer: ${config.slug}`);
     }
@@ -124,6 +130,28 @@ export class RetailerIntegrationService {
           maxRetries: RETRY_CONFIG.SCRAPING_MAX_RETRIES,
           retryDelay: RETRY_CONFIG.SCRAPING_RETRY_DELAY
         },
+        isActive: true
+      },
+      {
+        id: 'macys',
+        name: "Macy's",
+        slug: 'macys',
+        type: 'scraping',
+        baseUrl: 'https://www.macys.com',
+        rateLimit: { requestsPerMinute: 2, requestsPerHour: 60 },
+        timeout: HTTP_TIMEOUTS.COSTCO_SCRAPING,
+        retryConfig: { maxRetries: RETRY_CONFIG.SCRAPING_MAX_RETRIES, retryDelay: RETRY_CONFIG.SCRAPING_RETRY_DELAY },
+        isActive: true
+      },
+      {
+        id: 'henry-schein',
+        name: 'Henry Schein',
+        slug: 'henry-schein',
+        type: 'scraping',
+        baseUrl: 'https://www.henryschein.com',
+        rateLimit: { requestsPerMinute: 2, requestsPerHour: 60 },
+        timeout: HTTP_TIMEOUTS.COSTCO_SCRAPING,
+        retryConfig: { maxRetries: RETRY_CONFIG.SCRAPING_MAX_RETRIES, retryDelay: RETRY_CONFIG.SCRAPING_RETRY_DELAY },
         isActive: true
       },
       {
@@ -273,7 +301,9 @@ export class RetailerIntegrationService {
       'target': '/images/retailers/target-logo.svg',
       'amazon': '/images/retailers/amazon-logo.svg',
       'walgreens': '/images/retailers/walgreens-logo.svg',
-      'barnes-noble': '/images/retailers/barnesnoble-logo.svg'
+      'barnes-noble': '/images/retailers/barnesnoble-logo.svg',
+      'macys': '/images/retailers/macys-logo.svg',
+      'henry-schein': '/images/retailers/henryschein-logo.svg'
     };
     return logoMap[slug] || '/images/retailers/default-logo.svg';
   }
@@ -288,7 +318,9 @@ export class RetailerIntegrationService {
       'target': 'https://www.target.com',
       'amazon': 'https://www.amazon.com',
       'walgreens': 'https://www.walgreens.com',
-      'barnes-noble': 'https://www.barnesandnoble.com'
+      'barnes-noble': 'https://www.barnesandnoble.com',
+      'macys': 'https://www.macys.com',
+      'henry-schein': 'https://www.henryschein.com'
     };
     return websiteMap[slug] || '';
   }

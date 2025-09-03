@@ -178,6 +178,28 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
 
   const inStockAvailability = product?.availability?.filter(a => a.inStock) || [];
   const outOfStockAvailability = product?.availability?.filter(a => !a.inStock) || [];
+  const anyInStock = product?.availability?.some(a => a.inStock) === true;
+  // Collect shipping cues across retailers
+  const shippingEntries = (product?.availability || [])
+    .map(a => ((a as any).metadata || {}))
+    .filter((m: any) => m && (m.shippingDateIso || m.shippingText)) as Array<{ shippingDateIso?: string; shippingText?: string }>;
+  let headerShipLabel: string | undefined;
+  if (shippingEntries.length > 0) {
+    const dated = shippingEntries
+      .map(m => ({
+        d: m.shippingDateIso ? new Date(m.shippingDateIso) : undefined,
+        t: m.shippingText
+      }));
+    const withDate = dated.filter(x => x.d && !isNaN(x.d.getTime()));
+    if (withDate.length > 0) {
+      withDate.sort((a, b) => (a.d!.getTime() - b.d!.getTime()));
+      const d0 = withDate[0].d!;
+      headerShipLabel = `Ships by ${d0.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    } else {
+      const firstText = dated.find(x => x.t)?.t;
+      headerShipLabel = firstText;
+    }
+  }
   const lowestPrice = inStockAvailability.reduce((min, curr) => 
     curr.price < min ? curr.price : min, 
     Infinity
@@ -312,16 +334,19 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
 
                 <div>
                   <div className="text-sm text-gray-400">Availability</div>
-                  <div className={`text-xl font-semibold ${
-                    inStockAvailability.length > 0 ? 'text-green-400' : 'text-red-400'
-                  }`}>
-                    {inStockAvailability.length > 0 
+                  <div className={`text-xl font-semibold ${anyInStock ? 'text-green-400' : 'text-red-400'}`}>
+                    {anyInStock
                       ? `${inStockAvailability.length} retailer${inStockAvailability.length > 1 ? 's' : ''}`
-                      : 'Out of Stock'
-                    }
+                      : 'Out of Stock'}
                   </div>
                 </div>
               </div>
+              {headerShipLabel && (
+                <div className="mt-3 text-sm text-gray-300 flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  <span>{headerShipLabel}</span>
+                </div>
+              )}
             </div>
 
             {/* Description */}

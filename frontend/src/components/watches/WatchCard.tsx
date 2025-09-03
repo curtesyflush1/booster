@@ -178,37 +178,47 @@ const WatchCardComponent: React.FC<WatchCardProps> = ({
             <div className="bg-gray-700 rounded-lg p-3">
               <h4 className="text-sm font-medium text-gray-300 mb-2">Current Availability</h4>
               <div className="space-y-2">
-                {watch.product.availability.slice(0, 3).map((availability) => (
-                  <div key={availability.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-white">{availability.retailerName}</span>
-                      <span className={`px-2 py-1 text-xs rounded ${
-                        availability.inStock 
-                          ? 'bg-green-600 text-white' 
-                          : 'bg-red-600 text-white'
-                      }`}>
-                        {availability.inStock ? 'In Stock' : 'Out of Stock'}
-                      </span>
-                    </div>
-                    {availability.inStock && (
+                {watch.product.availability.slice(0, 3).map((availability) => {
+                  const shipIso = (availability.metadata && (availability.metadata as any).shippingDateIso) as string | undefined;
+                  const shipText = (availability.metadata && (availability.metadata as any).shippingText) as string | undefined;
+                  const prettyShipDate = shipIso ? new Date(shipIso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : undefined;
+                  const shipLabel = prettyShipDate ? `Ships by ${prettyShipDate}` : (shipText || undefined);
+                  return (
+                    <div key={availability.id} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-green-400 font-medium">
-                          {formatPrice(availability.price)}
+                        <span className="text-sm text-white">{availability.retailerName}</span>
+                        <span className={`px-2 py-1 text-xs rounded ${
+                          availability.inStock 
+                            ? 'bg-green-600 text-white' 
+                            : 'bg-red-600 text-white'
+                        }`}>
+                          {availability.inStock ? 'In Stock' : 'Out of Stock'}
                         </span>
-                        {availability.cartUrl && (
-                          <a
-                            href={availability.cartUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-400 hover:text-blue-300"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
+                        {/* Show shipping date cue when provided (e.g., Target pre-shipping date) */}
+                        {shipLabel && (
+                          <span className="ml-2 text-xs text-gray-300">{shipLabel}</span>
                         )}
                       </div>
-                    )}
-                  </div>
-                ))}
+                      {availability.inStock && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-green-400 font-medium">
+                            {formatPrice(availability.price)}
+                          </span>
+                          {availability.cartUrl && (
+                            <a
+                              href={availability.cartUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-400 hover:text-blue-300"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
                 {watch.product.availability.length > 3 && (
                   <div className="text-sm text-gray-400">
                     +{watch.product.availability.length - 3} more retailers

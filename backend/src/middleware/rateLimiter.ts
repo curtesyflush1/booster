@@ -88,8 +88,9 @@ export const createRateLimit = (config: RateLimitConfig) => {
   } = config;
 
   return (req: Request, res: Response, next: NextFunction): void => {
-    // Skip rate limiting when explicitly disabled (but not just because we're in test mode)
-    if (process.env.DISABLE_RATE_LIMITING === 'true') {
+    // Dev guard: allow skipping limiter in development when explicitly disabled
+    if ((process.env.NODE_ENV || 'development') === 'development' && process.env.DISABLE_RATE_LIMITING === 'true') {
+      res.setHeader('X-RateLimit-Skipped', 'development');
       next();
       return;
     }

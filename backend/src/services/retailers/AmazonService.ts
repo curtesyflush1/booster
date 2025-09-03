@@ -11,6 +11,8 @@ interface AmazonProduct {
   url: string;
   imageUrl?: string;
   availability?: string;
+  shippingText?: string;
+  shippingDateIso?: string;
 }
 
 export class AmazonService extends BaseRetailerService {
@@ -55,7 +57,8 @@ export class AmazonService extends BaseRetailerService {
   }
 
   protected parseResponse(p: AmazonProduct, request: ProductAvailabilityRequest): ProductAvailabilityResponse {
-    const inStock = this.deriveInStock(p.availability);
+    const hasShip = !!p.shippingDateIso || /arrives|get it by|get it on|delivery|delivers|ships/i.test(p.shippingText || '');
+    const inStock = hasShip ? true : this.deriveInStock(p.availability);
     const status = this.determineAvailabilityStatus(inStock, p.availability);
     return {
       productId: request.productId,
@@ -69,7 +72,7 @@ export class AmazonService extends BaseRetailerService {
       stockLevel: undefined,
       storeLocations: [],
       lastUpdated: new Date(),
-      metadata: { name: p.name, image: p.imageUrl, retailer: 'Amazon' }
+      metadata: { name: p.name, image: p.imageUrl, retailer: 'Amazon', shippingText: p.shippingText, shippingDateIso: p.shippingDateIso }
     };
   }
 
@@ -85,12 +88,15 @@ export class AmazonService extends BaseRetailerService {
       if (!name || !href) return;
       const priceText = $el.find('span.a-offscreen').first().text();
       const image = $el.find('img.s-image').attr('src') || '';
+      const shipInfo = this.findShippingInfoInElement($ as any, $el as any);
       products.push({
         id: href.split('/').slice(-1)[0],
         name,
         url: this.absUrl(href),
         price: this.parsePrice(priceText),
-        imageUrl: image ? this.absUrl(image) : undefined
+        imageUrl: image ? this.absUrl(image) : undefined,
+        shippingText: shipInfo.text,
+        shippingDateIso: shipInfo.dateIso
       });
     });
     const map = new Map<string, AmazonProduct>();
@@ -119,4 +125,3 @@ export class AmazonService extends BaseRetailerService {
     return `${this.config.baseUrl.replace(/\/$/, '')}${href.startsWith('/') ? '' : '/'}${href}`;
   }
 }
-

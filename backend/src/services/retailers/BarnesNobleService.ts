@@ -11,6 +11,8 @@ interface BNProduct {
   url: string;
   imageUrl?: string;
   availability?: string;
+  shippingText?: string;
+  shippingDateIso?: string;
 }
 
 export class BarnesNobleService extends BaseRetailerService {
@@ -60,7 +62,8 @@ export class BarnesNobleService extends BaseRetailerService {
   }
 
   protected parseResponse(p: BNProduct, request: ProductAvailabilityRequest): ProductAvailabilityResponse {
-    const inStock = this.deriveInStock(p.availability);
+    const hasShip = !!p.shippingDateIso || /arrives|get it by|get it on|delivery|delivers|ships|usually ships/i.test(p.shippingText || '');
+    const inStock = hasShip ? true : this.deriveInStock(p.availability);
     const availabilityStatus = this.determineAvailabilityStatus(inStock, p.availability);
     return {
       productId: request.productId,
@@ -74,7 +77,7 @@ export class BarnesNobleService extends BaseRetailerService {
       stockLevel: undefined,
       storeLocations: [],
       lastUpdated: new Date(),
-      metadata: { name: p.name, image: p.imageUrl, retailer: 'Barnes & Noble' }
+      metadata: { name: p.name, image: p.imageUrl, retailer: 'Barnes & Noble', shippingText: p.shippingText, shippingDateIso: p.shippingDateIso }
     };
   }
 
@@ -98,6 +101,7 @@ export class BarnesNobleService extends BaseRetailerService {
       const origText = $el.find('.old-price, s:contains("$")').first().text();
       const img = $el.find('img').first().attr('src') || $el.find('img').first().attr('data-src') || '';
       const avail = $el.find('.availability, .fulfillment').first().text();
+      const shipInfo = this.findShippingInfoInElement($ as any, $el as any);
       products.push({
         id: href.split('/').pop(),
         name,
@@ -105,7 +109,9 @@ export class BarnesNobleService extends BaseRetailerService {
         price: this.parsePrice(priceText),
         originalPrice: this.parsePrice(origText),
         imageUrl: img ? this.absUrl(img) : undefined,
-        availability: avail || undefined
+        availability: avail || undefined,
+        shippingText: shipInfo.text,
+        shippingDateIso: shipInfo.dateIso
       });
     });
     // Dedup
@@ -135,4 +141,3 @@ export class BarnesNobleService extends BaseRetailerService {
     return `${this.config.baseUrl.replace(/\/$/, '')}${href.startsWith('/') ? '' : '/'}${href}`;
   }
 }
-

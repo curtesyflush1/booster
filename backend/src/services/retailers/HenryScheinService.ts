@@ -3,7 +3,7 @@ import { RetailerConfig, ProductAvailabilityRequest, ProductAvailabilityResponse
 import { BaseRetailerService } from './BaseRetailerService';
 import { logger } from '../../utils/logger';
 
-interface TargetProduct {
+interface ScheinProduct {
   id?: string;
   name: string;
   price?: number;
@@ -13,15 +13,10 @@ interface TargetProduct {
   availability?: string;
   description?: string;
   shippingText?: string;
-  shippingDateIso?: string; // ISO date when item ships/arrives (interpreted drop date)
+  shippingDateIso?: string;
 }
 
-/**
- * Target retailer integration (scraping)
- * - Parses HTML search results and product pages
- * - Uses defensive selectors due to UI variations
- */
-export class TargetService extends BaseRetailerService {
+export class HenryScheinService extends BaseRetailerService {
   constructor(config: RetailerConfig) {
     super(config);
   }
@@ -30,70 +25,53 @@ export class TargetService extends BaseRetailerService {
     const start = Date.now();
     try {
       const q = request.upc || request.sku || request.productId;
-      logger.info(`Checking Target availability for: ${q}`);
-
+      logger.info(`Checking Henry Schein availability for: ${q}`);
       const product = await this.searchOne(q!);
-      if (!product) {
-        throw this.createRetailerError(`Product not found for: ${q}`, 'NOT_FOUND', 404, false);
-      }
-
+      if (!product) throw this.createRetailerError(`Product not found: ${q}`, 'NOT_FOUND', 404, false);
       const refined = await this.enrichFromProductPage(product);
       const parsed = this.parseResponse(refined || product, request);
       this.updateMetrics(true, Date.now() - start);
       return parsed;
     } catch (error) {
       this.updateMetrics(false, Date.now() - start);
-      logger.error('Target availability check failed:', error);
+      logger.error(`Henry Schein availability check failed:`, error);
       if (error instanceof RetailerError) throw error;
-      throw this.createRetailerError(
-        `Failed to check availability: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        'SERVER_ERROR',
-        500,
-        true
-      );
+      throw this.createRetailerError('Failed to check availability', 'SERVER_ERROR', 500, true);
     }
   }
 
   async searchProducts(query: string): Promise<ProductAvailabilityResponse[]> {
     const start = Date.now();
     try {
-      logger.info(`Searching Target for: ${query}`);
       const results = await this.searchList(query);
       const filtered = results.filter(p => this.isPokemonTcgProduct(p.name));
       const responses = filtered.map(p => this.parseResponse(p, { productId: p.id || p.name }));
       this.updateMetrics(true, Date.now() - start);
-      logger.info(`Target search complete: ${responses.length} TCG items`);
       return responses;
     } catch (error) {
       this.updateMetrics(false, Date.now() - start);
-      logger.error(`Target search failed for query "${query}":`, error);
+      logger.error(`Henry Schein search failed for ${query}:`, error);
       if (error instanceof RetailerError) throw error;
-      throw this.createRetailerError(
-        `Search failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        'SERVER_ERROR',
-        500,
-        true
-      );
+      throw this.createRetailerError('Search failed', 'SERVER_ERROR', 500, true);
     }
   }
 
   protected override async performHealthCheck(): Promise<void> {
-    await this.makeRequest(`/s?searchTerm=pokemon%20tcg`, { render: true });
+    // US site often under /us-en/; search route varies, try basic site root
+    await this.makeRequest(`/us-en/search?q=pokemon`, { render: true });
   }
 
-  protected parseResponse(product: TargetProduct, request: ProductAvailabilityRequest): ProductAvailabilityResponse {
-    // Treat items with a future shipping/arrival date as purchasable (in stock for our purposes)
-    const hasShipDate = !!product.shippingDateIso || /arrives|get it by|ships by|shipping|delivery/i.test(product.shippingText || '');
-    const inStock = hasShipDate ? true : this.deriveInStock(product.availability);
-    const availabilityStatus = this.determineAvailabilityStatus(inStock, product.availability);
-
+  protected parseResponse(product: ScheinProduct, request: ProductAvailabilityRequest): ProductAvailabilityResponse {
+    const hasShip = !!product.shippingDateIso || /arrives|get it by|get it on|delivery|delivers|ships|estimated/i.test(product.shippingText || '');
+    const inStock = hasShip ? true : this.deriveInStock(product.availability);
+    const status = this.determineAvailabilityStatus(inStock, product.availability);
     return {
       productId: request.productId,
       retailerId: this.config.id,
       inStock,
       price: product.price,
       originalPrice: product.originalPrice,
-      availabilityStatus,
+      availabilityStatus: status,
       productUrl: product.url,
       cartUrl: this.buildCartUrl(product.url, this.config.id),
       stockLevel: undefined,
@@ -102,27 +80,25 @@ export class TargetService extends BaseRetailerService {
       metadata: {
         name: product.name,
         image: product.imageUrl,
-        retailer: 'Target',
+        retailer: 'Henry Schein',
         shippingText: product.shippingText,
         shippingDateIso: product.shippingDateIso
       }
     };
   }
 
-  // --------- Internals ---------
-
-  private async searchList(query: string): Promise<TargetProduct[]> {
-    const url = `/s?searchTerm=${encodeURIComponent(query)}`;
+  // -------- Internals --------
+  private async searchList(query: string): Promise<ScheinProduct[]> {
+    const url = `/us-en/search?q=${encodeURIComponent(query)}`;
     const res = await this.makeRequest(url, { render: true });
     const $: any = cheerio.load(res.data);
 
-    const products: TargetProduct[] = [];
-
-    // Common card containers on target.com
+    const products: ScheinProduct[] = [];
     const candidates = [
-      'li[data-test="list-entry-product-card"]',
-      'div[data-test="product-card"]',
-      'div.h-padding-h-default' // fallback container
+      'div.product-tile',
+      'div.card.product',
+      'li.product',
+      'div.search-result-item'
     ].join(',');
 
     $(candidates).each((_: any, el: any) => {
@@ -131,9 +107,8 @@ export class TargetService extends BaseRetailerService {
       if (p && p.url && p.name) products.push(p);
     });
 
-    // Fallback anchors
     if (products.length === 0) {
-      $('a[href*="/p/"]').each((_: any, a: any) => {
+      $('a[href*="/product/"]').each((_: any, a: any) => {
         const $a = $(a);
         const name = $a.text().trim();
         const href = $a.attr('href') || '';
@@ -142,8 +117,7 @@ export class TargetService extends BaseRetailerService {
       });
     }
 
-    // Deduplicate by URL
-    const deduped = new Map<string, TargetProduct>();
+    const deduped = new Map<string, ScheinProduct>();
     for (const p of products) {
       const key = p.url.split('?')[0];
       if (!deduped.has(key)) deduped.set(key, p);
@@ -151,27 +125,24 @@ export class TargetService extends BaseRetailerService {
     return Array.from(deduped.values());
   }
 
-  private async searchOne(query: string): Promise<TargetProduct | null> {
+  private async searchOne(query: string): Promise<ScheinProduct | null> {
     const list = await this.searchList(query);
     return list[0] || null;
   }
 
-  private extractFromCard($: any, $el: any): TargetProduct | null {
-    // Title
-    const $title = $el.find('a[data-test="product-title"], a[data-test="product-card-title"], a[href*="/p/"]').first();
+  private extractFromCard($: any, $el: any): ScheinProduct | null {
+    const $title = $el.find('a.product-link, a[href*="/product/"]').first();
     const name = ($title.text() || '').trim();
     const href = $title.attr('href') || '';
     if (!name || !href) return null;
 
-    // Price selectors
     const price = this.findPriceInCard($, $el);
     const orig = this.findOriginalPriceInCard($, $el);
     const img = this.findImageInCard($, $el);
     const avail = this.findAvailabilityText($, $el);
-    const shipInfo = this.findShippingInfoInCard($, $el);
+    const shipInfo = this.findShippingInfoInElement($ as any, $el as any);
 
-    // Target URLs include /p/<slug>/<tcin>
-    const idMatch = href.match(/\/p\/[^/]+\/(\d+)/);
+    const idMatch = href.match(/\/product\/(\d+|[A-Za-z0-9_-]+)/);
     const id = idMatch ? idMatch[1] : undefined;
 
     return {
@@ -182,15 +153,14 @@ export class TargetService extends BaseRetailerService {
       originalPrice: orig,
       imageUrl: img || undefined,
       availability: avail || undefined,
-      shippingText: shipInfo.text || undefined,
-      shippingDateIso: shipInfo.dateIso || undefined,
+      shippingText: shipInfo.text,
+      shippingDateIso: shipInfo.dateIso
     };
   }
 
   private findPriceInCard($: any, $el: any): number | undefined {
     const sel = [
-      '[data-test="current-price"], [data-test="current-price-container"]',
-      '.h-text-bs, .h-text-bs\@sm, .h-margin-t-tiny',
+      '.price, .current-price, .product-price',
       'span:contains("$")'
     ].join(',');
     const text = ($el.find(sel).first().text() || '').trim();
@@ -200,8 +170,7 @@ export class TargetService extends BaseRetailerService {
 
   private findOriginalPriceInCard($: any, $el: any): number | undefined {
     const sel = [
-      '[data-test="was-price"]',
-      's:contains("$")'
+      '.was-price, s:contains("$")'
     ].join(',');
     const text = ($el.find(sel).first().text() || '').trim();
     const price = this.parsePrice(text);
@@ -215,16 +184,9 @@ export class TargetService extends BaseRetailerService {
   }
 
   private findAvailabilityText($: any, $el: any): string | null {
-    const text = ($el.find('[data-test="fulfillment-availability"], .styles__StyledFulfillment:contains("out of stock")').first().text() || '').trim();
+    const text = ($el.find('.availability, .stock-status').first().text() || '').trim();
     return text || null;
   }
-
-  private findShippingInfoInCard($: any, $el: any): { text?: string; dateIso?: string } {
-    const res = this.findShippingInfoInElement($, $el);
-    return res;
-  }
-
-  // Use BaseRetailerService.parseShippingDate
 
   private findNearbyPrice($: any, $a: any): number | undefined {
     const $container = $a.closest('li,div,article');
@@ -242,7 +204,7 @@ export class TargetService extends BaseRetailerService {
   private deriveInStock(avail?: string): boolean {
     if (!avail) return true;
     const t = avail.toLowerCase();
-    if (t.includes('out of stock') || t.includes('sold out') || t.includes('unavailable')) return false;
+    if (t.includes('out of stock') || t.includes('unavailable')) return false;
     return true;
   }
 
@@ -252,28 +214,21 @@ export class TargetService extends BaseRetailerService {
     return `${this.config.baseUrl.replace(/\/$/, '')}${href.startsWith('/') ? '' : '/'}${href}`;
   }
 
-  private async enrichFromProductPage(p: TargetProduct): Promise<TargetProduct | null> {
+  private async enrichFromProductPage(p: ScheinProduct): Promise<ScheinProduct | null> {
     try {
-      // If we already have shipping info, skip expensive product page fetch to save proxy usage
       if (p.shippingText || p.shippingDateIso) return p;
       const res = await this.makeRequest(p.url, { render: true });
       const $: any = cheerio.load(res.data);
-
-      const availability = this.findAvailabilityText($, $('body')) || p.availability || undefined;
-      // Extract shipping info from product page if present
-      const shipEl = $('body');
-      const shipInfo = this.findShippingInfoInElement($ as any, shipEl as any);
-      const shipText = shipInfo.text || '';
-      const shipDateIso = shipInfo.dateIso || undefined;
+      const shipInfo = this.findShippingInfoInElement($ as any, $('body') as any);
       let price = p.price;
       if (!price || price <= 0) {
-        const priceText = $('body').find('[data-test="current-price"], .h-text-bs:contains("$")').first().text().trim();
+        const priceText = $('body').find('.price, .current-price, span:contains("$")').first().text().trim();
         const parsed = this.parsePrice(priceText);
         if (parsed > 0) price = parsed;
       }
       let originalPrice = p.originalPrice;
       if (!originalPrice) {
-        const opText = $('body').find('[data-test="was-price"], s:contains("$")').first().text().trim();
+        const opText = $('body').find('.was-price, s:contains("$")').first().text().trim();
         const parsed = this.parsePrice(opText);
         if (parsed > 0) originalPrice = parsed;
       }
@@ -282,9 +237,10 @@ export class TargetService extends BaseRetailerService {
         const img = $('body').find('img').first().attr('src') || $('body').find('img').first().attr('data-src') || '';
         if (img) imageUrl = this.absUrl(img);
       }
-      return { ...p, availability, price, originalPrice, imageUrl, shippingText: shipText || p.shippingText, shippingDateIso: shipDateIso || p.shippingDateIso };
+      return { ...p, price, originalPrice, imageUrl, shippingText: shipInfo.text || p.shippingText, shippingDateIso: shipInfo.dateIso || p.shippingDateIso };
     } catch (e) {
       return p;
     }
   }
 }
+

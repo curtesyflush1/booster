@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56" role="img" aria-label="BoosterBeacon Icon">
+  <defs>
+    <style>
+      .brand-red{fill:#e53935}
+      .brand-yellow{fill:#f7d02c}
+      .brand-black{fill:#111315}
+      .brand-white{fill:#ffffff}
+      .stroke{stroke:#111315;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+    </style>
+  </defs>
+  <circle cx="28" cy="28" r="25" class="brand-white stroke"/>
+  <path d="M6 28a22 22 0 0 1 44 0H6z" class="brand-red"/>
+  <rect x="6" y="26" width="44" height="4" rx="2" class="brand-black"/>
+  <circle cx="28" cy="28" r="7" class="brand-white stroke"/>
+  <circle cx="28" cy="28" r="3" class="brand-black"/>
+  <path d="M22 7h12l2.5 8H19.5z" class="brand-yellow stroke"/>
+  <path d="M28 2v3M20 4l2 3M36 4l-2 3" stroke="#f7d02c" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

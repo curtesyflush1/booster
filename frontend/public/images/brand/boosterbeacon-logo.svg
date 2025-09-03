@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="220" height="80" viewBox="0 0 220 80" role="img" aria-label="BoosterBeacon">
+  <defs>
+    <style>
+      .brand-red{fill:#e53935}
+      .brand-yellow{fill:#f7d02c}
+      .brand-black{fill:#111315}
+      .brand-white{fill:#ffffff}
+      .stroke{stroke:#111315;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+    </style>
+  </defs>
+  <!-- Icon -->
+  <g transform="translate(6,6)">
+    <!-- Outer circle with stroke -->
+    <circle cx="28" cy="28" r="26" class="brand-white stroke"/>
+    <!-- Upper half red -->
+    <path d="M4 28a24 24 0 0 1 48 0H4z" class="brand-red"/>
+    <!-- Center band -->
+    <rect x="4" y="26" width="48" height="4" class="brand-black" rx="2"/>
+    <!-- Center button -->
+    <circle cx="28" cy="28" r="8" class="brand-white stroke"/>
+    <circle cx="28" cy="28" r="3" class="brand-black"/>
+    <!-- Beacon top -->
+    <path d="M22 6h12l3 10H19z" class="brand-yellow stroke"/>
+    <!-- Light rays -->
+    <path d="M28 0v4M18 2l2 3M38 2l-2 3" class="brand-yellow" stroke="#f7d02c" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <!-- Wordmark -->
+  <g transform="translate(80,18)">
+    <text x="0" y="24" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-weight="700" font-size="24" class="brand-black">Booster</text>
+    <text x="0" y="52" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-weight="700" font-size="24" class="brand-black">Beacon</text>
+  </g>
+</svg>

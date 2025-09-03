@@ -14,6 +14,8 @@ interface CostcoProduct {
   availability: string;
   description?: string | undefined;
   isOnSale: boolean;
+  shippingText?: string;
+  shippingDateIso?: string;
 }
 
 export class CostcoService extends BaseRetailerService {
@@ -98,6 +100,7 @@ export class CostcoService extends BaseRetailerService {
           const url = $product.find('.description a').attr('href');
           const imageUrl = $product.find('.product-image img').attr('src');
           const itemNumber = $product.find('[data-item-number]').attr('data-item-number');
+          const shipInfo = this.findShippingInfoInElement($ as any, $product as any);
 
           if (name && priceText && url && this.isPokemonTcgProduct(name)) {
             const price = this.parsePrice(priceText);
@@ -109,7 +112,9 @@ export class CostcoService extends BaseRetailerService {
                 url: url.startsWith('http') ? url : `https://www.costco.com${url}`,
                 imageUrl: imageUrl?.startsWith('http') ? imageUrl : `https://www.costco.com${imageUrl}`,
                 availability: 'Available', // Would need to check individual product pages
-                isOnSale: $product.find('.sale-price').length > 0
+                isOnSale: $product.find('.sale-price').length > 0,
+                shippingText: shipInfo.text,
+                shippingDateIso: shipInfo.dateIso
               });
             }
           }
@@ -165,7 +170,9 @@ export class CostcoService extends BaseRetailerService {
         name: product.name,
         isOnSale: product.isOnSale,
         image: product.imageUrl,
-        description: product.description
+        description: product.description,
+        shippingText: product.shippingText,
+        shippingDateIso: product.shippingDateIso
       }
     };
   }

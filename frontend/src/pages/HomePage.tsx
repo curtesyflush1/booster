@@ -98,9 +98,7 @@ const HomePage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-pokemon rounded-lg flex items-center justify-center">
-                <Zap className="w-5 h-5 text-white" />
-              </div>
+              <img src="/images/brand/boosterbeacon-icon.svg" alt="BoosterBeacon" className="h-8 w-8 animate-glow" />
               <span className="text-xl font-display font-bold text-white">
                 BoosterBeacon
               </span>
@@ -134,7 +132,7 @@ const HomePage: React.FC = () => {
       <section className="relative py-20 lg:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h1 className="text-4xl lg:text-6xl font-display font-bold text-white mb-6">
+            <h1 className="text-4xl lg:6xl font-display font-bold text-white mb-6">
               Never Miss a{' '}
               <span className="text-gradient-pokemon">
                 Pokémon TCG Drop
@@ -317,12 +315,8 @@ const HomePage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <div className="w-8 h-8 bg-gradient-pokemon rounded-lg flex items-center justify-center">
-                <Zap className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-display font-bold text-white">
-                BoosterBeacon
-              </span>
+              <img src="/images/brand/boosterbeacon-icon.svg" alt="BoosterBeacon" className="h-8 w-8" />
+              <span className="text-xl font-display font-bold text-white">BoosterBeacon</span>
             </div>
             
             <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">

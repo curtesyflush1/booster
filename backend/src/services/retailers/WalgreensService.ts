@@ -11,6 +11,8 @@ interface WGProduct {
   url: string;
   imageUrl?: string;
   availability?: string;
+  shippingText?: string;
+  shippingDateIso?: string;
 }
 
 export class WalgreensService extends BaseRetailerService {
@@ -56,7 +58,8 @@ export class WalgreensService extends BaseRetailerService {
   }
 
   protected parseResponse(p: WGProduct, request: ProductAvailabilityRequest): ProductAvailabilityResponse {
-    const inStock = this.deriveInStock(p.availability);
+    const hasShip = !!p.shippingDateIso || /arrives|get it by|get it on|delivery|delivers|ships/i.test(p.shippingText || '');
+    const inStock = hasShip ? true : this.deriveInStock(p.availability);
     const status = this.determineAvailabilityStatus(inStock, p.availability);
     return {
       productId: request.productId,
@@ -70,7 +73,7 @@ export class WalgreensService extends BaseRetailerService {
       stockLevel: undefined,
       storeLocations: [],
       lastUpdated: new Date(),
-      metadata: { name: p.name, image: p.imageUrl, retailer: 'Walgreens' }
+      metadata: { name: p.name, image: p.imageUrl, retailer: 'Walgreens', shippingText: p.shippingText, shippingDateIso: p.shippingDateIso }
     };
   }
 
@@ -87,13 +90,16 @@ export class WalgreensService extends BaseRetailerService {
       const priceText = $el.find('.product__price, .product__sale-price').first().text();
       const img = $el.find('img').first().attr('src') || '';
       const avail = $el.find('.availability, .fulfillment').first().text();
+      const shipInfo = this.findShippingInfoInElement($ as any, $el as any);
       products.push({
         id: href.split('/').pop(),
         name,
         url: this.absUrl(href),
         price: this.parsePrice(priceText),
         imageUrl: img ? this.absUrl(img) : undefined,
-        availability: avail || undefined
+        availability: avail || undefined,
+        shippingText: shipInfo.text,
+        shippingDateIso: shipInfo.dateIso
       });
     });
     const map = new Map<string, WGProduct>();

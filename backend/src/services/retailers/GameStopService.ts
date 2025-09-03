@@ -12,6 +12,8 @@ interface GameStopProduct {
   imageUrl?: string;
   availability?: string;
   description?: string;
+  shippingText?: string;
+  shippingDateIso?: string;
 }
 
 /**
@@ -22,6 +24,12 @@ interface GameStopProduct {
 export class GameStopService extends BaseRetailerService {
   constructor(config: RetailerConfig) {
     super(config);
+  }
+
+  private browserOnly(): boolean {
+    const v = process.env.GAMESTOP_BROWSER_ONLY;
+    if (v === undefined) return true; // default to browser-only to reduce 403s
+    return /^true|1|yes$/i.test(v);
   }
 
   async checkAvailability(request: ProductAvailabilityRequest): Promise<ProductAvailabilityResponse> {
@@ -79,11 +87,12 @@ export class GameStopService extends BaseRetailerService {
 
   protected override async performHealthCheck(): Promise<void> {
     // Light search request; render=true to bypass CF when a browser/unlocker is configured
-    await this.makeRequest(`/search/?q=pokemon%20tcg`, { render: true });
+    await this.makeRequest(`/search/?q=pokemon%20tcg`, { render: this.browserOnly() });
   }
 
   protected parseResponse(product: GameStopProduct, request: ProductAvailabilityRequest): ProductAvailabilityResponse {
-    const inStock = this.deriveInStock(product.availability);
+    const hasShip = !!product.shippingDateIso || /arrives|get it by|get it on|delivery|delivers|ships|release date|pre-?order/i.test(product.shippingText || '') || /pre-?order|release/i.test(product.availability || '');
+    const inStock = hasShip ? true : this.deriveInStock(product.availability);
     const availabilityStatus = this.determineAvailabilityStatus(inStock, product.availability);
 
     return {
@@ -101,7 +110,9 @@ export class GameStopService extends BaseRetailerService {
       metadata: {
         name: product.name,
         image: product.imageUrl,
-        retailer: 'GameStop'
+        retailer: 'GameStop',
+        shippingText: product.shippingText,
+        shippingDateIso: product.shippingDateIso
       }
     };
   }
@@ -110,7 +121,7 @@ export class GameStopService extends BaseRetailerService {
 
   private async searchList(query: string): Promise<GameStopProduct[]> {
     const url = `/search/?q=${encodeURIComponent(query)}`;
-    const res = await this.makeRequest(url, { render: true });
+    const res = await this.makeRequest(url, { render: this.browserOnly() });
     const $: any = cheerio.load(res.data);
 
     const products: GameStopProduct[] = [];
@@ -183,6 +194,7 @@ export class GameStopService extends BaseRetailerService {
     const orig = this.findOriginalPriceInCard($, $el);
     const img = this.findImageInCard($, $el);
     const availText = this.findAvailabilityText($, $el);
+    const shipInfo = this.findShippingInfoInElement($ as any, $el as any);
 
     // Try to extract a simple id token from URL if present
     const idMatch = href.match(/\/(?:product|products)\/(\d+)[^/]*$/i) || href.match(/sku=(\d+)/i);
@@ -196,6 +208,8 @@ export class GameStopService extends BaseRetailerService {
       originalPrice: orig,
       imageUrl: img || undefined,
       availability: availText || undefined,
+      shippingText: shipInfo.text,
+      shippingDateIso: shipInfo.dateIso,
     };
   }
 
@@ -270,11 +284,12 @@ export class GameStopService extends BaseRetailerService {
 
   private async enrichFromProductPage(p: GameStopProduct): Promise<GameStopProduct | null> {
     try {
-      const res = await this.makeRequest(p.url, { render: true });
+      const res = await this.makeRequest(p.url, { render: this.browserOnly() });
       const $: any = cheerio.load(res.data);
 
       // Try to pick explicit availability or price if missing
       const availability = this.findAvailabilityText($, $('body')) || p.availability || undefined;
+      const shipInfo = this.findShippingInfoInElement($ as any, $('body') as any);
       let price = p.price;
       if (!price || price <= 0) {
         const priceText = $('body').find('.price, .actual-price, [data-qa="price"]').first().text().trim();
@@ -292,7 +307,7 @@ export class GameStopService extends BaseRetailerService {
         const img = $('body').find('img').first().attr('src') || $('body').find('img').first().attr('data-src') || '';
         if (img) imageUrl = this.absUrl(img);
       }
-      return { ...p, availability, price, originalPrice, imageUrl };
+      return { ...p, availability, price, originalPrice, imageUrl, shippingText: shipInfo.text || p.shippingText, shippingDateIso: shipInfo.dateIso || p.shippingDateIso };
     } catch (e) {
       // Non-fatal; return original
       return p;

@@ -6,8 +6,10 @@ class ApiClient {
   private client: AxiosInstance;
 
   constructor() {
+    const rawBase = import.meta.env.VITE_API_URL as string | undefined;
+    const baseURL = rawBase ? `${rawBase.replace(/\/$/, '')}/api` : '/api';
     this.client = axios.create({
-      baseURL: import.meta.env.VITE_API_URL || '/api',
+      baseURL,
       timeout: 10000,
       headers: {
         'Content-Type': 'application/json'

@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "docker": "npm run docker:dev",
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev": "concurrently \"PORT=${DEV_BACKEND_PORT:-3001} npm run dev:backend\" \"VITE_API_URL=http://localhost:${DEV_BACKEND_PORT:-3001} npm run dev:frontend\"",
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:extension": "cd extension && npm run dev",

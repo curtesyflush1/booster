@@ -9,3 +9,5 @@ export { TargetService } from './TargetService';
 export { BarnesNobleService } from './BarnesNobleService';
 export { AmazonService } from './AmazonService';
 export { WalgreensService } from './WalgreensService';
+export { MacysService } from './MacysService';
+export { HenryScheinService } from './HenryScheinService';

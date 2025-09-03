@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Pokémon-themed color palette
+        // Pokémon-themed color palette (original dark theme)
         primary: {
           50: '#eff6ff',
           100: '#dbeafe',
