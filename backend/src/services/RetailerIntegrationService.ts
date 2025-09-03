@@ -265,13 +265,17 @@ export class RetailerIntegrationService {
 
   private getRetailerLogoUrl(slug: string): string {
     const logoMap: Record<string, string> = {
-      'best-buy': '/images/retailers/bestbuy-logo.png',
-      'walmart': '/images/retailers/walmart-logo.png',
-      'costco': '/images/retailers/costco-logo.png',
-      'sams-club': '/images/retailers/samsclub-logo.png',
-      'gamestop': '/images/retailers/gamestop-logo.png'
+      'best-buy': '/images/retailers/bestbuy-logo.svg',
+      'walmart': '/images/retailers/walmart-logo.svg',
+      'costco': '/images/retailers/costco-logo.svg',
+      'sams-club': '/images/retailers/samsclub-logo.svg',
+      'gamestop': '/images/retailers/gamestop-logo.svg',
+      'target': '/images/retailers/target-logo.svg',
+      'amazon': '/images/retailers/amazon-logo.svg',
+      'walgreens': '/images/retailers/walgreens-logo.svg',
+      'barnes-noble': '/images/retailers/barnesnoble-logo.svg'
     };
-    return logoMap[slug] || '/images/retailers/default-logo.png';
+    return logoMap[slug] || '/images/retailers/default-logo.svg';
   }
 
   private getRetailerWebsite(slug: string): string {
@@ -280,7 +284,11 @@ export class RetailerIntegrationService {
       'walmart': 'https://www.walmart.com',
       'costco': 'https://www.costco.com',
       'sams-club': 'https://www.samsclub.com',
-      'gamestop': 'https://www.gamestop.com'
+      'gamestop': 'https://www.gamestop.com',
+      'target': 'https://www.target.com',
+      'amazon': 'https://www.amazon.com',
+      'walgreens': 'https://www.walgreens.com',
+      'barnes-noble': 'https://www.barnesandnoble.com'
     };
     return websiteMap[slug] || '';
   }

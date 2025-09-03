@@ -40,6 +40,7 @@ import purchasesRoutes from './routes/purchases';
 import sitemapRoutes from './routes/sitemapRoutes';
 import healthRoutes from './routes/health';
 import monitoringRoutes from './routes/monitoring';
+import schedulerRoutes from './routes/scheduler';
 // import kmsRoutes from './routes/kmsRoutes';
 import { EXPRESS_LIMITS } from './constants/http';
 import { startWorker as startPurchaseWorker } from './services/PurchaseQueue';
@@ -138,6 +139,8 @@ app.use('/api/csv', csvRoutes);
 
 // Social sharing routes
 app.use('/api/social', socialRoutes);
+// Scheduler status routes
+app.use('/api/scheduler', schedulerRoutes);
 
 // Community features routes
 app.use('/api/community', communityRoutes);

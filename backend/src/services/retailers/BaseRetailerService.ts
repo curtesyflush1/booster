@@ -13,12 +13,16 @@ export abstract class BaseRetailerService extends IBaseRetailerService {
   protected httpFetcher: HttpFetcherService;
   protected lastRequestTime: number = 0;
   protected readonly minRequestInterval: number;
+  private readonly scrapeUserAgent: string;
 
   constructor(config: RetailerConfig) {
     super(config);
     
     // Set minimum request interval based on retailer type
     this.minRequestInterval = this.calculateMinRequestInterval();
+    
+    // Choose a stable User-Agent per instance for scraping retailers
+    this.scrapeUserAgent = this.pickScrapingUserAgent();
     
     // Initialize HTTP client with common configuration
     this.httpClient = this.createHttpClient();
@@ -47,23 +51,7 @@ export abstract class BaseRetailerService extends IBaseRetailerService {
    * Create and configure the HTTP client with common settings
    */
   protected createHttpClient(): AxiosInstance {
-    const defaultHeaders: Record<string, string> = {
-      'Accept': 'application/json',
-      'User-Agent': 'BoosterBeacon/1.0',
-    };
-
-    // Add scraping-specific headers for web scraping retailers
-    if (this.config.type === 'scraping') {
-      Object.assign(defaultHeaders, {
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'DNT': '1',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      });
-    }
+    const defaultHeaders: Record<string, string> = this.buildDefaultHeaders();
 
     return axios.create({
       baseURL: this.config.baseUrl,
@@ -73,6 +61,45 @@ export abstract class BaseRetailerService extends IBaseRetailerService {
         ...this.config.headers
       }
     });
+  }
+
+  /**
+   * Build default headers for outbound requests. For scraping retailers, use
+   * a realistic browser-like profile to reduce 403/anti-bot responses.
+   */
+  protected buildDefaultHeaders(): Record<string, string> {
+    if (this.config.type === 'scraping') {
+      return {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': this.scrapeUserAgent
+      };
+    }
+
+    return {
+      'Accept': 'application/json',
+      'User-Agent': 'BoosterBeacon/1.0'
+    };
+  }
+
+  // Pick a realistic Chrome UA string; stable per service instance
+  private pickScrapingUserAgent(): string {
+    if (this.config.type !== 'scraping') return 'BoosterBeacon/1.0';
+    const pool = [
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
+    ];
+    const hash = Array.from(this.config.id).reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 997, 7);
+    return pool[hash % pool.length]!;
   }
 
   /**
@@ -220,10 +247,18 @@ export abstract class BaseRetailerService extends IBaseRetailerService {
         return res;
       }
 
-      // Otherwise use the fetcher (proxy/browser) which supports rendering/unblockers
+      // Otherwise use the fetcher (proxy/browser) which supports rendering/unblockers.
+      // Important: Include realistic default headers for scraping retailers since the
+      // axios client defaults are not applied via the fetcher path.
+      const fetchHeaders: Record<string, string> = {
+        ...this.buildDefaultHeaders(),
+        ...(this.config.headers || {}),
+        ...(reqConfig.headers as Record<string, string>)
+      };
+
       const res = await this.httpFetcher.get(fullUrl, {
         params: reqConfig.params as any,
-        headers: reqConfig.headers as any,
+        headers: fetchHeaders,
         timeout: this.config.timeout,
         render: options.render === true
       });
@@ -238,7 +273,59 @@ export abstract class BaseRetailerService extends IBaseRetailerService {
         request: {}
       } as any;
       return fakeAxiosResponse;
-    } catch (error) {
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (this.config.type === 'scraping' && (status === 403 || status === 429)) {
+        // Attempt: rotate forward proxy session and retry once
+        try {
+          this.httpFetcher.rotateForwardProxySession?.();
+          const fullUrl2 = url.startsWith('http') ? url : `${this.config.baseUrl || ''}${url}`;
+          const retryRes = await this.httpFetcher.get(fullUrl2, {
+            params: options.params || {},
+            headers: {
+              ...this.buildDefaultHeaders(),
+              ...(this.config.headers || {}),
+              ...(options.headers || {})
+            },
+            timeout: this.config.timeout,
+          });
+          const fakeAxiosResponse: AxiosResponse = {
+            data: retryRes.data,
+            status: retryRes.status,
+            statusText: String(retryRes.status),
+            headers: retryRes.headers as any,
+            config: {},
+            request: {}
+          } as any;
+          return fakeAxiosResponse;
+        } catch (e1) {
+          // Fallback: attempt browser API if configured
+          try {
+            const fullUrl3 = url.startsWith('http') ? url : `${this.config.baseUrl || ''}${url}`;
+            const browserRes = await this.httpFetcher.getWithBrowser(fullUrl3, {
+              params: options.params || {},
+              headers: {
+                ...this.buildDefaultHeaders(),
+                ...(this.config.headers || {}),
+                ...(options.headers || {})
+              },
+              timeout: Math.max(this.config.timeout, 30000),
+            });
+            const fakeAxiosResponse: AxiosResponse = {
+              data: browserRes.data,
+              status: browserRes.status,
+              statusText: String(browserRes.status),
+              headers: browserRes.headers as any,
+              config: {},
+              request: {}
+            } as any;
+            return fakeAxiosResponse;
+          } catch (e2) {
+            // fallthrough to error log below
+          }
+        }
+      }
+
       logger.error(`HTTP request failed for ${this.config.id}:`, {
         url,
         error: error instanceof Error ? error.message : 'Unknown error',

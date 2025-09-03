@@ -60,7 +60,9 @@ const PokemonTCGAlertsPage: React.FC = () => {
     { name: 'Best Buy', type: 'Official API', speed: '< 5 seconds' },
     { name: 'Walmart', type: 'Affiliate Feed', speed: '< 10 seconds' },
     { name: 'Costco', type: 'Monitor', speed: '< 30 seconds' },
-    { name: 'Sam\'s Club', type: 'Monitor', speed: '< 30 seconds' }
+    { name: 'Sam\'s Club', type: 'Monitor', speed: '< 30 seconds' },
+    { name: 'Target', type: 'Monitor', speed: '< 30 seconds' },
+    { name: 'GameStop', type: 'Monitor', speed: '< 30 seconds' }
   ];
 
   const faqs = [

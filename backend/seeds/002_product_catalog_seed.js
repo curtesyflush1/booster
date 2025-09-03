@@ -79,6 +79,40 @@ exports.seed = async function(knex) {
       supported_features: JSON.stringify(['price_tracking']),
       created_at: knex.fn.now(),
       updated_at: knex.fn.now()
+    },
+    {
+      id: knex.raw('gen_random_uuid()'),
+      name: 'GameStop',
+      slug: 'gamestop',
+      website_url: 'https://www.gamestop.com',
+      api_type: 'scraping',
+      api_config: JSON.stringify({
+        base_url: 'https://www.gamestop.com',
+        user_agent: 'BoosterBeacon/1.0'
+      }),
+      is_active: true,
+      rate_limit_per_minute: 30,
+      health_score: 80,
+      supported_features: JSON.stringify(['price_tracking']),
+      created_at: knex.fn.now(),
+      updated_at: knex.fn.now()
+    },
+    {
+      id: knex.raw('gen_random_uuid()'),
+      name: 'Target',
+      slug: 'target',
+      website_url: 'https://www.target.com',
+      api_type: 'scraping',
+      api_config: JSON.stringify({
+        base_url: 'https://www.target.com',
+        user_agent: 'BoosterBeacon/1.0'
+      }),
+      is_active: true,
+      rate_limit_per_minute: 30,
+      health_score: 80,
+      supported_features: JSON.stringify(['price_tracking']),
+      created_at: knex.fn.now(),
+      updated_at: knex.fn.now()
     }
   ];
 

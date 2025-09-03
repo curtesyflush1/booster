@@ -63,7 +63,9 @@ const HomePage: React.FC = () => {
     { name: 'Best Buy', status: 'API' },
     { name: 'Walmart', status: 'Affiliate' },
     { name: 'Costco', status: 'Monitor' },
-    { name: "Sam's Club", status: 'Monitor' }
+    { name: "Sam's Club", status: 'Monitor' },
+    { name: 'Target', status: 'Monitor' },
+    { name: 'GameStop', status: 'Monitor' }
   ];
 
   const testimonials = [

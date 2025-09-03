@@ -91,7 +91,7 @@ export class TargetService extends BaseRetailerService {
       originalPrice: product.originalPrice,
       availabilityStatus,
       productUrl: product.url,
-      cartUrl: undefined,
+      cartUrl: this.buildCartUrl(product.url, this.config.id),
       stockLevel: undefined,
       storeLocations: [],
       lastUpdated: new Date(),
@@ -265,4 +265,3 @@ export class TargetService extends BaseRetailerService {
     }
   }
 }
-

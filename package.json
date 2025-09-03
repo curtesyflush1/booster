@@ -79,7 +79,8 @@
     "prepare": "node -e \"if (process.env.NODE_ENV !== 'production') require('husky').install()\"",
     "memories": "bash ./scripts/push-memories.sh",
     "memories:push": "bash ./scripts/push-memories.sh",
-    "memories:pull": "bash ./scripts/pull-memories.sh"
+    "memories:pull": "bash ./scripts/pull-memories.sh",
+    "retailers:smoke": "cd backend && npm run retailers:smoke"
   },
   "keywords": [
     "pokemon",
