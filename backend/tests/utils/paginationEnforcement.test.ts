@@ -193,8 +193,7 @@ describe('Pagination Enforcement', () => {
         limit: jest.fn().mockReturnThis()
       };
       
-      (db as jest.Mock).mockImplementation(() => mockQuery);
-      mockQuery.where.mockResolvedValue([{ id: 1 }, { id: 2 }]);
+      (db as unknown as jest.Mock).mockImplementation(() => mockQuery);
     });
 
     it('should enforce pagination in findBy method', async () => {
@@ -290,27 +289,27 @@ describe('Pagination Enforcement', () => {
 
   describe('createPaginatedQuery', () => {
     it('should create paginated query with count query', () => {
-      const mockKnex = {
-        select: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        offset: jest.fn().mockReturnThis(),
-        count: jest.fn().mockReturnThis()
-      } as any;
+    const mockBuilder = {
+      select: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      offset: jest.fn().mockReturnThis(),
+      count: jest.fn().mockReturnThis(),
+      toSQL: jest.fn().mockReturnValue({ sql: 'SELECT * FROM products LIMIT 25 OFFSET 25' })
+    } as any;
+    const mockKnex = ((tableName: any) => mockBuilder) as any;
 
-      // mockKnex is already set up to return itself
+    const result = createPaginatedQuery(mockKnex as any, 'products', {
+      page: 2,
+      limit: 25,
+      where: { is_active: true }
+    });
 
-      const result = createPaginatedQuery(mockKnex, 'products', {
-        page: 2,
-        limit: 25,
-        where: { is_active: true }
-      });
-
-      expect(result.pagination).toEqual({ page: 2, limit: 25 });
-      expect(mockKnex.where).toHaveBeenCalledWith({ is_active: true });
-      expect(mockKnex.limit).toHaveBeenCalledWith(25);
-      expect(mockKnex.offset).toHaveBeenCalledWith(25);
+    expect(result.pagination).toEqual({ page: 2, limit: 25 });
+    expect(mockBuilder.where).toHaveBeenCalledWith({ is_active: true });
+    expect(mockBuilder.limit).toHaveBeenCalledWith(25);
+    expect(mockBuilder.offset).toHaveBeenCalledWith(25);
     });
   });
 });
@@ -327,13 +326,18 @@ describe('Integration Tests', () => {
       orderBy: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
       offset: jest.fn().mockReturnThis(),
-      then: jest.fn().mockResolvedValue([
-        { id: 1, name: 'Product 1' },
-        { id: 2, name: 'Product 2' }
-      ])
+      then: jest.fn(function(onFulfilled: any) {
+        if (typeof onFulfilled === 'function') {
+          onFulfilled([
+            { id: 1, name: 'Product 1' },
+            { id: 2, name: 'Product 2' }
+          ]);
+        }
+        return Promise.resolve();
+      })
     };
 
-    (db as jest.Mock).mockImplementation(() => mockDb);
+    (db as unknown as jest.Mock).mockImplementation(() => mockDb);
 
     class TestModel extends BaseModel {
       protected static override tableName = 'products';

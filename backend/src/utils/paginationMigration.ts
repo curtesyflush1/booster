@@ -172,16 +172,16 @@ export class PaginationComplianceChecker {
     recordCount: number,
     hasPagination: boolean
   ): void {
+    const entry = {
+      timestamp: new Date(),
+      method: methodName,
+      recordCount,
+      hasPagination
+    };
+    this.violations.push(entry);
+
     const isViolation = recordCount > DEFAULT_VALUES.MAX_QUERY_LIMIT && !hasPagination;
-
     if (isViolation) {
-      this.violations.push({
-        timestamp: new Date(),
-        method: methodName,
-        recordCount,
-        hasPagination
-      });
-
       logger.warn('Pagination compliance violation:', {
         method: methodName,
         recordCount,
@@ -192,7 +192,8 @@ export class PaginationComplianceChecker {
   }
 
   static getViolations(): typeof PaginationComplianceChecker.violations {
-    return [...this.violations];
+    // Return only true violations
+    return this.violations.filter(v => v.recordCount > DEFAULT_VALUES.MAX_QUERY_LIMIT && !v.hasPagination);
   }
 
   static getComplianceReport(): {
@@ -202,7 +203,7 @@ export class PaginationComplianceChecker {
     recentViolations: typeof PaginationComplianceChecker.violations;
   } {
     const totalChecks = this.violations.length;
-    const violations = this.violations.filter(v => !v.hasPagination).length;
+    const violations = this.getViolations().length;
     const complianceRate = totalChecks > 0 ? ((totalChecks - violations) / totalChecks) * 100 : 100;
     
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);

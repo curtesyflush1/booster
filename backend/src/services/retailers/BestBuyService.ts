@@ -229,16 +229,17 @@ export class BestBuyService extends BaseRetailerService {
 
   private async getProductBySku(sku: string): Promise<BestBuyProduct | null> {
     try {
-      const response = await this.makeRequest(`/products(sku=${encodeURIComponent(sku)})`, {
+      const response = await this.httpClient.get(`/products/${encodeURIComponent(sku)}`, {
         params: {
-          apiKey: this.config.apiKey,
+          apikey: this.config.apiKey,
           format: 'json',
           show: 'sku,name,regularPrice,salePrice,onSale,url,addToCartUrl,inStoreAvailability,onlineAvailability,image,categoryPath'
         }
       });
-      
-      const products = response.data?.products || [];
-      return products.length ? products[0] : null;
+      const data = response.data as any;
+      // Some endpoints return product directly, others under products[]
+      const product = data?.products?.[0] || data;
+      return product ? (product as BestBuyProduct) : null;
     } catch (error) {
       if ((error as any).response?.status === 404) {
         return null;
@@ -249,17 +250,17 @@ export class BestBuyService extends BaseRetailerService {
 
   private async getProductByUpc(upc: string): Promise<BestBuyProduct | null> {
     try {
-      const response = await this.makeRequest(`/products(upc=${encodeURIComponent(upc)})`, {
+      const response = await this.httpClient.get('/products', {
         params: {
-          apiKey: this.config.apiKey,
+          apikey: this.config.apiKey,
           format: 'json',
+          upc: upc,
           show: 'sku,name,regularPrice,salePrice,onSale,url,addToCartUrl,inStoreAvailability,onlineAvailability,image,categoryPath',
           pageSize: 1
         }
       });
-      
-      const products = response.data.products || [];
-      return products.length > 0 ? products[0] : null;
+      const products = (response.data as any)?.products || [];
+      return products.length > 0 ? (products[0] as BestBuyProduct) : null;
     } catch (error) {
       logger.error(`Error searching Best Buy by UPC ${upc}:`, error);
       return null;

@@ -1,5 +1,7 @@
 import nodemailer from 'nodemailer';
 import { EmailConfigService } from '../../services/emailConfigService';
+import { EmailPreferencesService } from '../../services/emailPreferencesService';
+import { EmailDeliveryService } from '../../services/emailDeliveryService';
 
 export interface SMTPConfig {
   host: string;
@@ -22,6 +24,38 @@ export interface ChannelDeliveryResult {
 
 export class EmailService {
   private static transporter: nodemailer.Transporter | null = null;
+
+  private static getBackendPublicBase(): string {
+    const baseBackend = process.env.BACKEND_PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
+    return baseBackend.replace(/\/$/, '');
+  }
+
+  private static async buildUnsubscribeHeaders(
+    userId: string | undefined,
+    emailType: 'all' | 'alerts' | 'marketing' | 'digest'
+  ): Promise<Record<string, string> | undefined> {
+    try {
+      const mailto = (process.env.UNSUBSCRIBE_MAILTO || process.env.SUPPORT_EMAIL || process.env.FROM_EMAIL || 'support@boosterbeacon.com');
+      let token: string | null = null;
+      if (userId) {
+        try {
+          token = await EmailPreferencesService.createUnsubscribeToken(userId, emailType);
+        } catch {
+          token = null;
+        }
+      }
+      const parts: string[] = [];
+      if (mailto) parts.push(`<mailto:${mailto}?subject=unsubscribe>`);
+      if (token) parts.push(`<${this.getBackendPublicBase()}/api/email/unsubscribe?token=${encodeURIComponent(token)}> `);
+      if (parts.length === 0) return undefined;
+      return {
+        'List-Unsubscribe': parts.join(', '),
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
+      };
+    } catch {
+      return undefined;
+    }
+  }
 
   private static async getTransporter(): Promise<nodemailer.Transporter | null> {
     // If transporter already set (e.g., in production init), reuse it
@@ -72,7 +106,7 @@ export class EmailService {
     }
   }
 
-  static async sendVerificationEmail(user: { email: string; first_name?: string; last_name?: string }, token: string): Promise<{ success: boolean; error?: string; previewUrl?: string }> {
+  static async sendVerificationEmail(user: { id?: string; email: string; first_name?: string; last_name?: string }, token: string): Promise<{ success: boolean; error?: string; previewUrl?: string }> {
     const transporter = await this.getTransporter();
     const baseFrontend = process.env.FRONTEND_URL;
     const baseBackend = process.env.BACKEND_PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
@@ -100,13 +134,29 @@ export class EmailService {
 
     try {
       const cfg = EmailConfigService.getCurrentConfiguration();
+      const headers = (process.env.EMAIL_INCLUDE_UNSUBSCRIBE_IN_TRANSACTIONAL === 'true')
+        ? await this.buildUnsubscribeHeaders(user.id, 'all')
+        : undefined;
       const info = await transporter.sendMail({
         from: `${cfg.fromName} <${cfg.fromEmail}>`,
         to: user.email,
         subject,
         text,
-        html
+        html,
+        headers
       });
+      if (user.id) {
+        try {
+          await EmailDeliveryService.logEmailSent({
+            userId: user.id,
+            emailType: 'system',
+            recipientEmail: user.email,
+            subject,
+            messageId: (info as any)?.messageId,
+            metadata: { category: 'verification' }
+          });
+        } catch {}
+      }
       const previewUrl = nodemailer.getTestMessageUrl(info) || undefined;
       return { success: true, previewUrl };
     } catch (err: any) {
@@ -123,7 +173,7 @@ export class EmailService {
     return { success: true };
   }
 
-  static async sendPasswordResetEmail(user: { email: string; first_name?: string }, token: string): Promise<{ success: boolean; error?: string; previewUrl?: string }> {
+  static async sendPasswordResetEmail(user: { id?: string; email: string; first_name?: string }, token: string): Promise<{ success: boolean; error?: string; previewUrl?: string }> {
     const transporter = await this.getTransporter();
     const baseFrontend = process.env.FRONTEND_URL;
     const resetUrl = `${(baseFrontend || '').replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}`;
@@ -145,13 +195,29 @@ export class EmailService {
     }
     try {
       const cfg = EmailConfigService.getCurrentConfiguration();
+      const headers = (process.env.EMAIL_INCLUDE_UNSUBSCRIBE_IN_TRANSACTIONAL === 'true')
+        ? await this.buildUnsubscribeHeaders(user.id, 'all')
+        : undefined;
       const info = await transporter.sendMail({
         from: `${cfg.fromName} <${cfg.fromEmail}>`,
         to: user.email,
         subject,
         text,
-        html
+        html,
+        headers
       });
+      if (user.id) {
+        try {
+          await EmailDeliveryService.logEmailSent({
+            userId: user.id,
+            emailType: 'system',
+            recipientEmail: user.email,
+            subject,
+            messageId: (info as any)?.messageId,
+            metadata: { category: 'password_reset' }
+          });
+        } catch {}
+      }
       const previewUrl = nodemailer.getTestMessageUrl(info) || undefined;
       return { success: true, previewUrl };
     } catch (err: any) {

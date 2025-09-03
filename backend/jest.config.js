@@ -65,7 +65,7 @@ module.exports = {
   verbose: false,
   forceExit: true,
   clearMocks: true,
-  resetMocks: true,
+  resetMocks: false,
   restoreMocks: true,
   detectOpenHandles: true, // Enable to catch resource leaks
   maxWorkers: '50%', // Use half available cores for better performance

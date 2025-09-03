@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as authController from '../controllers/authController';
-import { authenticate } from '../middleware/auth';
+import * as authMiddleware from '../middleware/auth';
 import { 
   authRateLimit, 
   passwordResetRateLimit, 
@@ -36,7 +36,8 @@ router.post('/refresh', validateBody(authSchemas.refreshToken), authController.r
  * @desc    Get current user profile
  * @access  Private
  */
-router.get('/profile', authenticate, authController.getProfile);
+const authGuard = (authMiddleware as any).authenticate || (authMiddleware as any).auth;
+router.get('/profile', authGuard, authController.getProfile);
 
 /**
  * @route   POST /api/auth/forgot-password
@@ -57,7 +58,7 @@ router.post('/reset-password', validateBody(authSchemas.passwordReset), authCont
  * @desc    Change password (requires current password)
  * @access  Private
  */
-router.post('/change-password', authenticate, validateBody(authSchemas.changePassword), authController.changePassword);
+router.post('/change-password', authGuard, validateBody(authSchemas.changePassword), authController.changePassword);
 
 /**
  * @route   POST /api/auth/verify-email
@@ -85,13 +86,13 @@ router.post('/resend-verification', validateBody(authSchemas.resendVerification)
  * @desc    Logout user
  * @access  Private
  */
-router.post('/logout', authenticate, authController.logout);
+router.post('/logout', authGuard, authController.logout);
 
 /**
  * @route   POST /api/auth/logout-all
  * @desc    Logout user from all devices
  * @access  Private
  */
-router.post('/logout-all', authenticate, authController.logoutAllDevices);
+router.post('/logout-all', authGuard, authController.logoutAllDevices);
 
 export default router;

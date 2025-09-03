@@ -4,6 +4,11 @@ import { BestBuyService } from './retailers/BestBuyService';
 import { WalmartService } from './retailers/WalmartService';
 import { CostcoService } from './retailers/CostcoService';
 import { SamsClubService } from './retailers/SamsClubService';
+import { GameStopService } from './retailers/GameStopService';
+import { TargetService } from './retailers/TargetService';
+import { BarnesNobleService } from './retailers/BarnesNobleService';
+import { AmazonService } from './retailers/AmazonService';
+import { WalgreensService } from './retailers/WalgreensService';
 import { logger } from '../utils/logger';
 import { 
   HTTP_TIMEOUTS, 
@@ -33,6 +38,11 @@ export class RetailerIntegrationService {
     
     for (const config of retailerConfigs) {
       try {
+        // Skip initializing disabled retailers to avoid constructor errors (e.g., missing API keys)
+        if (!config.isActive) {
+          logger.info(`Skipping retailer service (inactive): ${config.name}`);
+          continue;
+        }
         const service = this.createRetailerService(config);
         const circuitBreaker = new CircuitBreaker({
           failureThreshold: CIRCUIT_BREAKER.FAILURE_THRESHOLD,
@@ -64,6 +74,16 @@ export class RetailerIntegrationService {
         return new CostcoService(config);
       case 'sams-club':
         return new SamsClubService(config);
+      case 'gamestop':
+        return new GameStopService(config);
+      case 'target':
+        return new TargetService(config);
+      case 'barnes-noble':
+        return new BarnesNobleService(config);
+      case 'amazon':
+        return new AmazonService(config);
+      case 'walgreens':
+        return new WalgreensService(config);
       default:
         throw new Error(`Unknown retailer: ${config.slug}`);
     }
@@ -90,6 +110,45 @@ export class RetailerIntegrationService {
         isActive: !!(process.env.BEST_BUY_API_KEY || process.env.BESTBUY_API_KEY)
       },
       {
+        id: 'barnes-noble',
+        name: 'Barnes & Noble',
+        slug: 'barnes-noble',
+        type: 'scraping',
+        baseUrl: 'https://www.barnesandnoble.com',
+        rateLimit: {
+          requestsPerMinute: 2,
+          requestsPerHour: 60
+        },
+        timeout: HTTP_TIMEOUTS.COSTCO_SCRAPING,
+        retryConfig: {
+          maxRetries: RETRY_CONFIG.SCRAPING_MAX_RETRIES,
+          retryDelay: RETRY_CONFIG.SCRAPING_RETRY_DELAY
+        },
+        isActive: true
+      },
+      {
+        id: 'amazon',
+        name: 'Amazon',
+        slug: 'amazon',
+        type: 'scraping',
+        baseUrl: 'https://www.amazon.com',
+        rateLimit: { requestsPerMinute: 2, requestsPerHour: 60 },
+        timeout: HTTP_TIMEOUTS.COSTCO_SCRAPING,
+        retryConfig: { maxRetries: RETRY_CONFIG.SCRAPING_MAX_RETRIES, retryDelay: RETRY_CONFIG.SCRAPING_RETRY_DELAY },
+        isActive: true
+      },
+      {
+        id: 'walgreens',
+        name: 'Walgreens',
+        slug: 'walgreens',
+        type: 'scraping',
+        baseUrl: 'https://www.walgreens.com',
+        rateLimit: { requestsPerMinute: 2, requestsPerHour: 60 },
+        timeout: HTTP_TIMEOUTS.COSTCO_SCRAPING,
+        retryConfig: { maxRetries: RETRY_CONFIG.SCRAPING_MAX_RETRIES, retryDelay: RETRY_CONFIG.SCRAPING_RETRY_DELAY },
+        isActive: true
+      },
+      {
         id: 'walmart',
         name: 'Walmart',
         slug: 'walmart',
@@ -106,6 +165,40 @@ export class RetailerIntegrationService {
           retryDelay: RETRY_CONFIG.API_RETRY_DELAY
         },
         isActive: !!process.env.WALMART_API_KEY
+      },
+      {
+        id: 'gamestop',
+        name: 'GameStop',
+        slug: 'gamestop',
+        type: 'scraping',
+        baseUrl: 'https://www.gamestop.com',
+        rateLimit: {
+          requestsPerMinute: 2,
+          requestsPerHour: 60
+        },
+        timeout: HTTP_TIMEOUTS.COSTCO_SCRAPING,
+        retryConfig: {
+          maxRetries: RETRY_CONFIG.SCRAPING_MAX_RETRIES,
+          retryDelay: RETRY_CONFIG.SCRAPING_RETRY_DELAY
+        },
+        isActive: true
+      },
+      {
+        id: 'target',
+        name: 'Target',
+        slug: 'target',
+        type: 'scraping',
+        baseUrl: 'https://www.target.com',
+        rateLimit: {
+          requestsPerMinute: 2,
+          requestsPerHour: 60
+        },
+        timeout: HTTP_TIMEOUTS.COSTCO_SCRAPING,
+        retryConfig: {
+          maxRetries: RETRY_CONFIG.SCRAPING_MAX_RETRIES,
+          retryDelay: RETRY_CONFIG.SCRAPING_RETRY_DELAY
+        },
+        isActive: true
       },
       {
         id: 'costco',
@@ -175,7 +268,8 @@ export class RetailerIntegrationService {
       'best-buy': '/images/retailers/bestbuy-logo.png',
       'walmart': '/images/retailers/walmart-logo.png',
       'costco': '/images/retailers/costco-logo.png',
-      'sams-club': '/images/retailers/samsclub-logo.png'
+      'sams-club': '/images/retailers/samsclub-logo.png',
+      'gamestop': '/images/retailers/gamestop-logo.png'
     };
     return logoMap[slug] || '/images/retailers/default-logo.png';
   }
@@ -185,7 +279,8 @@ export class RetailerIntegrationService {
       'best-buy': 'https://www.bestbuy.com',
       'walmart': 'https://www.walmart.com',
       'costco': 'https://www.costco.com',
-      'sams-club': 'https://www.samsclub.com'
+      'sams-club': 'https://www.samsclub.com',
+      'gamestop': 'https://www.gamestop.com'
     };
     return websiteMap[slug] || '';
   }

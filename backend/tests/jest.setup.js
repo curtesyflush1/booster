@@ -65,25 +65,7 @@ jest.mock('redis', () => ({
   }))
 }));
 
-// Mock the database configuration to use SQLite in memory
-jest.mock('../src/config/database', () => ({
-  default: {
-    client: 'sqlite3',
-    connection: ':memory:',
-    useNullAsDefault: true,
-    pool: {
-      min: 0,
-      max: 1
-    },
-    migrations: {
-      directory: './migrations'
-    },
-    seeds: {
-      directory: './seeds'
-    }
-  },
-  testConnection: jest.fn().mockResolvedValue(true)
-}));
+// Note: database module is mocked per-test where needed to avoid global side effects
 
 // Mock Knex database
 jest.mock('knex', () => {
@@ -153,27 +135,9 @@ global.clearInterval = jest.fn((intervalId) => {
   // Do nothing for mock intervals
 });
 
-// Mock KMS providers for test environment - only use EnvironmentKMSService
+// Use actual KMS factory in unit tests to validate configuration logic
 jest.mock('../src/utils/encryption/kms/factory', () => {
-  const { EnvironmentKMSService } = require('../src/utils/encryption/kms/envKMS');
-  
-  return {
-    KMSFactory: {
-      createKMSService: jest.fn((config) => {
-        // Always return EnvironmentKMSService for tests
-        return new EnvironmentKMSService(config);
-      }),
-      createFromEnvironment: jest.fn(() => {
-        const config = {
-          provider: 'env',
-          keyId: process.env.KMS_KEY_ID || 'default'
-        };
-        return new EnvironmentKMSService(config);
-      }),
-      validateConfig: jest.fn(() => ({ valid: true, errors: [] })),
-      testKMSService: jest.fn(async () => ({ healthy: true }))
-    }
-  };
+  return jest.requireActual('../src/utils/encryption/kms/factory');
 });
 
 // Global test timeout

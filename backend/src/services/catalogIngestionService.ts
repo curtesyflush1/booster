@@ -24,12 +24,36 @@ export class CatalogIngestionService extends BaseModel<any> {
     const integration = new RetailerIntegrationService();
 
     const queries = [
+      // Generic
       'pokemon tcg',
+      'pokemon cards',
+      'pokemon trading card game',
+      // Product types
       'pokemon booster box',
-      'pokemon elite trainer box',
       'pokemon booster pack',
+      'pokemon blister pack',
+      'pokemon booster bundle',
+      'pokemon build & battle stadium',
+      'pokemon build and battle',
+      'pokemon elite trainer box',
+      'pokemon etb',
+      'pokemon premium collection',
+      'pokemon ultra premium collection',
+      'pokemon tin',
       'pokemon collection box',
-      'pokemon tin'
+      // Recent sets (Scarlet & Violet era)
+      'pokemon obsidian flames',
+      'pokemon paradox rift',
+      'pokemon temporal forces',
+      'pokemon twilight masquerade',
+      'pokemon stellar crown',
+      'pokemon surging sparks',
+      'pokemon shrouded fable',
+      'pokemon paldean fates',
+      'pokemon scarlet & violet 151',
+      // Popular SKUs/terms
+      'pokemon upc',
+      'pokemon ultra premium',
     ];
 
     await this.ensureExternalMapTable();
@@ -68,11 +92,31 @@ export class CatalogIngestionService extends BaseModel<any> {
       ? options.queries
       : [
           'pokemon tcg',
+          'pokemon cards',
+          'pokemon trading card game',
           'pokemon booster box',
-          'pokemon elite trainer box',
           'pokemon booster pack',
+          'pokemon blister pack',
+          'pokemon booster bundle',
+          'pokemon build & battle stadium',
+          'pokemon build and battle',
+          'pokemon elite trainer box',
+          'pokemon etb',
+          'pokemon premium collection',
+          'pokemon ultra premium collection',
+          'pokemon tin',
           'pokemon collection box',
-          'pokemon tin'
+          'pokemon obsidian flames',
+          'pokemon paradox rift',
+          'pokemon temporal forces',
+          'pokemon twilight masquerade',
+          'pokemon stellar crown',
+          'pokemon surging sparks',
+          'pokemon shrouded fable',
+          'pokemon paldean fates',
+          'pokemon scarlet & violet 151',
+          'pokemon upc',
+          'pokemon ultra premium'
         ];
 
     // Map retailer slug -> DB id for availability preview

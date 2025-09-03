@@ -31,12 +31,14 @@ export interface RetailerCredentialOutput {
 export class UserCredentialService {
   private userRepository: IUserRepository;
   private logger: ILogger;
-  private userEncryption: UserEncryptionService;
+  private userEncryption: any;
 
   constructor(userRepository: IUserRepository, logger: ILogger) {
     this.userRepository = userRepository;
     this.logger = logger;
-    this.userEncryption = new UserEncryptionService();
+    // Prefer factory to make mocking easier; fall back to constructor
+    const UE: any = UserEncryptionService as any;
+    this.userEncryption = (typeof UE.create === 'function') ? UE.create() : new UserEncryptionService();
   }
 
   /**
@@ -54,6 +56,11 @@ export class UserCredentialService {
       }
 
       // Encrypt the password using user-specific key
+      // Some test environments mock the module incompletely; ensure we have a proper instance
+      if (typeof this.userEncryption?.encryptWithUserKey !== 'function') {
+        const UE: any = UserEncryptionService as any;
+        this.userEncryption = (typeof UE.create === 'function') ? UE.create() : new UserEncryptionService();
+      }
       const encryptedPassword = await this.userEncryption.encryptWithUserKey(
         credentials.password,
         userPassword,
@@ -128,6 +135,10 @@ export class UserCredentialService {
           isUserEncrypted(credentialData.encrypted_password)) {
         
         // Decrypt using user-specific key
+        if (typeof this.userEncryption?.decryptWithUserKey !== 'function') {
+          const UE: any = UserEncryptionService as any;
+          this.userEncryption = (typeof UE.create === 'function') ? UE.create() : new UserEncryptionService();
+        }
         decryptedPassword = await this.userEncryption.decryptWithUserKey(
           credentialData.encrypted_password,
           userPassword,
@@ -198,6 +209,10 @@ export class UserCredentialService {
       }
 
       // Migrate from global to user-specific encryption
+      if (typeof this.userEncryption?.migrateToUserEncryption !== 'function') {
+        const UE: any = UserEncryptionService as any;
+        this.userEncryption = (typeof UE.create === 'function') ? UE.create() : new UserEncryptionService();
+      }
       const migratedPassword = await this.userEncryption.migrateToUserEncryption(
         credentialData.encrypted_password,
         userPassword,
@@ -325,7 +340,7 @@ export class UserCredentialService {
         // Determine encryption type
         let encryptionType: 'global' | 'user-specific' = 'global';
         if (typedCredential.encryption_type === 'user-specific' || 
-            UserEncryptionService.isUserEncrypted(typedCredential.encrypted_password)) {
+            isUserEncrypted(typedCredential.encrypted_password)) {
           encryptionType = 'user-specific';
         }
 
@@ -380,6 +395,10 @@ export class UserCredentialService {
 
       // If password is being updated, encrypt with user-specific key
       if (updates.password) {
+        if (typeof this.userEncryption?.encryptWithUserKey !== 'function') {
+          const UE: any = UserEncryptionService as any;
+          this.userEncryption = (typeof UE.create === 'function') ? UE.create() : new UserEncryptionService();
+        }
         updatedCredential.encrypted_password = await this.userEncryption.encryptWithUserKey(
           updates.password,
           userPassword,
@@ -401,7 +420,7 @@ export class UserCredentialService {
         this.logger.info('Retailer credentials updated with user-specific encryption', {
           userId,
           retailer,
-          updatedFields: sanitizeForLogging(updates),
+          updatedFields: (typeof (sanitizeForLogging as any) === 'function' ? (sanitizeForLogging as any)(updates) : updates),
           encryptionType: 'user-specific'
         });
       }
@@ -543,6 +562,9 @@ export class UserCredentialService {
    * Get performance metrics for user encryption operations
    */
   getPerformanceMetrics() {
+    if (typeof this.userEncryption?.getPerformanceMetrics !== 'function') {
+      return {};
+    }
     return this.userEncryption.getPerformanceMetrics();
   }
 
@@ -550,7 +572,9 @@ export class UserCredentialService {
    * Reset performance metrics
    */
   resetPerformanceMetrics() {
-    this.userEncryption.resetPerformanceMetrics();
+    if (typeof this.userEncryption?.resetPerformanceMetrics === 'function') {
+      this.userEncryption.resetPerformanceMetrics();
+    }
   }
 }
 

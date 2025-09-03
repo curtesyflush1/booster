@@ -384,12 +384,11 @@ export function sanitizeJSONContent(
  * Determine the appropriate content type for a given key
  */
 function determineContentTypeForKey(key: string, defaultContentType: string): string {
-  // If a specific non-default content type was provided, use it for all fields
-  if (defaultContentType !== 'plain_text') {
+  // If a default is explicitly provided, use it as-is, including plain_text
+  if (defaultContentType) {
     return defaultContentType;
   }
-  
-  // Auto-detect based on key name for plain_text default
+  // Otherwise auto-detect based on key name
   return getContentTypeFromKey(key);
 }
 
@@ -439,7 +438,8 @@ function getContentTypeFromKey(key: string): string {
  * Middleware to sanitize request body content
  */
 export function sanitizeRequestBody(contentTypeMap: Record<string, string> = {}) {
-  return (req: Request, _res: Response, next: NextFunction) => {
+  // Loosen parameter typing to improve test ergonomics while preserving runtime behavior
+  return (req: any, _res: any, next: any) => {
     if (req.body && typeof req.body === 'object') {
       try {
         req.body = sanitizeObjectFields(req.body, contentTypeMap);

@@ -57,8 +57,18 @@ export class BaseAppError extends Error implements AppError {
  * Specific error classes for common scenarios
  */
 export class ValidationError extends BaseAppError {
-  constructor(message: string, context?: Record<string, any>, userId?: string) {
+  public field?: string;
+  constructor(message: string, fieldOrContext?: string | Record<string, any>, value?: any, userId?: string) {
+    let context: Record<string, any> | undefined = undefined;
+    let field: string | undefined = undefined;
+    if (typeof fieldOrContext === 'string') {
+      field = fieldOrContext;
+      context = { field, value };
+    } else if (fieldOrContext && typeof fieldOrContext === 'object') {
+      context = fieldOrContext;
+    }
     super(message, 400, 'VALIDATION_ERROR', true, context, userId, 'validation');
+    this.field = field;
   }
 }
 
@@ -104,6 +114,35 @@ export class DatabaseError extends BaseAppError {
     if (originalError) {
       (this as any).cause = originalError;
     }
+  }
+}
+
+// Additional error classes expected by tests
+export class ModelError extends BaseAppError {
+  public field?: string;
+  public originalError?: Error;
+  constructor(message: string, code: string = 'MODEL_ERROR', field?: string, originalError?: Error) {
+    super(message, 400, code, true, field ? { field } : undefined, undefined, 'model');
+    this.field = field;
+    this.originalError = originalError;
+  }
+}
+
+export class DuplicateError extends ModelError {
+  constructor(resourceOrMessage: string, field?: string, value?: any) {
+    const message = field
+      ? `${resourceOrMessage} with ${field} '${value}' already exists`
+      : resourceOrMessage;
+    super(message, 'DUPLICATE_ERROR', field);
+  }
+}
+
+export class DatabaseOperationError extends DatabaseError {
+  public originalError?: Error;
+  constructor(operation: string, originalError: Error) {
+    super(`Database ${operation} operation failed: ${originalError.message}`, originalError, operation);
+    this.originalError = originalError;
+    this.name = 'DatabaseOperationError';
   }
 }
 
@@ -270,3 +309,32 @@ export const asyncRouteHandler = (
     Promise.resolve(fn(req, res, next)).catch(next);
   };
 };
+
+// Model/database error translator expected by tests
+export function handleModelError(err: any, operation: string): never {
+  // Re-throw known app errors
+  if (err instanceof BaseAppError) {
+    throw err;
+  }
+  // Postgres unique violation
+  if (err && err.code === '23505') {
+    const detail: string = err.detail || '';
+    // crude parse for (field)=(value)
+    const match = detail.match(/\(([^)]+)\)=\(([^)]+)\)/);
+    const field = match?.[1] || 'unknown';
+    const value = match?.[2] || 'unknown';
+    throw new DuplicateError('Duplicate entry', field, value);
+  }
+  // Foreign key violation
+  if (err && err.code === '23503') {
+    throw new ModelError('Referenced resource does not exist', 'FOREIGN_KEY_ERROR');
+  }
+  // Not null violation
+  if (err && err.code === '23502') {
+    const column = err.column || 'unknown field';
+    throw new ValidationError(`${column} is required`, column);
+  }
+  // Fallback generic database error
+  const original = err instanceof Error ? err : new Error(err?.message || 'Database error');
+  throw new DatabaseOperationError(operation, original);
+}

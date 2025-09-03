@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { authService } from '../services/authService';
 import { User } from '../models/User';
 import { logger } from '../utils/logger';
+import { EmailService } from '../services/notifications/emailService';
 import { IUserRegistration, ILoginCredentials } from '../types/database';
 import { 
   sendSuccessResponse, 
@@ -132,7 +133,17 @@ export const requestPasswordReset = async (req: Request, res: Response, next: Ne
     const { email } = req.body;
 
     // Initiate password reset
-    await authService.initiatePasswordReset(email);
+    const token = await authService.initiatePasswordReset(email);
+
+    // Best-effort email delivery without revealing existence
+    try {
+      const user = await User.findByEmail(email);
+      if (user && token && typeof token === 'string') {
+        await EmailService.sendPasswordResetEmail({ id: user.id, email: user.email, first_name: (user as any).first_name }, token);
+      }
+    } catch (e) {
+      logger.warn('Password reset email send failed (non-blocking)', { error: e instanceof Error ? e.message : String(e) });
+    }
 
     // Always return success to prevent email enumeration
     res.status(200).json({

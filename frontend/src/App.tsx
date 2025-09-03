@@ -30,6 +30,8 @@ const PrivacyPage = React.lazy(() => import('./pages/PrivacyPage'));
 const SiteMapPage = React.lazy(() => import('./pages/SiteMapPage'));
 const AdminDashboardPage = React.lazy(() => import('./pages/AdminDashboardPage'));
 const VerifyEmailPage = React.lazy(() => import('./pages/VerifyEmailPage'));
+const ForgotPasswordPage = React.lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = React.lazy(() => import('./pages/ResetPasswordPage'));
 
 // SEO-optimized landing pages
 const PokemonTCGAlertsPage = React.lazy(() => import('./pages/PokemonTCGAlertsPage'));
@@ -101,6 +103,8 @@ const routeConfig: RouteConfig[] = [
   { path: '/privacy', element: PrivacyPage },
   { path: '/sitemap', element: SiteMapPage },
   { path: '/verify-email', element: VerifyEmailPage },
+  { path: '/forgot-password', element: ForgotPasswordPage },
+  { path: '/reset-password', element: ResetPasswordPage },
 
   // SEO-optimized landing pages
   { path: '/pokemon-tcg-alerts', element: PokemonTCGAlertsPage },

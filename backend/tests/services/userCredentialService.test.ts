@@ -169,6 +169,8 @@ describe('UserCredentialService', () => {
 
   describe('getRetailerCredentials', () => {
     it('should retrieve and decrypt user-encrypted credentials', async () => {
+      // Ensure decrypt returns original password for this test case
+      (mockUserEncryptionService.decryptWithUserKey as jest.Mock).mockResolvedValueOnce(testRetailerPassword);
       const userEncryption = new UserEncryptionService();
       const encryptedPassword = await userEncryption.encryptWithUserKey(
         testRetailerPassword,
@@ -591,6 +593,10 @@ describe('UserCredentialService', () => {
 
       mockUserRepository.findById.mockResolvedValue(userWithCredentials);
       mockUserRepository.updateById.mockResolvedValue(userWithCredentials);
+
+      // Force global decrypt to fail for invalid data to simulate verification failure
+      const enc = require('../../src/utils/encryption');
+      (enc.decrypt as jest.Mock).mockImplementationOnce(() => { throw new Error('Invalid encrypted data'); });
 
       const result = await userCredentialService.verifyRetailerCredentials(
         testUserId,

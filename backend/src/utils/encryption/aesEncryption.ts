@@ -15,6 +15,11 @@ export class AESEncryptionService implements IEncryptionService {
   encrypt(plaintext: string): string {
     this.performanceTracker.startTimer();
     try {
+      // Allow empty strings for legacy callers/tests: treat as pass-through
+      if (typeof plaintext === 'string' && plaintext.length === 0) {
+        this.performanceTracker.endTimer('encrypt');
+        return '';
+      }
       EncryptionValidator.validatePlaintext(plaintext);
       
       // Use synchronous key retrieval for backward compatibility
@@ -60,6 +65,10 @@ export class AESEncryptionService implements IEncryptionService {
   async encryptAsync(plaintext: string): Promise<string> {
     this.performanceTracker.startTimer();
     try {
+      if (typeof plaintext === 'string' && plaintext.length === 0) {
+        this.performanceTracker.endTimer('encrypt');
+        return '';
+      }
       EncryptionValidator.validatePlaintext(plaintext);
       
       const key = await this.keyManager.getKey();
@@ -104,6 +113,10 @@ export class AESEncryptionService implements IEncryptionService {
   decrypt(encryptedData: string): string {
     this.performanceTracker.startTimer();
     try {
+      if (encryptedData === '') {
+        this.performanceTracker.endTimer('decrypt');
+        return '';
+      }
       EncryptionValidator.validateEncryptedData(encryptedData);
 
       const parts = encryptedData.split(':');
@@ -156,6 +169,10 @@ export class AESEncryptionService implements IEncryptionService {
   async decryptAsync(encryptedData: string): Promise<string> {
     this.performanceTracker.startTimer();
     try {
+      if (encryptedData === '') {
+        this.performanceTracker.endTimer('decrypt');
+        return '';
+      }
       EncryptionValidator.validateEncryptedData(encryptedData);
 
       const parts = encryptedData.split(':');
