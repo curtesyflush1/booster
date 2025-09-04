@@ -24,7 +24,7 @@ export class StepManager {
   }
 
   getCurrentStep(): CheckoutStep | null {
-    return this.steps.length > 0 ? this.steps[this.steps.length - 1] : null;
+    return this.steps.length > 0 ? this.steps[this.steps.length - 1]! : null;
   }
 
   getSteps(): CheckoutStep[] {

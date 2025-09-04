@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 import AdminRecentTransactionsPanel from '../components/admin/AdminRecentTransactionsPanel';
+import ReactMemo = React.memo;
 
 interface DashboardStats {
   users: {
@@ -69,6 +70,16 @@ const AdminDashboardPage: React.FC = () => {
   const [mlError, setMlError] = useState<string | null>(null);
   const [retraining, setRetraining] = useState(false);
   const [retrainMetrics, setRetrainMetrics] = useState<{ rows?: number; r2?: number } | null>(null);
+  const [dropRetraining, setDropRetraining] = useState(false);
+  const [dropRetrainMetrics, setDropRetrainMetrics] = useState<{ feature_rows?: number; events_30d?: number; retailers_30d?: number } | null>(null);
+  const [budgets, setBudgets] = useState<Array<{ slug: string; qpm: number; source: string; key: string; limiter?: { count: number; ttl: number } }>>([]);
+  const [budgetsLoading, setBudgetsLoading] = useState(false);
+  const [budgetsDirty, setBudgetsDirty] = useState<Record<string, number>>({});
+  const [clfMetrics, setClfMetrics] = useState<{ exists?: boolean; trainedAt?: string; metrics?: { rows?: number; auc?: number; precisionAt10?: number } }|null>(null);
+  const [clfFlags, setClfFlags] = useState<{ primaryEnabled: boolean; threshold: number }>({ primaryEnabled: false, threshold: 0.5 });
+  const [clfSaving, setClfSaving] = useState(false);
+  const [tsData, setTsData] = useState<{ times: string[]; data: Record<string, { requests: number[]; blocked: number[]; errors: number[] }> } | null>(null);
+  const [liveSummary, setLiveSummary] = useState<{ hours: string[]; urlLive: number[]; inStock: number[]; total: number } | null>(null);
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -111,6 +122,41 @@ const AdminDashboardPage: React.FC = () => {
   useEffect(() => {
     if (activeTab === 'ml') {
       loadPriceModelMetadata();
+      (async () => {
+        try {
+          setBudgetsLoading(true);
+          const res = await apiClient.get<{ success: boolean; data: { budgets: Array<{ slug: string; qpm: number; source: string; key: string; limiter?: { count: number; ttl: number } }> } }>('/monitoring/drop-budgets');
+          setBudgets(res.data.data.budgets);
+        } catch (e) {
+          // ignore
+        } finally {
+          setBudgetsLoading(false);
+        }
+      })();
+      (async () => {
+        try {
+          const [statusRes, flagRes] = await Promise.all([
+            apiClient.get<{ success: boolean; data: any }>('/monitoring/drop-classifier'),
+            apiClient.get<{ success: boolean; data: { primaryEnabled: boolean; threshold: number } }>('/monitoring/drop-classifier/flags')
+          ]);
+          setClfMetrics(statusRes.data.data || null);
+          setClfFlags(flagRes.data.data);
+        } catch {}
+      })();
+      (async () => {
+        try {
+          // If budgets already loaded, use their slugs; else omit slugs to fetch all
+          const slugsParam = budgets.length ? budgets.map(b=>b.slug).join(',') : '';
+          const res = await apiClient.get<{ success:boolean; data: { times: string[]; data: Record<string, { requests: number[]; blocked: number[]; errors: number[] }> } }>('/monitoring/drop-timeseries', { params: { minutes: 60, slugs: slugsParam } });
+          setTsData(res.data.data);
+        } catch {}
+      })();
+      (async () => {
+        try {
+          const res = await apiClient.get<{ success: boolean; data: { hours: string[]; urlLive: number[]; inStock: number[]; total: number } }>('/monitoring/drop-live-summary');
+          setLiveSummary(res.data.data);
+        } catch {}
+      })();
     }
   }, [activeTab, loadPriceModelMetadata]);
 
@@ -140,6 +186,67 @@ const AdminDashboardPage: React.FC = () => {
       toast.error('Retrain failed');
     } finally {
       setRetraining(false);
+    }
+  };
+
+  const handleRetrainDrops = async () => {
+    try {
+      setDropRetraining(true);
+      setMlError(null);
+      setDropRetrainMetrics(null);
+      // Optional config can include horizon/lookback
+      const res = await apiClient.post<{ success: boolean; data: { metrics?: { feature_rows?: number; events_30d?: number; retailers_30d?: number } } }>(
+        '/admin/ml/models/drop-windows/retrain',
+        { lookbackDays: 30, horizonDays: 30 },
+        { timeout: 180000 }
+      );
+      const metrics = res.data?.data?.metrics || null;
+      setDropRetrainMetrics(metrics);
+      if (metrics) {
+        const parts: string[] = [];
+        if (metrics.feature_rows !== undefined) parts.push(`features ${metrics.feature_rows}`);
+        if (metrics.events_30d !== undefined) parts.push(`events30d ${metrics.events_30d}`);
+        if (metrics.retailers_30d !== undefined) parts.push(`retailers ${metrics.retailers_30d}`);
+        toast.success(parts.length ? `Drop model retrained: ${parts.join(', ')}` : 'Drop model retrained');
+      } else {
+        toast.success('Drop model retrained');
+      }
+    } catch (e) {
+      setMlError(e instanceof Error ? e.message : 'Failed to retrain drop model');
+      toast.error('Drop retrain failed');
+    } finally {
+      setDropRetraining(false);
+    }
+  };
+
+  const updateBudgetValue = (slug: string, val: string) => {
+    const num = parseInt(val || '0', 10);
+    setBudgetsDirty(prev => ({ ...prev, [slug]: isNaN(num) ? 0 : num }));
+  };
+
+  const saveBudgets = async () => {
+    try {
+      const updates = Object.entries(budgetsDirty).filter(([_, v]) => v > 0).map(([slug, qpm]) => ({ slug, qpm }));
+      if (updates.length === 0) return;
+      await apiClient.put('/monitoring/drop-budgets', { budgets: updates });
+      toast.success('Budgets updated');
+      setBudgetsDirty({});
+      const res = await apiClient.get<{ success: boolean; data: { budgets: any[] } }>('/monitoring/drop-budgets');
+      setBudgets(res.data.data.budgets);
+    } catch (e) {
+      toast.error('Failed to update budgets');
+    }
+  };
+
+  const saveClfFlags = async () => {
+    try {
+      setClfSaving(true);
+      await apiClient.put('/monitoring/drop-classifier/flags', clfFlags);
+      toast.success('Classifier flags updated');
+    } catch {
+      toast.error('Failed to update classifier flags');
+    } finally {
+      setClfSaving(false);
     }
   };
 
@@ -467,6 +574,13 @@ const AdminDashboardPage: React.FC = () => {
                   >
                     {retraining ? 'Retraining…' : 'Retrain Price Model'}
                   </button>
+                  <button
+                    onClick={handleRetrainDrops}
+                    disabled={dropRetraining}
+                    className={`w-full mt-3 py-2 px-3 rounded text-white ${dropRetraining ? 'bg-gray-400' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                  >
+                    {dropRetraining ? 'Retraining…' : 'Retrain Drop Windows'}
+                  </button>
                   {retrainMetrics && (
                     <div className="mt-4 text-sm">
                       <div className="text-gray-500">Last Retrain Metrics</div>
@@ -474,9 +588,144 @@ const AdminDashboardPage: React.FC = () => {
                       <div className="flex gap-2"><span className="w-20 text-gray-500">R²:</span><span className="text-gray-900">{retrainMetrics.r2 !== undefined ? Number(retrainMetrics.r2).toFixed(4) : '—'}</span></div>
                     </div>
                   )}
+                  {dropRetrainMetrics && (
+                    <div className="mt-4 text-sm">
+                      <div className="text-gray-500">Drop Windows Metrics</div>
+                      <div className="flex gap-2"><span className="w-32 text-gray-500">Features:</span><span className="text-gray-900">{dropRetrainMetrics.feature_rows ?? '—'}</span></div>
+                      <div className="flex gap-2"><span className="w-32 text-gray-500">Events 30d:</span><span className="text-gray-900">{dropRetrainMetrics.events_30d ?? '—'}</span></div>
+                      <div className="flex gap-2"><span className="w-32 text-gray-500">Retailers 30d:</span><span className="text-gray-900">{dropRetrainMetrics.retailers_30d ?? '—'}</span></div>
+                    </div>
+                  )}
                   <p className="mt-3 text-xs text-gray-500">Requires admin role with ML train permission.</p>
                 </div>
               </div>
+            </div>
+
+            {/* Drop Budgets Card */}
+            <div className="mt-6 border rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold text-gray-900">Drop Candidate Budgets</h4>
+                <button onClick={saveBudgets} disabled={Object.keys(budgetsDirty).length===0} className={`text-sm px-3 py-1 rounded ${Object.keys(budgetsDirty).length===0 ? 'bg-gray-300 text-gray-600' : 'bg-green-600 text-white hover:bg-green-700'}`}>Save</button>
+              </div>
+              {budgetsLoading ? (
+                <div className="text-sm text-gray-600">Loading budgets…</div>
+              ) : budgets.length ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-gray-500">
+                        <th className="py-2 pr-4">Retailer</th>
+                        <th className="py-2 pr-4">QPM</th>
+                        <th className="py-2 pr-4">Source</th>
+                        <th className="py-2 pr-4">Limiter</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {budgets.map(b => (
+                        <tr key={b.slug} className="border-t">
+                          <td className="py-2 pr-4 font-medium text-gray-900">{b.slug}</td>
+                          <td className="py-2 pr-4">
+                            <input type="number" min={1} className="w-24 border rounded px-2 py-1"
+                              defaultValue={b.qpm}
+                              onChange={e => updateBudgetValue(b.slug, e.target.value)} />
+                          </td>
+                          <td className="py-2 pr-4 text-gray-700">{b.source}</td>
+                          <td className="py-2 pr-4 text-gray-700">{b.limiter ? `${b.limiter.count} req, ttl ${b.limiter.ttl}s` : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="mt-2 text-xs text-gray-500">Updates are stored in Redis at keys: config:url_candidate:qpm:&lt;slug&gt; (takes effect immediately).</p>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-600">No retailers found.</div>
+              )}
+            </div>
+
+            {/* Rate Status Sparklines */}
+            <div className="mt-6 border rounded-lg p-4">
+              <h4 className="font-semibold text-gray-900 mb-3">Budgets / Rate Status</h4>
+              {tsData ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                  {Object.keys(tsData.data).map(slug => (
+                    <div key={slug} className="p-3 bg-gray-50 rounded">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium text-gray-900">{slug}</span>
+                        <span className="text-xs text-gray-500">last 60m</span>
+                      </div>
+                      <Sparkline label="requests" values={tsData.data[slug].requests} color="#2563eb" />
+                      <Sparkline label="blocked" values={tsData.data[slug].blocked} color="#dc2626" />
+                      <Sparkline label="errors" values={tsData.data[slug].errors} color="#f59e0b" />
+                      <RateRow slug={slug} ts={tsData} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-600">Loading sparkline data…</div>
+              )}
+            </div>
+
+            {/* Classifier Metrics & Rollout */}
+            <div className="mt-6 border rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold text-gray-900">Drop Classifier (Shadow)</h4>
+              </div>
+              {clfMetrics?.exists ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="p-3 bg-gray-50 rounded">
+                    <div className="text-gray-500">Trained</div>
+                    <div className="text-gray-900">{clfMetrics?.trainedAt ? new Date(clfMetrics.trainedAt).toLocaleString() : '—'}</div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded">
+                    <div className="text-gray-500">AUC</div>
+                    <div className="text-gray-900">{clfMetrics?.metrics?.auc ?? '—'}</div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded">
+                    <div className="text-gray-500">Precision@10%</div>
+                    <div className="text-gray-900">{clfMetrics?.metrics?.precisionAt10 ?? '—'}</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-600">No classifier calibration found yet.</div>
+              )}
+
+              <div className="mt-4 flex items-center gap-4">
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={clfFlags.primaryEnabled} onChange={e => setClfFlags(prev => ({ ...prev, primaryEnabled: e.target.checked }))} />
+                  Use classifier as primary (rollout)
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm">
+                  Threshold
+                  <input type="number" min={0} max={1} step={0.01} value={clfFlags.threshold} onChange={e => setClfFlags(prev => ({ ...prev, threshold: Math.max(0, Math.min(1, parseFloat(e.target.value || '0'))) }))} className="w-24 border rounded px-2 py-1" />
+                </label>
+                <button onClick={saveClfFlags} disabled={clfSaving} className={`text-sm px-3 py-1 rounded ${clfSaving ? 'bg-gray-300 text-gray-600' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>Save</button>
+              </div>
+              <p className="mt-2 text-xs text-gray-500">When enabled, primary confidence may be driven by the classifier probability with the specified threshold. Suggest enabling after AUC/precision meet targets.</p>
+            </div>
+
+            {/* Live Promotions Summary */}
+            <div className="mt-6 border rounded-lg p-4">
+              <h4 className="font-semibold text-gray-900 mb-3">Live Promotions (last 24h)</h4>
+              {liveSummary ? (
+                <div className="text-sm">
+                  <div className="flex items-center gap-6 mb-2">
+                    <div className="p-2 bg-gray-50 rounded">
+                      <div className="text-gray-500">Total</div>
+                      <div className="text-gray-900 font-medium">{liveSummary.total}</div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Sparkline label="url_live" values={liveSummary.urlLive} color="#16a34a" height={40} />
+                    </div>
+                    <div>
+                      <Sparkline label="in_stock" values={liveSummary.inStock} color="#0ea5e9" height={40} />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-600">Loading summary…</div>
+              )}
             </div>
           </div>
         )}
@@ -508,3 +757,47 @@ const AdminDashboardPage: React.FC = () => {
 };
 
 export default AdminDashboardPage;
+
+// Minimal inline sparkline component for small time-series
+const Sparkline: React.FC<{ label: string; values: number[]; color?: string; height?: number }> = React.memo(({ label, values, color = '#2563eb', height = 32 }) => {
+  const max = Math.max(1, ...values);
+  const w = Math.max(60, values.length);
+  const h = height;
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1 || 1)) * (w - 2) + 1;
+    const y = h - 1 - (v / max) * (h - 2);
+    return `${x},${y}`;
+  }).join(' ');
+  return (
+    <div className="mt-1">
+      <div className="text-xs text-gray-600 mb-1">{label}</div>
+      <svg width="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+        <polyline fill="none" stroke={color} strokeWidth="1.5" points={pts} />
+      </svg>
+    </div>
+  );
+});
+
+const RateRow: React.FC<{ slug: string; ts: { times: string[]; data: Record<string, { requests: number[]; blocked: number[]; errors: number[] }> } }> = React.memo(({ slug, ts }) => {
+  const series = ts.data[slug];
+  const n = series.requests.length;
+  const half = Math.floor(Math.min(10, Math.max(1, n/2)));
+  const sum = (arr: number[], start: number, end: number) => arr.slice(start, end).reduce((a,b)=>a+b,0);
+  const lastReq = sum(series.requests, n - half, n);
+  const prevReq = sum(series.requests, Math.max(0, n - 2*half), n - half);
+  const lastBlk = sum(series.blocked, n - half, n);
+  const prevBlk = sum(series.blocked, Math.max(0, n - 2*half), n - half);
+  const lastErr = sum(series.errors, n - half, n);
+  const prevErr = sum(series.errors, Math.max(0, n - 2*half), n - half);
+  const rate = lastReq > 0 ? ((lastBlk + lastErr) / lastReq) : 0;
+  const prevRate = prevReq > 0 ? ((prevBlk + prevErr) / prevReq) : 0;
+  const trend = rate > prevRate + 0.02 ? 'up' : rate < prevRate - 0.02 ? 'down' : 'flat';
+  const arrow = trend === 'up' ? '▲' : trend === 'down' ? '▼' : '■';
+  const color = trend === 'up' ? 'text-red-600' : trend === 'down' ? 'text-green-600' : 'text-gray-600';
+  return (
+    <div className="mt-2 text-xs text-gray-700">
+      <span>blocked/errors rate (10m): </span>
+      <span className={`font-medium ${color}`}>{(rate*100).toFixed(1)}% {arrow}</span>
+    </div>
+  );
+});

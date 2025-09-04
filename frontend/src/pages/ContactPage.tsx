@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 
 const ContactPage: React.FC = () => {
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('');
@@ -30,6 +33,22 @@ const ContactPage: React.FC = () => {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="flex items-center justify-between mb-6">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-2 text-sm text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 border border-gray-700 px-3 py-2 rounded-lg"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </button>
+        <Link
+          to="/"
+          className="text-sm text-gray-300 hover:text-white"
+        >
+          Home
+        </Link>
+      </div>
       <h1 className="text-3xl font-display font-bold text-white mb-4">Contact Us</h1>
       <p className="text-gray-300 mb-6">
         We’d love to hear from you. For support, feedback, or partnership inquiries, send us a message.

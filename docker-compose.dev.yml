@@ -97,6 +97,8 @@ services:
       BESTBUY_API_KEY: ${BESTBUY_API_KEY}
       WALMART_API_KEY: ${WALMART_API_KEY}
       DISABLE_RATE_LIMITING: "true"
+      # Enable drop classifier shadow probabilities in dev
+      DROP_CLASSIFIER_SHADOW: "true"
       # HTTP fetching / scraping configuration
       HTTP_FETCH_PROVIDER: ${HTTP_FETCH_PROVIDER}
       FORWARD_PROXY_PROTOCOL: ${FORWARD_PROXY_PROTOCOL}

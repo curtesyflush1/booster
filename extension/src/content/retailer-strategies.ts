@@ -1,6 +1,8 @@
 // Strategy Pattern Implementation for Retailer-Specific Logic
+import { RetailerId, Product } from '../shared/types';
+import { debounce, log } from '../shared/utils';
 
-interface RetailerStrategy {
+export interface RetailerStrategy {
   detectProduct(): Product | null;
   getProductSelectors(): ProductSelectors;
   getCheckoutSelectors(): CheckoutSelectors;
@@ -23,7 +25,7 @@ interface CheckoutSelectors {
 }
 
 // Base Strategy with Common Logic
-abstract class BaseRetailerStrategy implements RetailerStrategy {
+export abstract class BaseRetailerStrategy implements RetailerStrategy {
   protected extractPrice(priceText: string): number {
     const match = priceText.match(/\$?(\d+(?:\.\d{2})?)/);
     return match && match[1] ? parseFloat(match[1]) : 0;
@@ -220,7 +222,7 @@ class SamsClubStrategy extends BaseRetailerStrategy {
 }
 
 // Strategy Factory
-class RetailerStrategyFactory {
+export class RetailerStrategyFactory {
   static createStrategy(retailerId: RetailerId): RetailerStrategy {
     const strategies = {
       bestbuy: () => new BestBuyStrategy(),
@@ -239,7 +241,7 @@ class RetailerStrategyFactory {
 }
 
 // Updated ProductDetector using Strategy Pattern
-class StrategyBasedProductDetector {
+export class StrategyBasedProductDetector {
   private strategy: RetailerStrategy;
 
   constructor(retailerId: RetailerId) {

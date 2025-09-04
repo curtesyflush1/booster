@@ -212,6 +212,22 @@ export class RedisService {
   }
 
   /**
+   * Atomically increment a counter key (creates if missing). Returns the new value.
+   */
+  async incr(key: string): Promise<number> {
+    try {
+      const val = await (this.client as any).incr(key);
+      return typeof val === 'number' ? val : parseInt(String(val || '0'), 10) || 0;
+    } catch (error) {
+      logger.error('Redis INCR operation failed', {
+        key,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Add member to a set
    */
   async sadd(key: string, member: string): Promise<number> {

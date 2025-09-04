@@ -138,7 +138,7 @@ export class CartManager {
       }
 
       // Click remove button
-      removeButton.click();
+      (removeButton as HTMLElement).click();
 
       // Wait for cart update
       await this.waitForCartUpdate();
@@ -209,7 +209,7 @@ export class CartManager {
       // Find and click clear cart button or remove all items
       const clearButton = await this.findClearCartButton();
       if (clearButton) {
-        clearButton.click();
+        (clearButton as HTMLElement).click();
         await this.waitForCartUpdate();
       } else {
         // Remove items one by one
@@ -396,7 +396,7 @@ export class CartManager {
     
     const itemElements = document.querySelectorAll(itemSelectors.container);
     
-    for (const element of itemElements) {
+    for (const element of Array.from(itemElements)) {
       try {
         const nameElement = element.querySelector(itemSelectors.name);
         const priceElement = element.querySelector(itemSelectors.price);
@@ -448,12 +448,12 @@ export class CartManager {
 
   private async findRemoveButton(productId: string): Promise<Element | null> {
     // This would need to find the remove button for a specific product
-    const removeSelector = this.getRemoveButtonSelector();
+    const removeSelector = this.getRemoveButtonSelector() || '';
     return document.querySelector(removeSelector);
   }
 
   private async findClearCartButton(): Promise<Element | null> {
-    const clearSelector = this.getClearCartSelector();
+    const clearSelector = this.getClearCartSelector() || '';
     return document.querySelector(clearSelector);
   }
 

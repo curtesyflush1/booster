@@ -11,7 +11,6 @@ import {
   LogOut,
   Menu,
   X,
-  Zap,
   Crown,
   ChevronDown
 } from 'lucide-react';

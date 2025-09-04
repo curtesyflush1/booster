@@ -83,7 +83,7 @@ export class AvailabilityPollingService extends BaseModel<any> {
           if (!dbRetailerId) continue;
           // Load previous availability to detect transitions
           const prev = await this.db('product_availability')
-            .select('in_stock', 'availability_status')
+            .select('in_stock', 'availability_status', 'price', 'product_url')
             .where({ product_id: product.id, retailer_id: dbRetailerId })
             .first();
 
@@ -103,9 +103,61 @@ export class AvailabilityPollingService extends BaseModel<any> {
             last_checked: new Date(),
           });
 
+          // Publish normalized signals for ML/drop detection
+          try {
+            const { DropSignalService } = await import('./dropSignalService');
+            const baseSig = {
+              product_id: product.id,
+              retailer_id: dbRetailerId,
+              source: 'availability-poller',
+            } as const;
+
+            // Availability status flip
+            if (prev && prev.availability_status !== res.availabilityStatus) {
+              await DropSignalService.publishSignal({
+                ...baseSig,
+                signal_type: 'status_change',
+                signal_value: { from: prev.availability_status, to: res.availabilityStatus },
+                confidence: 80,
+              });
+            }
+
+            // Price appeared
+            if ((!prev || prev.price == null) && (res.price != null)) {
+              await DropSignalService.publishSignal({
+                ...baseSig,
+                signal_type: 'price_present',
+                signal_value: { price: res.price, original: res.originalPrice ?? null },
+                confidence: 70,
+              });
+            }
+
+            // Product URL discovered/changed
+            if (res.productUrl && (!prev || prev.product_url !== res.productUrl)) {
+              await DropSignalService.publishSignal({
+                ...baseSig,
+                signal_type: 'url_seen',
+                signal_value: res.productUrl,
+                confidence: 60,
+              });
+            }
+          } catch (e) {
+            logger.warn('Failed to publish drop signals', {
+              productId: product.id,
+              retailerId: dbRetailerId,
+              error: e instanceof Error ? e.message : String(e)
+            });
+          }
+
           // Trigger restock alerts on transition into stock
           if (wentInStock) {
             try {
+              // Record outcome first for lead-time measurement
+              try {
+                const { DropOutcomeService } = await import('./DropOutcomeService');
+                await DropOutcomeService.recordFirstInStock(product.id, dbRetailerId, new Date());
+              } catch {}
+
               const { AlertProcessingService } = await import('./alertProcessingService');
               // Fetch active watches for this product; filter to retailer when specified on watch
               const watches = await this.db('watches')
@@ -140,6 +192,19 @@ export class AvailabilityPollingService extends BaseModel<any> {
                   })
                 )
               );
+
+              // Also emit a high-confidence in_stock signal
+              try {
+                const { DropSignalService } = await import('./dropSignalService');
+                await DropSignalService.publishSignal({
+                  product_id: product.id,
+                  retailer_id: dbRetailerId,
+                  signal_type: 'in_stock',
+                  signal_value: true,
+                  source: 'availability-poller',
+                  confidence: 95,
+                });
+              } catch {}
             } catch (e) {
               logger.warn('Failed to generate restock alerts', {
                 productId: product.id,

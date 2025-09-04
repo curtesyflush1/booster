@@ -2,14 +2,13 @@
 import { ExtensionMessage, MessageResponse, MessageType } from '../../shared/types';
 import { performanceMonitor } from '../../shared/performanceMonitor';
 import { log } from '../../shared/utils';
+import { CacheManager } from './CacheManager';
 
 export class MessageHandler {
   private handlers = new Map<MessageType, (payload: any, sender?: chrome.runtime.MessageSender) => Promise<MessageResponse>>();
 
   constructor(
-    private cacheManager: CacheManager,
-    private credentialService: any,
-    private notificationService: any
+    private cacheManager: CacheManager
   ) {
     this.registerHandlers();
   }

@@ -572,15 +572,18 @@
           await this.trackPurchaseFromCheckout(result.orderId, payload.alertId);
         }
 
-        return { 
+        const resp: MessageResponse = { 
           success: result.success, 
           data: { 
             message: result.success ? 'Checkout completed successfully' : 'Checkout failed',
             orderId: result.orderId,
             steps: result.steps
-          },
-          error: result.error ? { code: 'CHECKOUT_ERROR', message: result.error } : undefined
+          }
         };
+        if (result.error) {
+          resp.error = { code: 'CHECKOUT_ERROR', message: result.error };
+        }
+        return resp;
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Automated checkout failed';
         log('error', 'Automated checkout failed', error);

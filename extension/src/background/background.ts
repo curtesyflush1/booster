@@ -60,7 +60,7 @@ class BackgroundService {
     // Initialize services with dependency injection
     this.cacheManager = new CacheManager();
     this.syncService = new SyncService(this.cacheManager);
-    this.messageHandler = new MessageHandler(this.cacheManager, null, null);
+    this.messageHandler = new MessageHandler(this.cacheManager);
     this.alarmManager = new AlarmManager(this.cacheManager, this.syncService);
     
     this.initialize();
@@ -84,7 +84,8 @@ class BackgroundService {
       await Promise.all([
         this.initializeDefaultSettings(),
         this.validatePermissions(),
-        this.alarmManager.initialize()
+        this.alarmManager.initialize(),
+        this.preloadCache()
       ]);
       
       const initTime = performance.now() - startTime;
@@ -92,6 +93,8 @@ class BackgroundService {
       
       // Track initialization performance
       performanceMonitor.recordMetric('initialization', initTime);
+      // Start periodic tasks after successful initialization
+      this.startOptimizedPeriodicTasks();
       
     } catch (error) {
       log('error', 'Failed to initialize background service', error);
@@ -244,9 +247,9 @@ class BackgroundService {
     this.messageHandler.processMessage(message, sender)
       .then((response) => {
         // Add performance info to response in debug mode
-        if (process.env.NODE_ENV === 'development') {
+        if (process.env['NODE_ENV'] === 'development') {
           const processingTime = performance.now() - startTime;
-          response.processingTime = processingTime;
+          log('info', 'Message processed', { processingTime });
         }
         
         sendResponse(response);
@@ -490,29 +493,7 @@ class BackgroundService {
     }
   }
 
-  private handleAlarm(alarm: chrome.alarms.Alarm): void {
-    log('info', `Alarm triggered: ${alarm.name}`, { 
-      scheduledTime: alarm.scheduledTime,
-      periodInMinutes: alarm.periodInMinutes 
-    });
-    
-    // Execute alarm tasks with performance monitoring
-    performanceMonitor.timeFunction(
-      `alarm_${alarm.name}`,
-      () => this.executeAlarmTask(alarm.name),
-      { 
-        alarmName: alarm.name,
-        scheduledTime: alarm.scheduledTime,
-        periodInMinutes: alarm.periodInMinutes
-      }
-    )
-      .then(() => {
-        log('info', `Alarm ${alarm.name} completed successfully`);
-      })
-      .catch((error) => {
-        log('error', `Alarm ${alarm.name} failed`, error);
-      });
-  }
+  // Note: Alarm handling is delegated to AlarmManager
 
   /**
    * Execute alarm tasks with proper error handling and performance optimization
@@ -749,19 +730,15 @@ class BackgroundService {
       }
     } catch (error) {
       // Log error but don't throw to avoid breaking other functionality
+      const msg = error instanceof Error ? error.message : String(error);
       log('error', 'Failed to ensure content script injection', { 
-        error: error.message, 
+        error: msg, 
         tabId 
       });
     }
   }
 
-  /**
-   * Legacy method - now delegates to optimized version
-   */
-  private async checkForNewAlerts(): Promise<void> {
-    await this.optimizedCheckForNewAlerts();
-  }
+  // Legacy checkForNewAlerts() removed; using optimizedCheckForNewAlerts()
 
   private async storeRetailerCredentials(payload: any): Promise<MessageResponse> {
     try {

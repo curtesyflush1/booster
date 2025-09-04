@@ -10,9 +10,9 @@ import {
   getStorageData, 
   setStorageData,
   log, 
-  sendExtensionMessage,
-  MessageType
+  sendExtensionMessage
 } from '../shared/utils';
+import { MessageType } from '../shared/types';
 
 export interface Purchase {
   id: string;
@@ -326,7 +326,7 @@ export class PurchaseTracker {
     
     const itemElements = document.querySelectorAll(selectors.container);
     
-    for (const element of itemElements) {
+    for (const element of Array.from(itemElements)) {
       try {
         const nameElement = element.querySelector(selectors.name);
         const priceElement = element.querySelector(selectors.price);

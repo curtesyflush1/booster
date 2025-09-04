@@ -109,7 +109,7 @@ class PermissionStorageHandler implements IPermissionStorage {
   async updateRetailerSettings(retailerId: RetailerId, enabled: boolean): Promise<void> {
     try {
       const settings = await chrome.storage.sync.get(['booster_settings']);
-      const currentSettings = settings.booster_settings || {};
+      const currentSettings = settings['booster_settings'] || {};
       
       if (!currentSettings.retailerSettings) {
         currentSettings.retailerSettings = {};
@@ -125,7 +125,7 @@ class PermissionStorageHandler implements IPermissionStorage {
         currentSettings.retailerSettings[retailerId].enabled = enabled;
       }
       
-      await chrome.storage.sync.set({ booster_settings: currentSettings });
+      await chrome.storage.sync.set({ ['booster_settings']: currentSettings });
     } catch (error) {
       log('error', `Failed to update settings for ${retailerId}`, error);
       throw error;
@@ -135,7 +135,7 @@ class PermissionStorageHandler implements IPermissionStorage {
   async getRetailerSettings(): Promise<Record<string, any>> {
     try {
       const settings = await chrome.storage.sync.get(['booster_settings']);
-      return settings.booster_settings?.retailerSettings || {};
+      return settings['booster_settings']?.retailerSettings || {};
     } catch (error) {
       log('error', 'Failed to get retailer settings', error);
       return {};

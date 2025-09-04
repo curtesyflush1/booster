@@ -113,35 +113,35 @@ export class CheckoutAutomationService {
       // Step 2: Login if credentials are available
       if (this.settings?.retailerSettings[this.retailerId]?.autoLogin && 
           this.checkoutData.retailerCredentials) {
-        await this.addStep('login', 'pending');
+        this.stepManager.addStep('login', 'pending');
         await this.performLogin();
-        await this.updateStep('login', 'completed');
+        this.stepManager.updateStep('login', 'completed');
       }
 
       // Step 3: Navigate to checkout
-      await this.addStep('navigate_checkout', 'pending');
+      this.stepManager.addStep('navigate_checkout', 'pending');
       await this.navigateToCheckout();
-      await this.updateStep('navigate_checkout', 'completed');
+      this.stepManager.updateStep('navigate_checkout', 'completed');
 
       // Step 4: Fill shipping information
-      await this.addStep('fill_shipping', 'pending');
+      this.stepManager.addStep('fill_shipping', 'pending');
       await this.fillShippingInformation();
-      await this.updateStep('fill_shipping', 'completed');
+      this.stepManager.updateStep('fill_shipping', 'completed');
 
       // Step 5: Fill payment information
-      await this.addStep('fill_payment', 'pending');
+      this.stepManager.addStep('fill_payment', 'pending');
       await this.fillPaymentInformation();
-      await this.updateStep('fill_payment', 'completed');
+      this.stepManager.updateStep('fill_payment', 'completed');
 
       // Step 6: Review and place order (with safety checks)
-      await this.addStep('place_order', 'pending');
+      this.stepManager.addStep('place_order', 'pending');
       const orderId = await this.placeOrder();
-      await this.updateStep('place_order', 'completed');
+      this.stepManager.updateStep('place_order', 'completed');
 
       return {
         success: true,
         orderId,
-        steps: this.steps
+        steps: this.stepManager.getSteps()
       };
 
     } catch (error) {
@@ -149,8 +149,8 @@ export class CheckoutAutomationService {
       log('error', 'Checkout automation failed', error);
       
       // Update current step as failed
-      if (this.steps.length > 0) {
-        const currentStep = this.steps[this.steps.length - 1];
+      const currentStep = this.stepManager.getCurrentStep();
+      if (currentStep) {
         if (currentStep && (currentStep.status === 'in_progress' || currentStep.status === 'pending')) {
           currentStep.status = 'failed';
           currentStep.error = errorMessage;
@@ -160,7 +160,7 @@ export class CheckoutAutomationService {
       return {
         success: false,
         error: errorMessage,
-        steps: this.steps
+        steps: this.stepManager.getSteps()
       };
     } finally {
       this.isRunning = false;
@@ -171,7 +171,7 @@ export class CheckoutAutomationService {
    * Add product to cart
    */
   private async addToCart(productUrl: string, quantity: number): Promise<void> {
-    await this.updateStep('add_to_cart', 'in_progress');
+    this.stepManager.updateStep('add_to_cart', 'in_progress');
     
     // Navigate to product page if not already there
     if (window.location.href !== productUrl) {
@@ -201,7 +201,7 @@ export class CheckoutAutomationService {
    * Perform automated login
    */
   private async performLogin(): Promise<void> {
-    await this.updateStep('login', 'in_progress');
+    this.stepManager.updateStep('login', 'in_progress');
     
     if (!this.checkoutData?.retailerCredentials) {
       throw new Error('Login credentials not available');
@@ -240,7 +240,7 @@ export class CheckoutAutomationService {
    * Navigate to checkout page
    */
   private async navigateToCheckout(): Promise<void> {
-    await this.updateStep('navigate_checkout', 'in_progress');
+    this.stepManager.updateStep('navigate_checkout', 'in_progress');
     
     // Find checkout button in cart
     const checkoutButton = await this.findCheckoutButton();
@@ -258,7 +258,7 @@ export class CheckoutAutomationService {
    * Fill shipping information
    */
   private async fillShippingInformation(): Promise<void> {
-    await this.updateStep('fill_shipping', 'in_progress');
+    this.stepManager.updateStep('fill_shipping', 'in_progress');
     
     if (!this.checkoutData?.shippingAddress) {
       throw new Error('Shipping address not configured');
@@ -287,7 +287,7 @@ export class CheckoutAutomationService {
    * Fill payment information
    */
   private async fillPaymentInformation(): Promise<void> {
-    await this.updateStep('fill_payment', 'in_progress');
+    this.stepManager.updateStep('fill_payment', 'in_progress');
     
     if (!this.checkoutData?.paymentMethod) {
       throw new Error('Payment method not configured');
@@ -310,7 +310,7 @@ export class CheckoutAutomationService {
    * Place the order with safety checks
    */
   private async placeOrder(): Promise<string> {
-    await this.updateStep('place_order', 'in_progress');
+    this.stepManager.updateStep('place_order', 'in_progress');
     
     // Safety check: Verify order details
     const orderSummary = await this.getOrderSummary();
@@ -398,25 +398,7 @@ export class CheckoutAutomationService {
 
   // Step management methods
 
-  private async addStep(name: string, status: CheckoutStep['status']): Promise<void> {
-    const step: CheckoutStep = {
-      name,
-      status,
-      timestamp: Date.now()
-    };
-    this.steps.push(step);
-  }
-
-  private async updateStep(name: string, status: CheckoutStep['status'], error?: string): Promise<void> {
-    const step = this.steps.find(s => s.name === name);
-    if (step) {
-      step.status = status;
-      step.timestamp = Date.now();
-      if (error) {
-        step.error = error;
-      }
-    }
-  }
+  // Step methods are delegated to StepManager
 
   // Retailer-specific selector methods (to be implemented for each retailer)
 

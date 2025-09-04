@@ -1,4 +1,5 @@
 // Centralized Configuration Management
+import type { RetailerId } from '../shared/types';
 
 interface RetailerConfig {
   name: string;

@@ -425,75 +425,124 @@ export class AdminMLService {
       );
 
       // Execute ETL + training synchronously and compute basic metrics
-      const path = await import('path');
-      const fs = await import('fs');
-      const outDir = path.join(process.cwd(), 'data', 'ml');
-      const { MLTrainingETLService } = await import('./ml/MLTrainingETLService');
-      const { PricePredictionModelRunner } = await import('./ml/PricePredictionModelRunner');
+      // Branch by model name
+      const norm = modelName.toLowerCase();
+      if (norm === 'price' || norm === 'price-model' || norm === 'price_prediction') {
+        const path = await import('path');
+        const fs = await import('fs');
+        const outDir = path.join(process.cwd(), 'data', 'ml');
+        const { MLTrainingETLService } = await import('./ml/MLTrainingETLService');
+        const { PricePredictionModelRunner } = await import('./ml/PricePredictionModelRunner');
 
-      const csvPath = await MLTrainingETLService.run(outDir);
-      const csvText = fs.readFileSync(csvPath, 'utf8').trim();
-      const lines = csvText.split(/\r?\n/);
-      const rowCount = Math.max(0, lines.length - 1);
+        const csvPath = await MLTrainingETLService.run(outDir);
+        const csvText = fs.readFileSync(csvPath, 'utf8').trim();
+        const lines = csvText.split(/\r?\n/);
+        const rowCount = Math.max(0, lines.length - 1);
 
-      const runner = new PricePredictionModelRunner();
-      await runner.train(csvPath);
+        const runner = new PricePredictionModelRunner();
+        await runner.train(csvPath);
 
-      // Load trained model and compute R^2 on training set
-      const modelPath = path.join(outDir, 'price_model.json');
-      const model = JSON.parse(fs.readFileSync(modelPath, 'utf8')) as { coef: number[]; features: string[]; trainedAt: string };
-      const header = lines[0].split(',');
-      const idx = (name: string) => header.indexOf(name);
-      const iRecent = idx('recent_avg');
-      const iPrev = idx('prev_avg');
-      const iTrend = idx('trend_pct');
-      const iMsrp = idx('msrp');
-      const iPop = idx('popularity');
-      const iLabel = idx('label_next7');
-      const y: number[] = [];
-      const yhat: number[] = [];
-      if ([iRecent, iPrev, iTrend, iMsrp, iPop, iLabel].some(n => n < 0)) {
-        throw new Error('Invalid header in training CSV');
+        // Load trained model and compute R^2 on training set
+        const modelPath = path.join(outDir, 'price_model.json');
+        const model = JSON.parse(fs.readFileSync(modelPath, 'utf8')) as { coef: number[]; features: string[]; trainedAt: string };
+        const header = lines[0].split(',');
+        const idx = (name: string) => header.indexOf(name);
+        const iRecent = idx('recent_avg');
+        const iPrev = idx('prev_avg');
+        const iTrend = idx('trend_pct');
+        const iMsrp = idx('msrp');
+        const iPop = idx('popularity');
+        const iLabel = idx('label_next7');
+        const y: number[] = [];
+        const yhat: number[] = [];
+        if ([iRecent, iPrev, iTrend, iMsrp, iPop, iLabel].some(n => n < 0)) {
+          throw new Error('Invalid header in training CSV');
+        }
+        for (let k = 1; k < lines.length; k++) {
+          const parts = lines[k].split(',');
+          if (parts.length !== header.length) continue;
+          const recent = Number(parts[iRecent]) || 0;
+          const prev = Number(parts[iPrev]) || 0;
+          const trend = Number(parts[iTrend]) || 0;
+          const msrp = Number(parts[iMsrp]) || 0;
+          const pop = Number(parts[iPop]) || 0;
+          const label = Number(parts[iLabel]) || 0;
+          const popNorm = pop / 1000;
+          const x = [1, recent, prev, trend, msrp, popNorm];
+          const pred = model.coef.reduce((s, v, i) => s + v * (x[i] || 0), 0);
+          y.push(label);
+          yhat.push(pred);
+        }
+        const ybar = y.length ? y.reduce((a, b) => a + b, 0) / y.length : 0;
+        const rss = y.reduce((s, v, i) => s + Math.pow(v - yhat[i], 2), 0);
+        const tss = y.reduce((s, v) => s + Math.pow(v - ybar, 2), 0);
+        const r2 = tss > 0 ? 1 - rss / tss : 1;
+
+        const metrics = { rows: rowCount, r2 };
+        const updated = await this.updateMLModel(
+          adminUserId,
+          newModel.id,
+          { status: 'active', metrics, model_path: modelPath },
+          ipAddress,
+          userAgent
+        );
+
+        // Optionally also retrain drop window model (default: true)
+        if (config.includeDrops !== false) {
+          try {
+            const { DropFeatureETLService } = await import('./ml/DropFeatureETLService');
+            const { DropWindowModelRunner } = await import('./ml/DropWindowModelRunner');
+            const inserted = await DropFeatureETLService.run({ lookbackDays: Number(config.dropLookbackDays || 30), splitTag: 'manual' });
+            const dropRunner = new DropWindowModelRunner();
+            await dropRunner.train(Number(config.dropHorizonDays || 30));
+            logger.info('Also retrained drop window model', { feature_rows: inserted });
+          } catch (e) {
+            logger.warn('Failed to retrain drop model during price retrain', { error: e instanceof Error ? e.message : String(e) });
+          }
+        }
+
+        logger.info('Price model retraining completed', { adminUserId, modelName, version, modelId: newModel.id, metrics });
+        return updated || newModel;
       }
-      for (let k = 1; k < lines.length; k++) {
-        const parts = lines[k].split(',');
-        if (parts.length !== header.length) continue;
-        const recent = Number(parts[iRecent]) || 0;
-        const prev = Number(parts[iPrev]) || 0;
-        const trend = Number(parts[iTrend]) || 0;
-        const msrp = Number(parts[iMsrp]) || 0;
-        const pop = Number(parts[iPop]) || 0;
-        const label = Number(parts[iLabel]) || 0;
-        const popNorm = pop / 1000;
-        const x = [1, recent, prev, trend, msrp, popNorm];
-        const pred = model.coef.reduce((s, v, i) => s + v * (x[i] || 0), 0);
-        y.push(label);
-        yhat.push(pred);
+
+      // Drop window model: build features and train retailer hour weights
+      if (norm === 'drop' || norm === 'drop-windows' || norm === 'drop_windows' || norm === 'drop_prediction') {
+        const { DropFeatureETLService } = await import('./ml/DropFeatureETLService');
+        const { DropWindowModelRunner } = await import('./ml/DropWindowModelRunner');
+        const inserted = await DropFeatureETLService.run({ lookbackDays: Number(config.lookbackDays || 30), splitTag: 'manual' });
+        const runner = new DropWindowModelRunner();
+        await runner.train(Number(config.horizonDays || 30));
+
+        // Compute simple metrics: recent event counts and retailers covered
+        const knex = BaseModel.getKnex();
+        const now = new Date();
+        const last30 = new Date(now.getTime() - 30*24*60*60*1000);
+        const ev = await knex('drop_events')
+          .where('observed_at','>=', last30)
+          .count('* as count')
+          .first();
+        const retailers = await knex('drop_events')
+          .where('observed_at','>=', last30)
+          .countDistinct('retailer_id as count')
+          .first();
+        const metrics = { feature_rows: inserted, events_30d: Number((ev as any)?.count || 0), retailers_30d: Number((retailers as any)?.count || 0) };
+
+        const path = await import('path');
+        const modelPath = path.join(process.cwd(), 'data', 'ml', 'drop_window_model.json');
+        const updated = await this.updateMLModel(
+          adminUserId,
+          newModel.id,
+          { status: 'active', metrics, model_path: modelPath },
+          ipAddress,
+          userAgent
+        );
+        logger.info('Drop window model retraining completed', { adminUserId, modelName, version, modelId: newModel.id, metrics });
+        return updated || newModel;
       }
-      const ybar = y.length ? y.reduce((a, b) => a + b, 0) / y.length : 0;
-      const rss = y.reduce((s, v, i) => s + Math.pow(v - yhat[i], 2), 0);
-      const tss = y.reduce((s, v) => s + Math.pow(v - ybar, 2), 0);
-      const r2 = tss > 0 ? 1 - rss / tss : 1;
 
-      // Update model record with metrics and mark as active
-      const metrics = { rows: rowCount, r2 };
-      const updated = await this.updateMLModel(
-        adminUserId,
-        newModel.id,
-        { status: 'active', metrics, model_path: modelPath },
-        ipAddress,
-        userAgent
-      );
-
-      logger.info('ML model retraining completed', {
-        adminUserId,
-        modelName,
-        version,
-        modelId: newModel.id,
-        metrics
-      });
-
-      return updated || newModel;
+      // Default: mark as failed for unknown model type
+      await this.updateMLModel(adminUserId, newModel.id, { status: 'failed', training_notes: `Unknown model: ${modelName}` }, ipAddress, userAgent);
+      throw new Error(`Unknown model: ${modelName}`);
     } catch (error) {
       logger.error('Failed to trigger retraining', {
         error: error instanceof Error ? error.message : String(error),

@@ -4,11 +4,18 @@ The Retailer Integration System is a core component of BoosterBeacon that monito
 
 ## Overview
 
-The system supports four major retailers with different integration approaches:
-- **Best Buy** - Official API integration
-- **Walmart** - Official API integration  
-- **Costco** - Polite web scraping
-- **Sam's Club** - Polite web scraping
+The system supports multiple major retailers with integration approaches tailored per site:
+- **Best Buy** – Official API integration
+- **Walmart** – Official API integration  
+- **Costco** – Polite web scraping
+- **Sam's Club** – Polite web scraping
+- **Target** – Polite web scraping
+- **Amazon** – Polite web scraping
+- **GameStop** – Polite web scraping
+- **Barnes & Noble** – Polite web scraping
+- **Walgreens** – Polite web scraping
+- **Macy's** – Polite web scraping
+- **Henry Schein** – Polite web scraping
 
 ## Architecture
 
@@ -30,10 +37,17 @@ All retailer services now extend a comprehensive `BaseRetailerService` class tha
 
 ### Individual Retailer Services
 Each retailer has a dedicated service extending `BaseRetailerService`:
-- `BestBuyService` - API-based integration with official Best Buy API
-- `WalmartService` - API-based integration with Walmart Open API
-- `CostcoService` - Scraping-based integration with polite delays and Pokemon TCG filtering
-- `SamsClubService` - Scraping-based integration with member pricing support
+- `BestBuyService` — API-based integration with official Best Buy API
+- `WalmartService` — API-based integration with Walmart Open API
+- `CostcoService` — Scraping with polite delays and Pokémon TCG filtering
+- `SamsClubService` — Scraping with member pricing support
+- `TargetService` — Scraping with shipping/preorder inference (see below)
+- `AmazonService` — Scraping with robust selector fallbacks
+- `GameStopService` — Scraping with store/pickup cues
+- `BarnesNobleService` — Scraping with book/toy filtering
+- `WalgreensService` — Scraping with limited product categories
+- `MacysService` — Scraping for occasional listings
+- `HenryScheinService` — Scraping for specialty listings
 
 **Code Reduction**: The BaseRetailerService refactoring eliminated ~325 lines of duplicated code while enhancing functionality and maintainability.
 
@@ -69,27 +83,29 @@ Each retailer has a dedicated service extending `BaseRetailerService`:
 
 ## API Endpoints
 
-### Product Availability
-```http
-POST /api/v1/retailers/check-availability
-Content-Type: application/json
+Base path for retailer endpoints: `/api/retailers`
 
-{
-  "productId": "uuid",
-  "sku": "123456",
-  "upc": "123456789012",
-  "retailers": ["best-buy", "walmart"]
-}
+### Product Availability (GET)
+Check availability across one or more retailers.
+
+```http
+GET /api/retailers/availability/:productId?sku=123456&upc=123456789012&retailers=best-buy,walmart&zipCode=90210&radiusMiles=25
 ```
 
-### Search Products
+Notes:
+- `productId` is your internal product ID; `sku`/`upc` are optional hints for retailer lookup.
+- `retailers` is an optional comma-separated list; omit for all active retailers.
+
+### Search Products (GET)
+Cross-retailer product search.
+
 ```http
-GET /api/v1/retailers/search?query=pokemon+tcg&retailers=best-buy,walmart
+GET /api/retailers/search?q=pokemon+tcg&retailers=best-buy,walmart
 ```
 
-### Health Status
+### Health Status (GET)
 ```http
-GET /api/v1/retailers/health
+GET /api/retailers/health
 ```
 
 Returns:
@@ -112,7 +128,7 @@ Returns:
 
 ### Retailer Metrics
 ```http
-GET /api/v1/retailers/metrics
+GET /api/retailers/metrics
 ```
 
 Returns:
@@ -137,11 +153,7 @@ Returns:
 
 ### Circuit Breaker Management
 ```http
-POST /api/v1/retailers/:retailerId/circuit-breaker/reset
-```
-
-```http
-GET /api/v1/retailers/circuit-breaker/metrics
+POST /api/retailers/:retailerId/circuit-breaker/reset
 ```
 
 ## Retailer-Specific Implementation
@@ -320,7 +332,7 @@ interface RetailerConfig {
 ## Future Enhancements
 
 ### Planned Features
-- **Additional Retailers**: Target, GameStop, local stores
+- **Additional Retailers**: Local/regional stores
 - **Smart Retry**: ML-based retry strategies
 - **Predictive Scaling**: Anticipate traffic spikes
 - **Advanced Caching**: Redis-based distributed caching
@@ -365,15 +377,15 @@ interface RetailerConfig {
 ```bash
 # Check retailer health
 curl -H "Authorization: Bearer $TOKEN" \
-  "https://api.boosterbeacon.com/api/v1/retailers/health"
+  "https://api.boosterbeacon.com/api/retailers/health"
 
 # Reset circuit breaker
 curl -X POST -H "Authorization: Bearer $TOKEN" \
-  "https://api.boosterbeacon.com/api/v1/retailers/best-buy/circuit-breaker/reset"
+  "https://api.boosterbeacon.com/api/retailers/best-buy/circuit-breaker/reset"
 
 # View metrics
 curl -H "Authorization: Bearer $TOKEN" \
-  "https://api.boosterbeacon.com/api/v1/retailers/metrics"
+  "https://api.boosterbeacon.com/api/retailers/metrics"
 ```
 
 ## Compliance Statement
@@ -388,3 +400,26 @@ BoosterBeacon's retailer integration system is designed with compliance and ethi
 - **Data Minimization**: Collect only necessary product availability data
 
 This system enables collectors to stay informed about product availability while maintaining respectful relationships with retail partners.
+### Target Service
+- **Base URL**: `https://www.target.com`
+- **Method**: Web scraping with Cheerio and defensive selectors
+- **Preorder/Shipping Inference**: Items with shipping/arrival text or a future ship date are treated as purchasable for alerting (preorder-friendly)
+- **Rate Limiting**: Minimum 2 seconds between requests (polite scraping)
+- **Special Features**: Shipping text/date extraction to inform availability
+
+### Amazon, GameStop, Barnes & Noble, Walgreens, Macy's, Henry Schein
+- **Method**: Polite web scraping with robust selector fallbacks
+- **Filters**: Pokémon TCG detection and exclusion of unrelated categories
+- **Notes**: Retailer-specific nuances handled in each service
+## URL Candidates and Live Detection (2025-09)
+
+BoosterBeacon now maintains per‑retailer URL candidates and promotes them to live when strong product‑page signals are present.
+
+- Candidate generation: `URLPatternService` emits search and product URL patterns per retailer (BestBuy, Target, Walmart, Costco, Sam’s Club). Candidates are stored in `url_candidates` with a score and reason.
+- Candidate checking: `URLCandidateChecker` fetches candidates, with Browser API fallback when blocked (403/407/429/Incapsula), and updates `status` to `live|valid|invalid`. Live detection requires likely product pages (retailer‑specific URL patterns or JSON‑LD `Product`) and CTA/stock cues.
+- Signals: Live promotions emit `drop_events` of type `url_live` and record `first_seen_at` in `drop_outcomes`.
+- Budgets: Per‑retailer QPM is enforced with Redis rate limits. Configure `URL_CANDIDATE_QPM_DEFAULT` and optional overrides like `URL_CANDIDATE_QPM_BEST_BUY`. At runtime, admins can set overrides via Redis keys `config:url_candidate:qpm:<slug>`.
+- Admin APIs:
+  - `GET /api/retailers/candidates` (admin): generate candidates for a product/retailer.
+  - `GET /api/retailers/url-candidates` (admin): list current candidates.
+  - `GET /api/monitoring/drop-budgets` (admin): view budgets; `PUT /api/monitoring/drop-budgets` to update.

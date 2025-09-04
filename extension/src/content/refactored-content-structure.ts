@@ -1,4 +1,14 @@
 // Proposed refactored structure for ContentScript
+import { RetailerId, Product, ExtensionMessage, MessageResponse, MessageType } from '../shared/types';
+import { getCurrentRetailer, log } from '../shared/utils';
+// Local minimal stubs to satisfy types in this refactor sketch
+type ProductDetector = { 
+  startMonitoring(): void; 
+  isProductPage(): boolean; 
+  detectProduct(): Product | null; 
+};
+type CheckoutAssistant = { startMonitoring(): void };
+type ServiceCoordinator = any;
 // This demonstrates how to break down the large ContentScript class
 
 interface IUIManager {
@@ -22,7 +32,7 @@ interface IServiceCoordinator {
 // Focused UI Management Class
 class UIManager implements IUIManager {
   constructor(
-    private retailer: { id: RetailerId; name: string } | null,
+    private retailer: { id: string; name: string } | null,
     private productDetector: ProductDetector | null,
     private onAddToWatchList: (product: Product) => Promise<void>,
     private onQuickBuy: (product: Product) => Promise<void>
@@ -181,22 +191,24 @@ class ContentScript {
     log('info', `Content script initializing on ${this.retailer.name}`);
     
     // Initialize components
-    this.productDetector = new ProductDetector(this.retailer.id);
-    this.checkoutAssistant = new CheckoutAssistant(this.retailer.id);
-    this.serviceCoordinator = new ServiceCoordinator(/* dependencies */);
+    // Note: In the real implementation, these would be concrete classes.
+    // Here we keep minimal stubs to satisfy type-checking in this refactor preview.
+    this.productDetector = null as unknown as ProductDetector;
+    this.checkoutAssistant = null as unknown as CheckoutAssistant;
+    this.serviceCoordinator = null as unknown as ServiceCoordinator;
     this.uiManager = new UIManager(
       this.retailer,
       this.productDetector,
       this.addProductToWatchList.bind(this),
       this.executeQuickBuy.bind(this)
     );
-    this.messageHandler = new MessageHandler(this.serviceCoordinator);
+    this.messageHandler = new MessageHandler(this.serviceCoordinator as IServiceCoordinator);
     
     // Set up message listener
     chrome.runtime.onMessage.addListener(this.messageHandler.handleMessage.bind(this.messageHandler));
     
     // Initialize services and start monitoring
-    await this.serviceCoordinator.initializeServices();
+    await this.serviceCoordinator?.initializeServices();
     this.startPageMonitoring();
     this.injectUI();
     

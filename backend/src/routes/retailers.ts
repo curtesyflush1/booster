@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { RetailerController } from '../controllers/retailerController';
 import { authenticate } from '../middleware/auth';
+import { requireAdmin } from '../middleware/adminAuth';
+import { URLPatternController } from '../controllers/urlPatternController';
 import { createRateLimit } from '../middleware/rateLimiter';
 import { sanitizeParameters } from '../middleware/parameterSanitization';
 
@@ -91,5 +93,23 @@ router.put('/:retailerId/status', sanitizeParameters, retailerController.setReta
  * @params retailerId - Retailer ID
  */
 router.post('/:retailerId/circuit-breaker/reset', sanitizeParameters, retailerController.resetCircuitBreaker);
+
+/**
+ * @route GET /api/retailers/candidates
+ * @desc Generate current URL candidates (admin/debug)
+ * @access Private (Admin only)
+ * @query product_id (uuid) - required
+ * @query retailer (slug) - required
+ * @query sku|upc|name|set_name - optional hints
+ */
+router.get('/candidates', requireAdmin, sanitizeParameters, URLPatternController.getCandidates);
+
+/**
+ * @route GET /api/retailers/url-candidates
+ * @desc List URL candidates by product/retailer/status (admin)
+ * @access Private (Admin only)
+ * @query product_id (uuid), retailer (slug or uuid), status (unknown|valid|invalid|live), limit (<=200)
+ */
+router.get('/url-candidates', requireAdmin, sanitizeParameters, URLPatternController.listCandidates);
 
 export default router;

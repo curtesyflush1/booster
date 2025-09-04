@@ -3,7 +3,7 @@ import { authenticate } from '../middleware/auth';
 import { requireAdmin } from '../middleware/adminAuth';
 import { sanitizeParameters } from '../middleware/parameterSanitization';
 import { validateBody, monitoringSchemas } from '../validators';
-import {
+import { 
   getMetrics,
   recordMetric,
   getAlertRules,
@@ -11,7 +11,15 @@ import {
   deleteAlertRule,
   getActiveAlerts,
   getAlertHistory,
-  getDashboardData
+  getDashboardData,
+  getDropMetrics,
+  getDropBudgets,
+  setDropBudgets,
+  getDropClassifierStatus,
+  getDropClassifierFlags,
+  setDropClassifierFlags,
+  getDropTimeSeries,
+  getDropLiveSummary
 } from '../controllers/monitoringController';
 
 const router = Router();
@@ -36,5 +44,15 @@ router.get('/alerts/history', authenticate, getAlertHistory);
 
 // Dashboard data
 router.get('/dashboard', authenticate, getDashboardData);
+
+// Drop metrics (admin)
+router.get('/drop-metrics', requireAdmin, getDropMetrics);
+router.get('/drop-budgets', requireAdmin, getDropBudgets);
+router.put('/drop-budgets', requireAdmin, setDropBudgets);
+router.get('/drop-classifier', requireAdmin, getDropClassifierStatus);
+router.get('/drop-classifier/flags', requireAdmin, getDropClassifierFlags);
+router.put('/drop-classifier/flags', requireAdmin, setDropClassifierFlags);
+router.get('/drop-timeseries', requireAdmin, getDropTimeSeries);
+router.get('/drop-live-summary', requireAdmin, getDropLiveSummary);
 
 export default router;

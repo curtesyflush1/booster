@@ -616,28 +616,43 @@ const AvailabilityCard: React.FC<{ availability: ProductAvailability }> = ({ ava
             Add to Cart
           </a>
         )}
-        {/* Fallback to retailer search when URL looks placeholder or missing */}
+        {/* Robust View link: prefer absolute retailer URL, else fall back to retailer/site search */}
         {(() => {
-          const url = availability.url || '';
-          const slug = (availability as any).retailerSlug as string | undefined;
-          const name = availability.metadata?.name as string | undefined;
-          const looksPlaceholder = /\/products\//.test(url);
+          const rawUrl = availability.url || '';
+          const productName = (availability.metadata?.name as string | undefined)
+            || (availability.metadata?.productName as string | undefined)
+            || undefined;
+          const isAbsolute = /^https?:\/\//i.test(rawUrl);
+          // Normalize slug variants
+          const rawSlug = ((availability as any).retailerSlug || availability.retailerName || '').toString().toLowerCase();
+          const slug = rawSlug
+            .replace(/\s+/g, '-')
+            .replace(/_/g, '-')
+            .replace(/&/g, 'and');
           const searchBases: Record<string, string> = {
+            'bestbuy': 'https://www.bestbuy.com/site/searchpage.jsp?st=',
             'best-buy': 'https://www.bestbuy.com/site/searchpage.jsp?st=',
             'walmart': 'https://www.walmart.com/search?q=',
             'costco': 'https://www.costco.com/CatalogSearch?keyword=',
+            'samsclub': 'https://www.samsclub.com/s/',
             'sams-club': 'https://www.samsclub.com/s/',
             'gamestop': 'https://www.gamestop.com/search/?q=',
             'target': 'https://www.target.com/s?searchTerm=',
+            'barnesandnoble': 'https://www.barnesandnoble.com/s/',
             'barnes-noble': 'https://www.barnesandnoble.com/s/',
             'amazon': 'https://www.amazon.com/s?k=',
             'walgreens': 'https://www.walgreens.com/search/results.jsp?Ntt=',
             'macys': 'https://www.macys.com/shop/featured/'
           };
-          const searchBase = slug ? searchBases[slug] : undefined;
-          const viewHref = (!url || looksPlaceholder) && searchBase && name
-            ? `${searchBase}${encodeURIComponent(name)}`
-            : (url || '#');
+          const searchBase = searchBases[slug];
+          // If not absolute or clearly relative to our app, build a safer search link
+          const needsFallback = !isAbsolute || rawUrl.startsWith('/') || /\bboosterbeacon\b/i.test(rawUrl);
+          const fallback = searchBase && productName
+            ? `${searchBase}${encodeURIComponent(productName as string)}`
+            : productName
+              ? `https://www.google.com/search?q=${encodeURIComponent(productName as string)}`
+              : '#';
+          const viewHref = needsFallback ? fallback : rawUrl;
           return (
             <a
               href={viewHref}

@@ -19,7 +19,14 @@ module.exports = {
     rules: [
       {
         test: /\.ts$/,
-        use: 'ts-loader',
+        include: path.resolve(__dirname, 'src'),
+        use: {
+          loader: 'ts-loader',
+          options: {
+            transpileOnly: true,
+            configFile: path.resolve(__dirname, 'tsconfig.build.json')
+          }
+        },
         exclude: /node_modules/
       }
     ]

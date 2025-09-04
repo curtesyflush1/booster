@@ -3,7 +3,10 @@
 import { 
   ExtensionSettings, 
   User, 
-  STORAGE_KEYS
+  STORAGE_KEYS,
+  MessageType,
+  RetailerId,
+  RetailerSettings
 } from '../shared/types';
 import { 
   sendExtensionMessage, 
@@ -71,11 +74,12 @@ class OptionsController {
 
   private async loadUserData(): Promise<void> {
     try {
-      const response = await sendExtensionMessage({ type: 'GET_USER_STATUS' });
+      const response = await sendExtensionMessage({ type: MessageType.GET_USER_STATUS });
       
       if (response.success && response.data) {
-        this.user = response.data.user;
-        this.updateAccountStatus(response.data.isAuthenticated);
+        const data = response.data as { user: User; isAuthenticated: boolean };
+        this.user = data.user;
+        this.updateAccountStatus(data.isAuthenticated);
       } else {
         this.updateAccountStatus(false);
       }
@@ -164,7 +168,8 @@ class OptionsController {
     
     // Update retailer settings
     Object.entries(this.settings.retailerSettings).forEach(([retailerId, settings]) => {
-      this.setCheckboxValue(`${retailerId}-enabled`, settings.enabled);
+      const id = retailerId as RetailerId;
+      this.setCheckboxValue(`${id}-enabled`, (settings as RetailerSettings).enabled);
     });
     
     // Update extension version
@@ -241,9 +246,11 @@ class OptionsController {
       
       // Update retailer settings
       if (this.settings.retailerSettings) {
-        Object.keys(this.settings.retailerSettings).forEach(retailerId => {
-          if (this.settings?.retailerSettings[retailerId]) {
-            this.settings.retailerSettings[retailerId].enabled = this.getCheckboxValue(`${retailerId}-enabled`);
+        Object.keys(this.settings.retailerSettings).forEach(key => {
+          const id = key as RetailerId;
+          const rs = this.settings!.retailerSettings[id] as RetailerSettings | undefined;
+          if (rs) {
+            rs.enabled = this.getCheckboxValue(`${id}-enabled`);
           }
         });
       }
@@ -253,7 +260,7 @@ class OptionsController {
       
       // Notify background script
       await sendExtensionMessage({
-        type: 'UPDATE_SETTINGS',
+        type: MessageType.UPDATE_SETTINGS,
         payload: this.settings
       });
       
@@ -339,7 +346,7 @@ class OptionsController {
         syncBtn.classList.add('loading');
       }
       
-      const response = await sendExtensionMessage({ type: 'SYNC_DATA' });
+      const response = await sendExtensionMessage({ type: MessageType.SYNC_DATA });
       
       if (response.success) {
         this.showStatusMessage('Data synced successfully!', 'success');

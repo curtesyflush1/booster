@@ -156,7 +156,7 @@ Delete an alert.
 
 ### ML Predictions (Premium/Pro Only)
 
-#### GET /api/ml/predictions/price/:productId
+#### GET /api/ml/products/:productId/price-prediction
 Get price prediction for a product.
 
 **Response:**
@@ -175,31 +175,45 @@ Get price prediction for a product.
 }
 ```
 
-#### GET /api/ml/predictions/risk/:productId
+#### GET /api/ml/products/:productId/sellout-risk
 Get investment risk assessment.
 
-#### GET /api/ml/predictions/roi/:productId
+#### GET /api/ml/products/:productId/roi-estimate
 Get return on investment prediction.
 
-#### GET /api/ml/insights/market
-Get market insights and trending products.
+#### GET /api/ml/products/:productId/hype-meter
+Get hype/engagement score for a product.
+
+#### GET /api/ml/products/:productId/market-insights
+Get market insights and price history aggregates.
+
+#### GET /api/ml/products/:productId/analysis
+Get comprehensive analysis (Premium only).
+
+#### GET /api/ml/trending-products
+List trending products (Premium only).
+
+#### GET /api/ml/high-risk-products
+List high sellout-risk products (Premium only).
 
 ### Real-Time Updates
 
-#### WebSocket Connection
-Connect to real-time updates via WebSocket.
+#### WebSocket Connection (Socket.IO)
+Connect using Socket.IO to receive real-time updates.
 
-**Connection URL:**
-```
-wss://api.boosterbeacon.com/ws
-```
+- URL: same origin as the API (default path `/socket.io/`)
+- Auth: pass JWT via `auth.token` when connecting
 
-**Authentication:**
-```json
-{
-  "type": "auth",
-  "token": "jwt_token"
-}
+Example (frontend):
+```ts
+import { io } from 'socket.io-client';
+
+const socket = io(import.meta.env.VITE_API_URL, {
+  auth: { token: jwtToken },
+  transports: ['websocket']
+});
+
+socket.on('dashboard:update', (msg) => console.log(msg));
 ```
 
 **Event Types:**
@@ -233,7 +247,7 @@ Response:
 }
 ```
 
-POST /api/admin/ml/models/price/retrain
+POST /api/admin/ml/models/:modelName/retrain
 
 Triggers ETL + training synchronously and returns the updated model record with metrics.
 
@@ -485,3 +499,20 @@ WALMART_API_KEY=your_walmart_key
 **Last Updated**: September 2024
 **API Version**: 2.0
 **Status**: Production Ready
+### Drop Predictions
+GET `/api/ml/drop-predictions?product_id|set|retailer&horizonMinutes&topK`
+- Returns predicted go‑live windows and confidence per retailer.
+- When `DROP_CLASSIFIER_SHADOW=true`, each window includes `shadowProb`.
+
+### URL Candidates (Admin)
+- GET `/api/retailers/candidates?product_id=<uuid>&retailer=<slug>&[sku|upc|name|set_name]`
+- GET `/api/retailers/url-candidates?product_id=<uuid>&retailer=<slug>&status=<status>&limit=<n>`
+
+### Monitoring (Admin)
+- GET `/api/monitoring/drop-metrics`
+- GET `/api/monitoring/drop-budgets`
+- PUT `/api/monitoring/drop-budgets` body: `{ "budgets": [ { "slug": "target", "qpm": 4 } ] }`
+
+### Admin ML (Training)
+- POST `/api/admin/ml/models/price/retrain` (also retrains drop windows by default; `{ includeDrops: false }` to skip)
+- POST `/api/admin/ml/models/drop-windows/retrain` (aliases: `drop`, `drop_windows`, `drop_prediction`)

@@ -1,4 +1,7 @@
 // DOM Caching System for Performance Optimization
+import { RetailerId, Product } from '../shared/types';
+import { debounce, log } from '../shared/utils';
+import { RetailerStrategy, RetailerStrategyFactory } from './retailer-strategies';
 
 interface CacheEntry<T> {
   value: T;
@@ -7,7 +10,7 @@ interface CacheEntry<T> {
 }
 
 class DOMCache {
-  private cache = new Map<string, CacheEntry<Element | null>>();
+  private cache = new Map<string, CacheEntry<Element | null | NodeListOf<Element>>>();
   private defaultTTL = 5000; // 5 seconds
   private observers = new Map<string, MutationObserver>();
 
@@ -16,7 +19,7 @@ class DOMCache {
   }
 
   querySelector(selector: string, ttl = this.defaultTTL): Element | null {
-    const cached = this.getFromCache(selector);
+    const cached = this.getFromCache(selector) as Element | null | undefined;
     if (cached !== undefined) {
       return cached;
     }
@@ -65,7 +68,7 @@ class DOMCache {
     this.observers.clear();
   }
 
-  private getFromCache(key: string): Element | null | undefined {
+  private getFromCache(key: string): Element | NodeListOf<Element> | null | undefined {
     const entry = this.cache.get(key);
     if (!entry) return undefined;
 

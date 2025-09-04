@@ -29,11 +29,12 @@ BoosterBeacon is an enterprise-grade platform for monitoring, analyzing, and inv
 - **Portfolio Optimization**: Personalized recommendations
 
 ### 🛒 Retailer Integration
-- **Multi-Retailer Support**: Best Buy, Walmart, Costco, Sam's Club
+- **Multi-Retailer Support**: Best Buy, Walmart, Costco, Sam's Club, Target, Amazon, GameStop, Barnes & Noble, Walgreens, Macy's, Henry Schein
 - **Automated Discovery**: 3-hour product discovery cycles
 - **Real-Time Updates**: 5-minute availability monitoring
 - **Circuit Breaker Pattern**: Resilient API handling
 - **Health Monitoring**: Performance metrics and error tracking
+- **Target Preorder Handling**: Ship/arrival dates are treated as purchasable for alerting
 
 ## 🏗️ Architecture
 
@@ -253,7 +254,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Last Updated**: September 2024  
+**Last Updated**: September 2025  
 **Version**: 2.0  
 **Status**: Production Ready
 

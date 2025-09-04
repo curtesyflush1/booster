@@ -53,7 +53,7 @@ const SETTINGS_CHECKBOXES = [
 ] as const;
 
 type ViewType = 'main' | 'settings';
-type MessageType = 'success' | 'error' | 'info';
+type ToastType = 'success' | 'error' | 'info';
 
 class PopupController {
   private currentView: ViewType = 'main';
@@ -414,13 +414,13 @@ class PopupController {
     window.close();
   }
 
-  private showTemporaryMessage(message: string, type: MessageType = 'success'): void {
+  private showTemporaryMessage(message: string, type: ToastType = 'success'): void {
     const messageEl = this.createMessageElement(message, type);
     document.body.appendChild(messageEl);
     this.scheduleMessageRemoval(messageEl);
   }
 
-  private createMessageElement(message: string, type: MessageType): HTMLElement {
+  private createMessageElement(message: string, type: ToastType): HTMLElement {
     const messageEl = document.createElement('div');
     messageEl.className = `temp-message temp-message-${type}`;
     messageEl.textContent = message;
@@ -428,7 +428,7 @@ class PopupController {
     return messageEl;
   }
 
-  private getMessageStyles(type: MessageType): string {
+  private getMessageStyles(type: ToastType): string {
     const colors = {
       success: '#10b981',
       error: '#ef4444',

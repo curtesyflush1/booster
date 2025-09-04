@@ -256,3 +256,187 @@ export const getDashboardData = async (req: Request, res: Response): Promise<voi
     errorResponse(res, 500, 'Failed to retrieve dashboard data');
   }
 };
+
+// --- Drop/URL Candidates metrics (admin) ---
+import { BaseModel } from '../models/BaseModel';
+import { redisService } from '../services/redisService';
+import { UrlCandidateMetricsService } from '../services/urlCandidateMetricsService';
+
+export const getDropMetrics = async (_req: Request, res: Response): Promise<void> => {
+  const db = BaseModel.getKnex();
+  const now = new Date();
+  const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  try {
+    // url_candidates by status
+    const uc = await db('url_candidates')
+      .select('status')
+      .count('* as count')
+      .groupBy('status');
+
+    // drop_events by type (24h / 7d)
+    const ev24 = await db('drop_events')
+      .select('signal_type')
+      .count('* as count')
+      .where('observed_at', '>=', last24h)
+      .groupBy('signal_type');
+    const ev7 = await db('drop_events')
+      .select('signal_type')
+      .count('* as count')
+      .where('observed_at', '>=', last7d)
+      .groupBy('signal_type');
+
+    // lead-time basic: first_instock_at - first_seen_at (last 7d)
+    const outcomes = await db('drop_outcomes')
+      .select('product_id','retailer_id','first_seen_at','first_instock_at')
+      .where('drop_at','>=', last7d);
+    const leadTimes = outcomes
+      .map(o => (!o.first_seen_at || !o.first_instock_at) ? null : ((new Date(o.first_instock_at).getTime() - new Date(o.first_seen_at).getTime())/1000))
+      .filter((n): n is number => typeof n === 'number' && isFinite(n) && n>=0)
+      .sort((a,b)=>a-b);
+    const p = (arr:number[], q:number)=> arr.length? arr[Math.floor(q*(arr.length-1))]: null;
+
+    const summary = {
+      urlCandidates: uc.reduce((acc:any,r:any)=>{acc[r.status]=Number(r.count);return acc;},{}),
+      events24h: ev24.reduce((acc:any,r:any)=>{acc[r.signal_type]=Number(r.count);return acc;},{}),
+      events7d: ev7.reduce((acc:any,r:any)=>{acc[r.signal_type]=Number(r.count);return acc;},{}),
+      leadTimeSec: {
+        p50: p(leadTimes,0.5), p90: p(leadTimes,0.9), p95: p(leadTimes,0.95), n: leadTimes.length
+      }
+    };
+
+    successResponse(res, summary, 'Drop metrics');
+  } catch (error) {
+    errorResponse(res, 500, 'Failed to compute drop metrics');
+  }
+};
+
+export const getDropBudgets = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    // Read known retailer slugs and budgets
+    const db = BaseModel.getKnex();
+    const rows: Array<{ slug: string }> = await db('retailers').select('slug');
+    const entries: Array<{ slug: string; qpm: number; source: 'redis' | 'env' | 'default'; key: string; limiter?: { count: number; ttl: number } }>= [];
+    for (const r of rows) {
+      const slug = r.slug;
+      const redisKey = `config:url_candidate:qpm:${slug}`;
+      let qpm = 6; let source: 'redis'|'env'|'default' = 'default';
+      const val = await redisService.get(redisKey);
+      if (val) { qpm = Number(val) || 6; source = 'redis'; }
+      else {
+        const envKey = `URL_CANDIDATE_QPM_${slug.toUpperCase().replace(/[^A-Z0-9]/g,'_')}`;
+        if (process.env[envKey]) { qpm = Number(process.env[envKey]) || 6; source = 'env'; }
+        else if (process.env.URL_CANDIDATE_QPM_DEFAULT) { qpm = Number(process.env.URL_CANDIDATE_QPM_DEFAULT) || 6; source = 'env'; }
+      }
+      // Limiter status
+      const limiterKey = `candqpm:${slug}`;
+      let limiter: { count: number; ttl: number } | undefined;
+      try { limiter = await redisService.getRateLimitStatus(limiterKey); } catch {}
+      entries.push({ slug, qpm, source, key: redisKey, limiter });
+    }
+    successResponse(res, { budgets: entries }, 'Drop budgets');
+  } catch (error) {
+    errorResponse(res, 500, 'Failed to get drop budgets');
+  }
+};
+
+export const setDropBudgets = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const updates = req.body?.budgets as Array<{ slug: string; qpm: number }> | undefined;
+    if (!Array.isArray(updates) || updates.length === 0) {
+      errorResponse(res, 400, 'budgets array required');
+      return;
+    }
+    for (const u of updates) {
+      if (!u.slug || typeof u.qpm !== 'number' || u.qpm <= 0) continue;
+      const key = `config:url_candidate:qpm:${u.slug}`;
+      await redisService.set(key, String(Math.floor(u.qpm)), 0);
+    }
+    successResponse(res, { updated: updates.length }, 'Budgets updated');
+  } catch (error) {
+    errorResponse(res, 500, 'Failed to set drop budgets');
+  }
+};
+
+export const getDropClassifierStatus = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const p = path.join(process.cwd(),'data','ml','drop_classifier_calibration.json');
+    if (!fs.existsSync(p)) {
+      successResponse(res, { exists: false }, 'No classifier calibration found');
+      return;
+    }
+    const j = JSON.parse(fs.readFileSync(p,'utf8'));
+    successResponse(res, { exists: true, ...j }, 'Classifier status');
+  } catch (error) {
+    errorResponse(res, 500, 'Failed to get classifier status');
+  }
+};
+
+export const getDropClassifierFlags = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const primary = (await redisService.get('config:drop_classifier:primary_enabled')) === 'true';
+    const threshold = Number((await redisService.get('config:drop_classifier:threshold')) || '0.5');
+    successResponse(res, { primaryEnabled: primary, threshold }, 'Classifier flags');
+  } catch (error) {
+    errorResponse(res, 500, 'Failed to get classifier flags');
+  }
+};
+
+export const setDropClassifierFlags = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const primary = !!req.body?.primaryEnabled;
+    const threshold = Number(req.body?.threshold || 0.5);
+    await redisService.set('config:drop_classifier:primary_enabled', primary ? 'true' : 'false');
+    await redisService.set('config:drop_classifier:threshold', String(Math.max(0, Math.min(1, threshold))));
+    successResponse(res, { primaryEnabled: primary, threshold }, 'Classifier flags updated');
+  } catch (error) {
+    errorResponse(res, 500, 'Failed to set classifier flags');
+  }
+};
+
+export const getDropTimeSeries = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const minutes = Math.max(5, Math.min(parseInt(String(req.query.minutes || '60'), 10) || 60, 180));
+    const slugsParam = String(req.query.slugs || '');
+    let slugs: string[] = [];
+    if (slugsParam) slugs = slugsParam.split(',').map(s => s.trim()).filter(Boolean);
+    if (slugs.length === 0) {
+      const rows: Array<{ slug: string }> = await BaseModel.getKnex()('retailers').select('slug');
+      slugs = rows.map(r => r.slug);
+    }
+    const series = await UrlCandidateMetricsService.getSeries(slugs, minutes, ['requests','blocked','errors']);
+    successResponse(res, series, 'Drop time series');
+  } catch (error) {
+    errorResponse(res, 500, 'Failed to get drop time series');
+  }
+};
+
+export const getDropLiveSummary = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const db = BaseModel.getKnex();
+    const now = new Date();
+    const last24 = new Date(now.getTime() - 24*60*60*1000);
+    const rows = await db('drop_events')
+      .select(db.raw("date_trunc('hour', observed_at) as hour"), 'signal_type')
+      .count('* as count')
+      .where('observed_at','>=', last24)
+      .whereIn('signal_type', ['url_live','in_stock'])
+      .groupBy(db.raw("date_trunc('hour', observed_at)"), 'signal_type')
+      .orderBy('hour','asc');
+    const map: Record<string, { url_live: number; in_stock: number }> = {};
+    rows.forEach((r: any) => {
+      const hour = new Date(r.hour).toISOString();
+      if (!map[hour]) map[hour] = { url_live: 0, in_stock: 0 };
+      map[hour][r.signal_type] = Number(r.count || 0);
+    });
+    const hours = Object.keys(map).sort();
+    const urlLive = hours.map(h => map[h].url_live);
+    const inStock = hours.map(h => map[h].in_stock);
+    const total = urlLive.reduce((a,b)=>a+b,0) + inStock.reduce((a,b)=>a+b,0);
+    successResponse(res, { hours, urlLive, inStock, total }, 'Live promotions summary');
+  } catch (error) {
+    errorResponse(res, 500, 'Failed to get live summary');
+  }
+};

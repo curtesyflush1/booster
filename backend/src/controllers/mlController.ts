@@ -176,6 +176,31 @@ export class MLController {
   }
 
   /**
+   * Get predicted drop windows for a product/retailer
+   * GET /api/ml/drop-predictions
+   * Query: product_id?|set?|retailer?  horizonMinutes? topK?
+   */
+  static async getDropPredictions(req: Request, res: Response): Promise<void> {
+    try {
+      const { product_id, set, retailer, horizonMinutes, topK } = req.query as Record<string, string>;
+      const { DropPredictionService } = await import('../services/ml/DropPredictionService');
+
+      const predictions = await DropPredictionService.predictWindows({
+        productId: product_id,
+        setName: set,
+        retailerSlug: retailer,
+        horizonMinutes: horizonMinutes ? parseInt(horizonMinutes, 10) : undefined,
+        topK: topK ? parseInt(topK, 10) : undefined,
+      });
+
+      successResponse(res, { predictions, generatedAt: new Date() }, 'Drop predictions generated successfully');
+    } catch (error) {
+      logger.error('Error getting drop predictions:', error);
+      errorResponse(res, 500, 'Failed to generate drop predictions');
+    }
+  }
+
+  /**
    * Get trending products based on hype metrics
    * GET /api/ml/trending-products
    */

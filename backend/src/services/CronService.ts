@@ -5,8 +5,14 @@ import { DataCollectionService } from './dataCollectionService';
 import { PriceDropAlertService } from './priceDropAlertService';
 import { MLTrainingETLService } from './ml/MLTrainingETLService';
 import { PricePredictionModelRunner } from './ml/PricePredictionModelRunner';
+import { DropFeatureETLService } from './ml/DropFeatureETLService';
+import { DropWindowModelRunner } from './ml/DropWindowModelRunner';
+import { DropClassifierTrainerService } from './ml/DropClassifierTrainerService';
 import { WatchMonitoringService } from './watchMonitoringService';
 import parser from 'cron-parser';
+import { DropSchedulerService } from './DropSchedulerService';
+import { PredictionOrchestrationService } from './PredictionOrchestrationService';
+import { URLCandidateChecker } from './URLCandidateChecker';
 
 export class CronService {
   private static started = false;
@@ -86,6 +92,42 @@ export class CronService {
       logger.info('[Cron] Availability scan completed');
     });
 
+    // Every 15 minutes: refresh predicted windows and set hot-scan flags
+    this.registerJob('predictions_refresh', '*/15 * * * *', async () => {
+      logger.info('[Cron] Predictions refresh started');
+      const setCount = await DropSchedulerService.refreshHotWindows({ topProducts: 30, horizonMinutes: 240 });
+      logger.info('[Cron] Predictions refresh completed', { hotFlagsSet: setCount });
+    });
+
+    // Every minute: if any hot window flags are active, run an extra availability scan
+    this.registerJob('availability_hot_scan', '* * * * *', async () => {
+      try {
+        const hot = await DropSchedulerService.hasActiveHotWindow();
+        if (hot) {
+          logger.info('[Cron] Hot window detected -> running focused scan');
+          await AvailabilityPollingService.scanBatch();
+          // Also check a few URL candidates during hot windows
+          await URLCandidateChecker.checkBatch(10).catch(() => {});
+        }
+      } catch {}
+    });
+
+    // Every 30 seconds: orchestrate staged purchases around windows
+    this.registerJob('prediction_orchestration', '*/1 * * * *', async () => {
+      // node-cron minimum is 1 minute; emulate 30s by double-run with short sleep
+      const run = async () => {
+        await PredictionOrchestrationService.runOnce();
+      };
+      await run();
+    });
+
+    // Every 5 minutes: background URL candidate checker
+    this.registerJob('url_candidate_check', '*/5 * * * *', async () => {
+      logger.info('[Cron] URL candidate check started');
+      const { checked, liveFound } = await URLCandidateChecker.checkBatch(30);
+      logger.info('[Cron] URL candidate check completed', { checked, liveFound });
+    });
+
     // Hourly: comprehensive data collection (price history, snapshots, analysis)
     this.registerJob('data_collection', '0 * * * *', async () => {
       logger.info('[Cron] Data collection started');
@@ -119,9 +161,15 @@ export class CronService {
     this.registerJob('ml_pipeline', '0 0 * * *', async () => {
       logger.info('[Cron] ML ETL started');
       await MLTrainingETLService.run();
+      const dropInserted = await DropFeatureETLService.run({ lookbackDays: 30, splitTag: 'daily' });
+      logger.info('[Cron] Drop feature ETL completed', { inserted: dropInserted });
       logger.info('[Cron] ML ETL completed; training model');
       const runner = new PricePredictionModelRunner();
       await runner.train();
+      const dropRunner = new DropWindowModelRunner();
+      await dropRunner.train(30);
+      const calib = await DropClassifierTrainerService.train({ lookbackDays: 30, horizonMinutes: 60, historyWindowDays: 7, sampleStepMinutes: 60, maxSamples: 5000 });
+      logger.info('[Cron] Drop classifier calibration completed', { metrics: calib?.metrics });
       logger.info('[Cron] ML training completed');
     });
 

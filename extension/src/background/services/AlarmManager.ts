@@ -154,7 +154,7 @@ export class AlarmManager {
       log('error', `Alarm ${alarm.name} failed`, error);
       
       if (config.retryOnFailure) {
-        await this.handleAlarmRetry(alarm.name, config, error);
+        await this.handleAlarmRetry(alarm.name, config);
       }
     }
   }
@@ -164,8 +164,7 @@ export class AlarmManager {
    */
   private async handleAlarmRetry(
     alarmName: string, 
-    config: AlarmConfig, 
-    error: any
+    config: AlarmConfig
   ): Promise<void> {
     const currentRetries = this.retryAttempts.get(alarmName) || 0;
     const maxRetries = config.maxRetries || 3;

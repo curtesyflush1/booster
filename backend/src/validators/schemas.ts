@@ -468,6 +468,21 @@ export const mlSchemas = {
         'number.max': 'Risk score cannot exceed 100'
       })
     })
+  },
+
+  // Drop prediction
+  getDropPredictions: {
+    query: Joi.object({
+      product_id: commonSchemas.optionalUuid,
+      set: Joi.string().min(1).max(120).optional(),
+      retailer: Joi.string().pattern(/^[a-z0-9-]+$/).optional().messages({
+        'string.pattern.base': 'Retailer must be a slug (lowercase, numbers, hyphens)'
+      }),
+      horizonMinutes: Joi.number().integer().min(15).max(1440).default(180),
+      topK: Joi.number().integer().min(1).max(5).default(3)
+    }).or('product_id', 'set', 'retailer').messages({
+      'object.missing': 'At least one of product_id, set, or retailer is required'
+    })
   }
 };
 

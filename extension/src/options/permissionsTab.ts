@@ -21,11 +21,11 @@ export class PermissionsTab {
   private async loadPermissionStatuses(): Promise<void> {
     try {
       const response = await sendExtensionMessage({
-        type: 'CHECK_RETAILER_PERMISSIONS' as MessageType
+        type: 'CHECK_RETAILER_PERMISSIONS' as any
       });
 
       if (response.success && response.data) {
-        const { retailerStatuses } = response.data;
+        const { retailerStatuses } = response.data as { retailerStatuses: Array<{ retailerId: RetailerId; hasPermission: boolean }>; };
         
         for (const status of retailerStatuses) {
           this.permissionStatuses.set(status.retailerId, status.hasPermission);
@@ -219,8 +219,8 @@ export class PermissionsTab {
       }
 
       if (response.success) {
-        const granted = action === 'grant' ? response.data?.granted : false;
-        const success = action === 'grant' ? granted : response.data?.removed;
+        const data = (response.data || {}) as { granted?: boolean; removed?: boolean };
+        const success = action === 'grant' ? !!data.granted : !!data.removed;
         
         if (success) {
           // Update local state
@@ -265,14 +265,14 @@ export class PermissionsTab {
       // Request permissions for all ungranted retailers
       for (const retailerId of ungrantedRetailers) {
         const response = await sendExtensionMessage({
-          type: 'REQUEST_RETAILER_PERMISSION' as MessageType,
+          type: 'REQUEST_RETAILER_PERMISSION' as any,
           payload: { 
             retailerId, 
             reason: 'Enable monitoring and checkout assistance for all supported retailers' 
           }
         });
 
-        if (response.success && response.data?.granted) {
+        if (response.success && (response.data as { granted?: boolean }).granted) {
           this.permissionStatuses.set(retailerId, true);
           this.updateRetailerCard(retailerId, true);
         }
@@ -308,11 +308,11 @@ export class PermissionsTab {
     try {
       for (const retailerId of grantedRetailers) {
         const response = await sendExtensionMessage({
-          type: 'REMOVE_RETAILER_PERMISSION' as MessageType,
+          type: 'REMOVE_RETAILER_PERMISSION' as any,
           payload: { retailerId }
         });
 
-        if (response.success && response.data?.removed) {
+        if (response.success && (response.data as { removed?: boolean }).removed) {
           this.permissionStatuses.set(retailerId, false);
           this.updateRetailerCard(retailerId, false);
         }

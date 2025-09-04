@@ -20,6 +20,10 @@ BoosterBeacon has achieved a major milestone with a production-ready, scalable, 
 - **Infrastructure**: Docker, Nginx, and deployment configurations
 - **Documentation**: New subscription policies and updated architecture docs
 
+### Platform Coverage Updates
+- **Retailers**: Added/validated integrations for Target, Amazon, GameStop, Barnes & Noble, Walgreens, Macy's, Henry Schein (in addition to Best Buy, Walmart, Costco, Sam's Club)
+- **Target Preorders**: Shipping/arrival date inference now treated as purchasable for alerting
+
 ## 🏗️ Architectural Achievements
 
 ### 1. Subscription-Based Policy Management

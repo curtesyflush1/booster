@@ -108,45 +108,51 @@ Data Sources → Ingestion → Processing → Feature Engineering → Model Trai
 
 ### Price Predictions
 ```http
-GET /api/v1/ml/predictions/price/:productId
+GET /api/ml/products/:productId/price-prediction
 ```
-Returns price forecasts with confidence intervals for specified time horizons.
+Returns price forecasts with confidence intervals for specified time horizons. (Premium)
 
 ### Sell-out Risk Assessment
 ```http
-GET /api/v1/ml/predictions/sellout/:productId
+GET /api/ml/products/:productId/sellout-risk
 ```
-Provides sell-out probability and estimated time until stock depletion.
+Provides sell-out probability and estimated time until stock depletion. (Pro/Premium)
 
 ### ROI Estimation
 ```http
-GET /api/v1/ml/predictions/roi/:productId
+GET /api/ml/products/:productId/roi-estimate
 ```
-Calculates expected returns and investment risk for collectible products.
+Calculates expected returns and investment risk for collectible products. (Premium)
 
 ### Hype Meter
 ```http
-GET /api/v1/ml/analytics/hype/:productId
+GET /api/ml/products/:productId/hype-meter
 ```
-Measures community interest and viral potential for products.
-
-### Personalized Recommendations
-```http
-GET /api/v1/ml/recommendations/user
-```
-Provides tailored investment recommendations based on user preferences and portfolio.
+Measures community interest and viral potential for products. (Pro/Premium)
 
 ### Market Insights
 ```http
-GET /api/v1/ml/insights/market
+GET /api/ml/products/:productId/market-insights
 ```
-Delivers real-time market analysis and opportunity identification.
+Delivers market aggregates and price history summaries. (Premium)
 
-### Portfolio Analysis
+### Comprehensive Analysis
 ```http
-GET /api/v1/ml/portfolio/analysis
+GET /api/ml/products/:productId/analysis
 ```
-Comprehensive portfolio optimization and risk assessment.
+Combines key metrics into a single analysis response. (Premium)
+
+### Trending Products
+```http
+GET /api/ml/trending-products
+```
+Lists trending products. (Premium)
+
+### High-Risk Products
+```http
+GET /api/ml/high-risk-products
+```
+Lists products with elevated sellout risk. (Premium)
 
 ## Data Models
 
@@ -381,3 +387,18 @@ const analysis = await api.get('/ml/portfolio/analysis');
 **Made with ❤️ for Pokémon TCG collectors**
 
 The ML system represents the cutting edge of collectibles analytics, providing unprecedented insights into the Pokémon TCG market to help collectors make informed investment decisions.
+
+
+## Drop Forecast Addendum (2025-09)
+
+This release adds a drop‑forecasting pipeline that powers near‑term go‑live windows and shadow probabilities.
+
+- Data sources: `drop_events` (status_change, price_present, url_seen, url_live, in_stock) and `availability_snapshots`.
+- ETL: `DropFeatureETLService` aggregates counts, hour histograms, and availability ratios into `model_features`.
+- Windows model: `DropWindowModelRunner` trains per‑retailer hour‑of‑day weights from `url_live` and `in_stock` events, saved to `data/ml/drop_window_model.json`.
+- API: `GET /api/ml/drop-predictions` returns windows; attaches `shadowProb` if `DROP_CLASSIFIER_SHADOW=true`.
+- Admin: “Retrain Drop Windows” button triggers ETL + training; the “Retrain Price Model” button also retrains drop windows by default.
+
+### Configuration
+- Set `DROP_CLASSIFIER_SHADOW=true` (dev/staging) to attach `shadowProb` to predicted windows.
+- Model paths: `data/ml/drop_window_model.json`, `data/ml/price_model.json`.

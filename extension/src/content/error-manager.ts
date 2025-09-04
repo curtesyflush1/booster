@@ -1,4 +1,6 @@
 // Centralized Error Management System
+import { MessageResponse } from '../shared/types';
+import { sendExtensionMessage, getCurrentRetailer } from '../shared/utils';
 
 interface ErrorContext {
   component: string;
@@ -117,7 +119,7 @@ class ErrorManager {
 
     try {
       await sendExtensionMessage({
-        type: 'ERROR_REPORT',
+        type: 'ERROR_REPORT' as any,
         payload: {
           errors: errorsToReport.map(report => ({
             message: report.error.message,
@@ -261,7 +263,7 @@ function withErrorHandling<T extends (...args: any[]) => any>(
 
 // Usage examples:
 class ExampleServiceWithErrorHandling {
-  @withErrorHandling
+  // Example: manual usage; decorator disabled to avoid TS decorator signature issues in strict mode
   async executeAddToCart(payload: any): Promise<MessageResponse> {
     // Method implementation
     // Errors will be automatically caught and reported

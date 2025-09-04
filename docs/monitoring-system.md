@@ -538,3 +538,16 @@ loggerWithContext.debug('Monitoring debug info', { metric: 'test' });
 - Monitoring data access is role-based
 - Alert rule management restricted to administrators
 - System metrics available to authenticated users only
+## Drop Metrics (2025-09)
+
+New admin monitoring endpoints provide visibility into drop detection and performance:
+
+- `GET /api/monitoring/drop-metrics` (admin):
+  - `urlCandidates` by status,
+  - `events24h` and `events7d` by signal type,
+  - lead‑time summary from `drop_outcomes` (p50/p90/p95).
+- `GET /api/monitoring/drop-budgets` (admin): current per‑retailer candidate QPM budgets and their source (redis/env/default).
+- `PUT /api/monitoring/drop-budgets` (admin): update budgets:
+```json
+{ "budgets": [ { "slug": "target", "qpm": 4 }, { "slug": "best-buy", "qpm": 3 } ] }
+```

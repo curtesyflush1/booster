@@ -57,7 +57,9 @@
     "admin:set-password": "ts-node scripts/admin-set-password.ts",
     "admin:make-admin": "ts-node scripts/admin-grant-admin.ts",
     "admin:print-user": "ts-node scripts/admin-print-user.ts",
-    "email:report": "ts-node scripts/email-deliverability-report.ts"
+    "email:report": "ts-node scripts/email-deliverability-report.ts",
+    "seed:url-candidates": "ts-node scripts/seed-url-candidates.ts",
+    "check:url-candidates": "ts-node scripts/check-url-candidates.ts"
   },
   "keywords": [
     "pokemon",

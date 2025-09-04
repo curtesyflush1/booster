@@ -50,6 +50,9 @@ router.get('/products/:productId/market-insights', requirePlan(TOP_TIER_PLAN_SLU
 // Premium-only (comprehensive)
 router.get('/products/:productId/analysis', requirePlan(TOP_TIER_PLAN_SLUGS), sanitizeParameters, validate(mlSchemas.getComprehensiveAnalysis), MLController.getComprehensiveAnalysis);
 
+// Drop predictions (Premium-only)
+router.get('/drop-predictions', requirePlan(TOP_TIER_PLAN_SLUGS), sanitizeParameters, validate(mlSchemas.getDropPredictions), MLController.getDropPredictions);
+
 // Aggregate ML endpoints
 // Premium-only aggregates
 router.get('/trending-products', requirePlan(TOP_TIER_PLAN_SLUGS), validate(mlSchemas.getTrendingProducts), MLController.getTrendingProducts);
