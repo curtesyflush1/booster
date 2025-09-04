@@ -21,6 +21,7 @@ import {
   getDropTimeSeries,
   getDropLiveSummary
 } from '../controllers/monitoringController';
+import { trainDropClassifierNow, runUrlCandidateCheckBatch, runSmokeTests } from '../controllers/monitoringController';
 
 const router = Router();
 
@@ -46,13 +47,16 @@ router.get('/alerts/history', authenticate, getAlertHistory);
 router.get('/dashboard', authenticate, getDashboardData);
 
 // Drop metrics (admin)
-router.get('/drop-metrics', requireAdmin, getDropMetrics);
-router.get('/drop-budgets', requireAdmin, getDropBudgets);
-router.put('/drop-budgets', requireAdmin, setDropBudgets);
-router.get('/drop-classifier', requireAdmin, getDropClassifierStatus);
-router.get('/drop-classifier/flags', requireAdmin, getDropClassifierFlags);
-router.put('/drop-classifier/flags', requireAdmin, setDropClassifierFlags);
-router.get('/drop-timeseries', requireAdmin, getDropTimeSeries);
-router.get('/drop-live-summary', requireAdmin, getDropLiveSummary);
+router.get('/drop-metrics', authenticate, requireAdmin, getDropMetrics);
+router.get('/drop-budgets', authenticate, requireAdmin, getDropBudgets);
+router.put('/drop-budgets', authenticate, requireAdmin, setDropBudgets);
+router.get('/drop-classifier', authenticate, requireAdmin, getDropClassifierStatus);
+router.get('/drop-classifier/flags', authenticate, requireAdmin, getDropClassifierFlags);
+router.put('/drop-classifier/flags', authenticate, requireAdmin, setDropClassifierFlags);
+router.get('/drop-timeseries', authenticate, requireAdmin, getDropTimeSeries);
+router.get('/drop-live-summary', authenticate, requireAdmin, getDropLiveSummary);
+router.post('/drop-classifier/train', authenticate, requireAdmin, trainDropClassifierNow);
+router.post('/url-candidates/check', authenticate, requireAdmin, runUrlCandidateCheckBatch);
+router.post('/smoke-tests', authenticate, requireAdmin, runSmokeTests);
 
 export default router;

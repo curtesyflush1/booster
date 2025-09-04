@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { URLCandidateChecker } from '../src/services/URLCandidateChecker';
 import { BaseModel } from '../src/models/BaseModel';
+import { redisService } from '../src/services/redisService';
 
 async function main() {
   const argv = new Map<string, string>();
@@ -30,7 +31,10 @@ async function main() {
   }
   console.log(`Checking ${toCheck.length} candidate(s):`);
   for (const r of toCheck) console.log(` - ${r.id} ${r.status} ${r.score ?? ''} ${r.url}`);
+  // Ensure Redis is connected for budgets/metrics (fail open if it errors)
+  try { await redisService.connect(); } catch {}
   const out = await URLCandidateChecker.checkBatch(limit);
+  try { await redisService.disconnect(); } catch {}
   console.log(`Done. Checked=${out.checked} liveFound=${out.liveFound}`);
   const after = await knex('url_candidates')
     .select('id','status','score','reason','last_checked_at')

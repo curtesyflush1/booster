@@ -250,6 +250,41 @@ const AdminDashboardPage: React.FC = () => {
     }
   };
 
+  const runDryRun = async () => {
+    try {
+      const res = await apiClient.post('/admin/catalog/ingestion/dry-run', {} , { timeout: 180000 });
+      toast.success(`Dry-run OK: discovered ${res.data?.data?.discovered ?? '?'} items`);
+    } catch (e) {
+      toast.error('Dry-run failed');
+    }
+  };
+
+  const runIngestion = async () => {
+    try {
+      const res = await apiClient.post('/admin/catalog/ingestion/run', {}, { timeout: 300000 });
+      toast.success(`Ingestion OK: upserted ${res.data?.data?.upserted ?? '?'} items`);
+    } catch (e) {
+      toast.error('Ingestion failed');
+    }
+  };
+
+  const [adminToolsEmail, setAdminToolsEmail] = React.useState('');
+  const [adminToolsPassword, setAdminToolsPassword] = React.useState('');
+  const setPassword = async () => {
+    try {
+      if (!adminToolsEmail || !adminToolsPassword) { toast.error('Email and new password required'); return; }
+      await apiClient.post('/admin/users/set-password', { email: adminToolsEmail, newPassword: adminToolsPassword });
+      toast.success('Password updated');
+    } catch { toast.error('Failed to set password'); }
+  };
+  const grantAdmin = async () => {
+    try {
+      if (!adminToolsEmail) { toast.error('Email required'); return; }
+      await apiClient.post('/admin/users/grant-admin', { email: adminToolsEmail, role: 'admin' });
+      toast.success('Granted admin role');
+    } catch { toast.error('Failed to grant role'); }
+  };
+
   const formatUptime = (seconds: number) => {
     const days = Math.floor(seconds / 86400);
     const hours = Math.floor((seconds % 86400) / 3600);
@@ -526,11 +561,11 @@ const AdminDashboardPage: React.FC = () => {
             {mlError && (
               <div className="mb-4 p-3 rounded bg-red-50 text-red-700 text-sm">{mlError}</div>
             )}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Metadata Card */}
-              <div className="lg:col-span-2">
-                <div className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Metadata Card */}
+                <div className="lg:col-span-2">
+                  <div className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
                     <h4 className="font-semibold text-gray-900">Price Prediction Model</h4>
                     <button
                       onClick={loadPriceModelMetadata}
@@ -581,6 +616,7 @@ const AdminDashboardPage: React.FC = () => {
                   >
                     {dropRetraining ? 'Retraining…' : 'Retrain Drop Windows'}
                   </button>
+                  <RunCheckerCard />
                   {retrainMetrics && (
                     <div className="mt-4 text-sm">
                       <div className="text-gray-500">Last Retrain Metrics</div>
@@ -670,6 +706,7 @@ const AdminDashboardPage: React.FC = () => {
               <div className="flex items-center justify-between mb-3">
                 <h4 className="font-semibold text-gray-900">Drop Classifier (Shadow)</h4>
               </div>
+              <CalibrateClassifierCard />
               {clfMetrics?.exists ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div className="p-3 bg-gray-50 rounded">
@@ -801,3 +838,62 @@ const RateRow: React.FC<{ slug: string; ts: { times: string[]; data: Record<stri
     </div>
   );
 });
+
+// Small helpers to run checker/calibration and smoke tests from UI
+const RunCheckerCard: React.FC = () => {
+  const [limit, setLimit] = React.useState(10);
+  const [timeout, setTimeoutMs] = React.useState(8000);
+  const [provider, setProvider] = React.useState<'browser'|'forward'|'direct'|'proxy'|'forward'>('browser');
+  const [running, setRunning] = React.useState(false);
+  const run = async () => {
+    try {
+      setRunning(true);
+      await apiClient.post('/monitoring/url-candidates/check', { limit, timeout, provider, render: true }, { timeout: Math.max(timeout+2000, 15000) });
+      toast.success('Checker batch triggered');
+    } catch {
+      toast.error('Checker batch failed');
+    } finally { setRunning(false); }
+  };
+  const smoke = async () => {
+    try { const r = await apiClient.post('/monitoring/smoke-tests', {}); toast.success(r.data?.success ? 'Smoke OK' : 'Smoke returned'); } catch { toast.error('Smoke tests failed'); }
+  };
+  return (
+              <div className="mt-3 p-3 border rounded">
+                <div className="text-sm font-medium text-gray-900 mb-2">Run Candidate Checker</div>
+      <div className="flex gap-2 items-center text-sm mb-2">
+        <label>Limit <input type="number" min={1} max={50} value={limit} onChange={e=>setLimit(parseInt(e.target.value||'10',10))} className="w-20 border rounded px-2 py-1" /></label>
+        <label>Timeout <input type="number" min={1000} max={30000} value={timeout} onChange={e=>setTimeoutMs(parseInt(e.target.value||'8000',10))} className="w-24 border rounded px-2 py-1" /></label>
+        <label>Provider
+          <select value={provider} onChange={e=>setProvider(e.target.value as any)} className="ml-2 border rounded px-2 py-1">
+            <option value="browser">browser</option>
+            <option value="forward">forward</option>
+            <option value="direct">direct</option>
+            <option value="proxy">proxy</option>
+          </select>
+        </label>
+      </div>
+      <div className="flex gap-2">
+        <button onClick={run} disabled={running} className={`text-sm px-3 py-1 rounded ${running?'bg-gray-300 text-gray-600':'bg-purple-600 text-white hover:bg-purple-700'}`}>Run Checker</button>
+                <button onClick={smoke} className="text-sm px-3 py-1 rounded bg-gray-800 text-white hover:bg-gray-900">Run Smoke Tests</button>
+              </div>
+    </div>
+  );
+};
+
+const CalibrateClassifierCard: React.FC = () => {
+  const [running, setRunning] = React.useState(false);
+  const run = async () => {
+    try {
+      setRunning(true);
+      await apiClient.post('/monitoring/drop-classifier/train', { lookbackDays: 30, horizonMinutes: 60, historyWindowDays: 7, sampleStepMinutes: 60, maxSamples: 3000 }, { timeout: 180000 });
+      toast.success('Classifier calibration started');
+    } catch {
+      toast.error('Classifier calibration failed');
+    } finally { setRunning(false); }
+  };
+  return (
+    <div className="mb-3">
+      <button onClick={run} disabled={running} className={`text-sm px-3 py-1 rounded ${running?'bg-gray-300 text-gray-600':'bg-blue-600 text-white hover:bg-blue-700'}`}>Calibrate Drop Classifier Now</button>
+    </div>
+  );
+};

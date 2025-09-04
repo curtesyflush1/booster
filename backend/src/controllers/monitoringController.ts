@@ -440,3 +440,59 @@ export const getDropLiveSummary = async (_req: Request, res: Response): Promise<
     errorResponse(res, 500, 'Failed to get live summary');
   }
 };
+
+// ---- On-demand admin operations ----
+import { DropClassifierTrainerService } from '../services/ml/DropClassifierTrainerService';
+import { URLCandidateChecker } from '../services/URLCandidateChecker';
+
+export const trainDropClassifierNow = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const {
+      lookbackDays = 30,
+      horizonMinutes = 60,
+      historyWindowDays = 7,
+      sampleStepMinutes = 60,
+      maxSamples = 3000
+    } = req.body || {};
+    const result = await DropClassifierTrainerService.train({
+      lookbackDays: Number(lookbackDays),
+      horizonMinutes: Number(horizonMinutes),
+      historyWindowDays: Number(historyWindowDays),
+      sampleStepMinutes: Number(sampleStepMinutes),
+      maxSamples: Number(maxSamples)
+    });
+    successResponse(res, result, 'Drop classifier training triggered');
+  } catch (error) {
+    errorResponse(res, 500, 'Failed to train drop classifier');
+  }
+};
+
+export const runUrlCandidateCheckBatch = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { limit = 10, timeout = 8000, provider, render = true } = req.body || {};
+    if (provider) process.env.HTTP_FETCH_PROVIDER = String(provider);
+    process.env.URL_CANDIDATE_TIMEOUT_MS = String(timeout);
+    if (render) process.env.URL_CANDIDATE_FORCE_RENDER = 'true';
+    try { await redisService.connect(); } catch {}
+    const out = await URLCandidateChecker.checkBatch(Math.min(Number(limit) || 10, 50));
+    try { await redisService.disconnect(); } catch {}
+    successResponse(res, out, 'URL candidate check batch complete');
+  } catch (error) {
+    errorResponse(res, 500, 'Failed to run candidate checker');
+  }
+};
+
+export const runSmokeTests = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const db = BaseModel.getKnex();
+    const tests: Array<{ name: string; ok: boolean; details?: any }> = [];
+    try { await db.raw('SELECT 1'); tests.push({ name: 'db_connect', ok: true }); } catch (e:any) { tests.push({ name: 'db_connect', ok: false, details: e?.message }); }
+    try { const ping = await redisService.ping(); tests.push({ name: 'redis_ping', ok: ping === 'PONG' }); } catch (e:any) { tests.push({ name: 'redis_ping', ok: false, details: e?.message }); }
+    try { const health = await db('retailers').count('* as c').first(); tests.push({ name: 'retailers_table', ok: true, details: health }); } catch (e:any) { tests.push({ name: 'retailers_table', ok: false, details: e?.message }); }
+    const ok = tests.every(t => t.ok);
+    successResponse(res, { ok, tests }, 'Smoke tests complete');
+  } catch (error) {
+    errorResponse(res, 500, 'Smoke tests failed');
+  }
+};
+// remove duplicate export (not needed)

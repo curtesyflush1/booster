@@ -9,6 +9,8 @@ import { IUser } from '../types/database';
 import { CatalogIngestionService } from '../services/catalogIngestionService';
 import fs from 'fs';
 import path from 'path';
+import { UserRepository } from '../repositories/UserRepository';
+import { User } from '../models/User';
 
 // Validation schemas
 const userFiltersSchema = Joi.object({
@@ -318,6 +320,99 @@ export const catalogIngestionDryRun = async (req: Request, res: Response, next: 
 
     const result = await CatalogIngestionService.dryRunDiscover({ queries });
 
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Run catalog ingestion (writes products/availability)
+ * POST /api/admin/catalog/ingestion/run
+ */
+// (duplicate removed below)
+
+/**
+ * Admin: Set user password by email (protected)
+ * POST /api/admin/users/set-password { email, newPassword }
+ */
+export const adminSetUserPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { email, newPassword } = req.body || {};
+    if (!email || !newPassword) {
+      res.status(400).json({ error: { code: 'INVALID_INPUT', message: 'email and newPassword required', timestamp: new Date().toISOString() } });
+      return;
+    }
+    const repo = new UserRepository();
+    const user: any = await repo.findByEmail(email.toLowerCase());
+    if (!user) {
+      res.status(404).json({ error: { code: 'USER_NOT_FOUND', message: 'User not found', timestamp: new Date().toISOString() } });
+      return;
+    }
+    await repo.updatePassword(user.id, newPassword);
+    await AdminAuditService.logAction(req.user!.id, 'admin_set_password', 'user', user.id, { email }, req.ip, req.get('User-Agent'));
+    res.json({ success: true, message: 'Password updated' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Admin: Grant admin role to user by email
+ * POST /api/admin/users/grant-admin { email, role? }
+ */
+export const adminGrantRoleByEmail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { email, role = 'admin' } = req.body || {};
+    if (!email) {
+      res.status(400).json({ error: { code: 'INVALID_INPUT', message: 'email required', timestamp: new Date().toISOString() } });
+      return;
+    }
+    const repo = new UserRepository();
+    const user: any = await repo.findByEmail(email.toLowerCase());
+    if (!user) {
+      res.status(404).json({ error: { code: 'USER_NOT_FOUND', message: 'User not found', timestamp: new Date().toISOString() } });
+      return;
+    }
+    const updated = await User.updateById(user.id, { role });
+    await AdminAuditService.logAction(req.user!.id, 'admin_grant_role', 'user', user.id, { email, role }, req.ip, req.get('User-Agent'));
+    res.json({ success: true, message: `Role set to ${role}`, userId: user.id });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Admin: Get user by email (safe fields)
+ * GET /api/admin/users/by-email?email=...
+ */
+export const adminGetUserByEmail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const email = String(req.query.email || '').trim().toLowerCase();
+    if (!email) {
+      res.status(400).json({ error: { code: 'INVALID_INPUT', message: 'email query required', timestamp: new Date().toISOString() } });
+      return;
+    }
+    const repo = new UserRepository();
+    const user: any = await repo.findByEmail(email);
+    if (!user) {
+      res.status(404).json({ error: { code: 'USER_NOT_FOUND', message: 'User not found', timestamp: new Date().toISOString() } });
+      return;
+    }
+    const { password_hash, reset_token, verification_token, ...safe } = user;
+    res.json({ success: true, data: safe });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Run catalog ingestion (writes products/availability)
+ * POST /api/admin/catalog/ingestion/run
+ */
+export const catalogIngestionRun = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const result = await CatalogIngestionService.discoverAndIngest();
     res.status(200).json({ success: true, data: result });
   } catch (error) {
     next(error);

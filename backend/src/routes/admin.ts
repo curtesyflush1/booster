@@ -16,6 +16,7 @@ import { addJob as enqueuePurchase } from '../services/PurchaseQueue';
 import { Product } from '../models/Product';
 import { AlertProcessingService } from '../services/alertProcessingService';
 import { transactionService } from '../services/transactionService';
+import { adminSetUserPassword, adminGrantRoleByEmail, catalogIngestionRun, adminGetUserByEmail } from '../controllers/adminController';
 
 const router = Router();
 
@@ -225,6 +226,36 @@ router.post(
   '/catalog/ingestion/dry-run',
   requirePermission(Permission.PRODUCT_BULK_IMPORT),
   adminController.catalogIngestionDryRun
+);
+
+/**
+ * Catalog ingestion run (writes)
+ */
+router.post(
+  '/catalog/ingestion/run',
+  requirePermission(Permission.PRODUCT_BULK_IMPORT),
+  catalogIngestionRun
+);
+
+// Admin: Set user password by email
+router.post(
+  '/users/set-password',
+  requirePermission(Permission.USER_UPDATE),
+  adminSetUserPassword
+);
+
+// Admin: Grant admin role by email
+router.post(
+  '/users/grant-admin',
+  requirePermission(Permission.USER_ROLE_MANAGE),
+  adminGrantRoleByEmail
+);
+
+// Admin: Get user by email (safe)
+router.get(
+  '/users/by-email',
+  requirePermission(Permission.USER_VIEW),
+  adminGetUserByEmail
 );
 
 /**
