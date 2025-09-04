@@ -206,6 +206,17 @@ export class BestBuyService extends BaseRetailerService {
     
     const availabilityStatus = this.determineAvailabilityStatus(inStock, availabilityText);
 
+    // Fallback cart URL: if API doesn't provide a usable addToCartUrl, attempt a best-effort deep link by SKU
+    let cartUrl = product.addToCartUrl;
+    if (!cartUrl || /\/cart\/?$/.test(cartUrl)) {
+      try {
+        const skuId = String(product.sku);
+        if (skuId && /^\d+$/.test(skuId)) {
+          cartUrl = `https://www.bestbuy.com/cart?skuId=${encodeURIComponent(skuId)}`;
+        }
+      } catch {}
+    }
+
     return {
       productId: request.productId,
       retailerId: this.config.id,
@@ -214,7 +225,7 @@ export class BestBuyService extends BaseRetailerService {
       originalPrice: product.regularPrice !== price ? product.regularPrice : undefined,
       availabilityStatus,
       productUrl: product.url,
-      cartUrl: product.addToCartUrl,
+      cartUrl,
       storeLocations,
       lastUpdated: new Date(),
       metadata: {

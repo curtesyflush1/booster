@@ -78,8 +78,8 @@ services:
       JWT_SECRET: dev_jwt_secret_key_change_in_production
       JWT_REFRESH_SECRET: dev_jwt_refresh_secret_key_change_in_production
       LOG_LEVEL: debug
-      # Allow both localhost and LAN Vite origins in dev (CORS)
-      FRONTEND_URLS: http://localhost:5173,http://192.168.1.238:5173
+      # Allow local frontend origins in dev (CORS)
+      FRONTEND_URLS: http://localhost:5173,http://192.168.1.238:5173,http://localhost:3000,http://localhost:4173
       FRONTEND_ORIGIN_REGEX: ^http://192\.168\.1\.\d+:5173$
       # SMTP configuration (dev points to your SMTP provider). Do NOT hardcode the password here.
       # Export SMTP_PASS in your shell before `docker compose up`, and it will be injected.
@@ -97,6 +97,22 @@ services:
       BESTBUY_API_KEY: ${BESTBUY_API_KEY}
       WALMART_API_KEY: ${WALMART_API_KEY}
       DISABLE_RATE_LIMITING: "true"
+      # HTTP fetching / scraping configuration
+      HTTP_FETCH_PROVIDER: ${HTTP_FETCH_PROVIDER}
+      FORWARD_PROXY_PROTOCOL: ${FORWARD_PROXY_PROTOCOL}
+      FORWARD_PROXY_HOST: ${FORWARD_PROXY_HOST}
+      FORWARD_PROXY_PORT: ${FORWARD_PROXY_PORT}
+      FORWARD_PROXY_USERNAME: ${FORWARD_PROXY_USERNAME}
+      FORWARD_PROXY_PASSWORD: ${FORWARD_PROXY_PASSWORD}
+      GAMESTOP_BROWSER_ONLY: ${GAMESTOP_BROWSER_ONLY}
+      BROWSER_API_URL: ${BROWSER_API_URL}
+      BROWSER_API_TOKEN: ${BROWSER_API_TOKEN}
+      # Optional per-retailer overrides (if defined in .env)
+      FORWARD_PROXY_USERNAME_GAMESTOP: ${FORWARD_PROXY_USERNAME_GAMESTOP}
+      FORWARD_PROXY_PASSWORD_GAMESTOP: ${FORWARD_PROXY_PASSWORD_GAMESTOP}
+      FORWARD_PROXY_HOST_GAMESTOP: ${FORWARD_PROXY_HOST_GAMESTOP}
+      FORWARD_PROXY_PORT_GAMESTOP: ${FORWARD_PROXY_PORT_GAMESTOP}
+      FORWARD_PROXY_PROTOCOL_GAMESTOP: ${FORWARD_PROXY_PROTOCOL_GAMESTOP}
       STRIPE_PUBLISHABLE_KEY: pk_test_your_publishable_key_here
       STRIPE_SECRET_KEY: sk_test_your_secret_key_here
       STRIPE_PRO_MONTHLY_PRICE_ID: price_your_pro_monthly_price_id

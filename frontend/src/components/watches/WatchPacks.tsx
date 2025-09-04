@@ -35,15 +35,22 @@ export const WatchPacks: React.FC = () => {
         endpoint = '/watches/packs/subscriptions/detailed';
       }
 
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: pagination.limit.toString(),
-        ...(searchQuery && { search: searchQuery })
-      });
+      // Build query params according to endpoint's schema
+      let params = new URLSearchParams();
+      if (activeTab === 'popular') {
+        // Popular packs accept only 'limit'
+        params.set('limit', pagination.limit.toString());
+      } else if (activeTab === 'all') {
+        params.set('page', page.toString());
+        params.set('limit', pagination.limit.toString());
+        if (searchQuery) params.set('search', searchQuery);
+      } else if (activeTab === 'subscribed') {
+        // Detailed subscriptions endpoint does not accept pagination/search
+        params = new URLSearchParams();
+      }
 
-      const response = await apiClient.get<PaginatedResponse<WatchPack> | WatchPack[]>(
-        `${endpoint}?${params}`
-      );
+      const url = params.toString() ? `${endpoint}?${params.toString()}` : endpoint;
+      const response = await apiClient.get<PaginatedResponse<WatchPack> | WatchPack[]>(url);
 
       // API responses are wrapped as { data, pagination? }
       const payload: any = response.data;

@@ -39,6 +39,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   const normalizeProduct = (raw: any): Product => {
     const p = raw || {};
     const availability = Array.isArray(p.availability) ? p.availability.map((a: any) => {
+      const status = (a.availability_status || a.availabilityStatus) as string | undefined;
       const stores = Array.isArray(a.store_locations)
         ? a.store_locations.map((s: any) => ({
             id: s.store_id || s.id,
@@ -58,7 +59,9 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
         productId: a.product_id || a.productId || p.id,
         retailerId: a.retailer_id || a.retailerId,
         retailerName: a.retailer_name || a.retailerName,
-        inStock: a.in_stock ?? a.inStock ?? false,
+        retailerSlug: a.retailer_slug || a.retailerSlug,
+        inStock: (a.in_stock ?? a.inStock ?? false) && status !== 'pre_order',
+        availabilityStatus: status as any,
         price: a.price ?? 0,
         originalPrice: a.original_price ?? a.originalPrice,
         url: a.product_url || a.url,
@@ -92,7 +95,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
     try {
       setLoading(true);
       const response = await apiClient.get<any>(`/products/${productId}`);
-      const p = (response.data && (response.data as any).product) || response.data;
+      // Backend responses are wrapped in { data: { product } }
+      const p = (response.data as any)?.data?.product || (response.data as any)?.product || response.data;
       setProduct(normalizeProduct(p));
     } catch (err: unknown) {
       const errorMessage = err && typeof err === 'object' && 'message' in err ? err.message as string : 'Failed to load product';
@@ -108,7 +112,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
     try {
       setPriceHistoryLoading(true);
       const response = await apiClient.get<any>(`/products/${productId}/price-history`);
-      const list = (response.data && (response.data as any).priceHistory) || response.data || [];
+      // Backend responses are wrapped in { data: { priceHistory } }
+      const list = (response.data as any)?.data?.priceHistory || (response.data as any)?.priceHistory || response.data || [];
       const mapped = (list as any[]).map((r: any) => ({
         date: (r.date || r.recorded_at || r.created_at) ? new Date(r.date || r.recorded_at || r.created_at).toISOString() : new Date().toISOString(),
         price: Number(r.price || 0),
@@ -548,17 +553,30 @@ const AvailabilityCard: React.FC<{ availability: ProductAvailability }> = ({ ava
     });
   };
 
+  // Derive status label and color
+  const status = (availability as any).availabilityStatus as string | undefined;
+  const statusLabel = (() => {
+    if (status === 'pre_order') return 'Pre-Order';
+    if (status === 'low_stock') return 'Low Stock';
+    if (status === 'in_stock') return 'In Stock';
+    if (status === 'discontinued') return 'Discontinued';
+    return availability.inStock ? 'In Stock' : 'Out of Stock';
+  })();
+  const statusClass = (() => {
+    if (status === 'pre_order') return 'bg-blue-600 text-white';
+    if (status === 'low_stock') return 'bg-yellow-600 text-white';
+    if (status === 'in_stock' || availability.inStock) return 'bg-green-600 text-white';
+    if (status === 'discontinued') return 'bg-gray-500 text-white';
+    return 'bg-red-600 text-white';
+  })();
+
   return (
     <div className="bg-gray-700 rounded-lg p-4">
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-semibold text-white">{availability.retailerName}</h4>
         <div className="flex items-center gap-2">
-          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-            availability.inStock 
-              ? 'bg-green-600 text-white' 
-              : 'bg-red-600 text-white'
-          }`}>
-            {availability.inStock ? 'In Stock' : 'Out of Stock'}
+          <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusClass}`}>
+            {statusLabel}
           </span>
         </div>
       </div>
@@ -598,16 +616,40 @@ const AvailabilityCard: React.FC<{ availability: ProductAvailability }> = ({ ava
             Add to Cart
           </a>
         )}
-        
-        <a
-          href={availability.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-600 hover:bg-gray-500 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          <ExternalLink className="w-4 h-4" />
-          View
-        </a>
+        {/* Fallback to retailer search when URL looks placeholder or missing */}
+        {(() => {
+          const url = availability.url || '';
+          const slug = (availability as any).retailerSlug as string | undefined;
+          const name = availability.metadata?.name as string | undefined;
+          const looksPlaceholder = /\/products\//.test(url);
+          const searchBases: Record<string, string> = {
+            'best-buy': 'https://www.bestbuy.com/site/searchpage.jsp?st=',
+            'walmart': 'https://www.walmart.com/search?q=',
+            'costco': 'https://www.costco.com/CatalogSearch?keyword=',
+            'sams-club': 'https://www.samsclub.com/s/',
+            'gamestop': 'https://www.gamestop.com/search/?q=',
+            'target': 'https://www.target.com/s?searchTerm=',
+            'barnes-noble': 'https://www.barnesandnoble.com/s/',
+            'amazon': 'https://www.amazon.com/s?k=',
+            'walgreens': 'https://www.walgreens.com/search/results.jsp?Ntt=',
+            'macys': 'https://www.macys.com/shop/featured/'
+          };
+          const searchBase = slug ? searchBases[slug] : undefined;
+          const viewHref = (!url || looksPlaceholder) && searchBase && name
+            ? `${searchBase}${encodeURIComponent(name)}`
+            : (url || '#');
+          return (
+            <a
+              href={viewHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-600 hover:bg-gray-500 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" />
+              View
+            </a>
+          );
+        })()}
       </div>
 
       {/* Store Locations */}

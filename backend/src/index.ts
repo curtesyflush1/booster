@@ -80,6 +80,13 @@ app.use(cors({
     if (!origin) return cb(null, true);
     if (allowedOrigins.includes(origin)) return cb(null, true);
     if (originRegex && originRegex.test(origin)) return cb(null, true);
+    // In development, allow any localhost:* origin to ease setup
+    if ((process.env.NODE_ENV || 'development') !== 'production') {
+      try {
+        const u = new URL(origin);
+        if (u.hostname === 'localhost') return cb(null, true);
+      } catch {}
+    }
     return cb(new Error('Not allowed by CORS'));
   },
   credentials: true

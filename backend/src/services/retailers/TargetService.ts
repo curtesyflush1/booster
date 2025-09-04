@@ -240,10 +240,13 @@ export class TargetService extends BaseRetailerService {
   }
 
   private deriveInStock(avail?: string): boolean {
-    if (!avail) return true;
+    // Be conservative: unknown text => assume not in stock
+    if (!avail) return false;
     const t = avail.toLowerCase();
     if (t.includes('out of stock') || t.includes('sold out') || t.includes('unavailable')) return false;
-    return true;
+    // Positive cues
+    if (t.includes('in stock') || t.includes('add to cart') || t.includes('ship it') || t.includes('pickup')) return true;
+    return false;
   }
 
   private absUrl(href: string): string {

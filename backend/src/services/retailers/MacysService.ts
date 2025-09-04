@@ -204,10 +204,11 @@ export class MacysService extends BaseRetailerService {
   }
 
   private deriveInStock(avail?: string): boolean {
-    if (!avail) return true;
+    if (!avail) return false;
     const t = avail.toLowerCase();
     if (t.includes('out of stock') || t.includes('unavailable')) return false;
-    return true;
+    if (t.includes('in stock') || t.includes('add to bag') || t.includes('ships') || t.includes('pickup')) return true;
+    return false;
   }
 
   private absUrl(href: string): string {
@@ -245,4 +246,3 @@ export class MacysService extends BaseRetailerService {
     }
   }
 }
-

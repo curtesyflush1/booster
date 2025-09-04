@@ -186,5 +186,27 @@ export class AvailabilityPollingService extends BaseModel<any> {
         updated_at: new Date(),
       });
     }
+
+    try {
+      // Also record a price history point for ML/trending when price is present
+      if (data.price !== null && data.price !== undefined) {
+        await this.db('price_history').insert({
+          id: this.db.raw('gen_random_uuid()'),
+          product_id: data.product_id,
+          retailer_id: data.retailer_id,
+          price: data.price,
+          original_price: data.original_price,
+          in_stock: data.in_stock,
+          availability_status: data.availability_status,
+          recorded_at: new Date()
+        });
+      }
+    } catch (e) {
+      logger.warn('Failed to insert price history during availability upsert', {
+        productId: data.product_id,
+        retailerId: data.retailer_id,
+        error: e instanceof Error ? e.message : String(e)
+      });
+    }
   }
 }

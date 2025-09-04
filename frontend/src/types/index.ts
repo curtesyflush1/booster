@@ -140,7 +140,9 @@ export interface ProductAvailability {
   productId: string;
   retailerId: string;
   retailerName: string;
+  retailerSlug?: string;
   inStock: boolean;
+  availabilityStatus?: 'in_stock' | 'low_stock' | 'out_of_stock' | 'pre_order' | 'discontinued';
   price: number;
   originalPrice?: number;
   url: string;

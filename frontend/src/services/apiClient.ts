@@ -6,11 +6,17 @@ class ApiClient {
   private client: AxiosInstance;
 
   constructor() {
-    const rawBase = import.meta.env.VITE_API_URL as string | undefined;
-    const baseURL = rawBase ? `${rawBase.replace(/\/$/, '')}/api` : '/api';
+    let baseURL: string;
+    if (import.meta.env.DEV) {
+      // Single-origin dev: use Vite proxy for API
+      baseURL = '/api';
+    } else {
+      const rawBase = import.meta.env.VITE_API_URL as string | undefined;
+      baseURL = rawBase ? `${rawBase.replace(/\/$/, '')}/api` : '/api';
+    }
     this.client = axios.create({
       baseURL,
-      timeout: 10000,
+      timeout: 20000,
       headers: {
         'Content-Type': 'application/json'
       }

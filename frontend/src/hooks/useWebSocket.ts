@@ -39,8 +39,7 @@ export const useWebSocket = (): UseWebSocketReturn => {
     }
 
     try {
-      const fallbackBase = `${window.location.protocol}//${window.location.hostname}:3000`;
-      const baseUrl = import.meta.env.VITE_API_URL || fallbackBase;
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
       const socket = io(baseUrl, {
         auth: {
           token
@@ -50,7 +49,8 @@ export const useWebSocket = (): UseWebSocketReturn => {
         reconnection: true,
         reconnectionAttempts: maxReconnectAttempts,
         reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000
+        reconnectionDelayMax: 5000,
+        path: '/socket.io'
       });
 
       socketRef.current = socket;

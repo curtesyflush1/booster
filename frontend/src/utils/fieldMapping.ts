@@ -43,6 +43,7 @@ export interface FrontendProduct {
 export function transformBackendAvailability(list: any[] | undefined): any[] {
   if (!Array.isArray(list)) return [];
   return list.map((a: any) => {
+    const status: string | undefined = a.availability_status || a.availabilityStatus;
     const stores = Array.isArray(a.store_locations)
       ? a.store_locations.map((s: any) => ({
           id: s.store_id || s.id,
@@ -61,7 +62,10 @@ export function transformBackendAvailability(list: any[] | undefined): any[] {
       productId: a.product_id || a.productId,
       retailerId: a.retailer_id || a.retailerId,
       retailerName: a.retailer_name || a.retailerName,
-      inStock: a.in_stock ?? a.inStock ?? false,
+      retailerSlug: a.retailer_slug || a.retailerSlug,
+      // Treat pre-order as not in stock for display purposes
+      inStock: (a.in_stock ?? a.inStock ?? false) && status !== 'pre_order',
+      availabilityStatus: status as any,
       price: typeof a.price === 'string' ? parseFloat(a.price) : a.price,
       originalPrice: a.original_price ?? a.originalPrice,
       url: a.product_url || a.url,

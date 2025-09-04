@@ -17,7 +17,8 @@ export default defineConfig(({ command, mode }) => ({
         template: 'treemap' as const // Options: 'treemap', 'sunburst', 'network'
       })
     ] : []),
-    VitePWA({
+    // Only register PWA during production builds to avoid dev caching confusion
+    ...(command === 'build' ? [VitePWA({
       registerType: 'autoUpdate',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
@@ -69,7 +70,7 @@ export default defineConfig(({ command, mode }) => ({
           }
         ]
       }
-    })
+    })] : [])
   ],
   server: {
     port: 5173,
@@ -78,10 +79,10 @@ export default defineConfig(({ command, mode }) => ({
     cors: true,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_URL || 'http://localhost:3000',
+        target: 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
-        ws: true, // Enable WebSocket proxying
+        ws: true,
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {
             console.log('proxy error', err);
@@ -93,6 +94,12 @@ export default defineConfig(({ command, mode }) => ({
             console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
           });
         }
+      },
+      '/socket.io': {
+        target: 'http://localhost:3000',
+        ws: true,
+        changeOrigin: true,
+        secure: false
       }
     }
   },

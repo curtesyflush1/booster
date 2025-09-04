@@ -113,10 +113,12 @@ export class AmazonService extends BaseRetailerService {
   }
 
   private deriveInStock(avail?: string): boolean {
-    if (!avail) return true;
+    // Unknown => not in stock; require explicit positive signal
+    if (!avail) return false;
     const t = avail.toLowerCase();
     if (t.includes('out of stock') || t.includes('unavailable')) return false;
-    return true;
+    if (t.includes('in stock') || t.includes('add to cart') || t.includes('ships') || t.includes('get it')) return true;
+    return false;
   }
 
   private absUrl(href: string): string {
