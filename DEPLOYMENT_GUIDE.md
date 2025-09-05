@@ -5,7 +5,7 @@ This guide covers deploying BoosterBeacon to production using Docker containers.
 ## Prerequisites
 
 ### Local Development Machine
-- Node.js 18+
+- Node.js 20+
 - npm 9+
 - Docker and Docker Compose
 - SSH access to production server
@@ -42,11 +42,16 @@ This guide covers deploying BoosterBeacon to production using Docker containers.
    npm run deploy:prod
    ```
 
+5. **Set JWT Secrets (first deploy)**
+   - On the server, ensure `/opt/booster/.env` contains strong secrets:
+     - `JWT_SECRET`, `JWT_REFRESH_SECRET`
+   - The compose file injects these into the app container.
+
 ## Detailed Deployment Process
 
 ### Step 1: Environment Configuration
 
-The `.env.production` file contains all production configuration. Update these critical values:
+The `.env.production` file contains all production configuration. Update these critical values (and mirror into `/opt/booster/.env` on the server):
 
 ```bash
 # Database - Use strong passwords
@@ -54,6 +59,7 @@ DATABASE_URL=postgresql://booster_user:STRONG_PASSWORD@db:5432/boosterbeacon_pro
 
 # JWT - Generate secure secret
 JWT_SECRET=your_very_secure_jwt_secret_key_here_change_this_in_production
+JWT_REFRESH_SECRET=your_very_secure_jwt_refresh_secret_key_here
 
 # Domain - Your actual domain
 FRONTEND_URL=https://your-domain.com
@@ -83,6 +89,8 @@ This script will:
 - Configure basic security
 - Set up log rotation
 
+Note: The Docker images use Node 20. Host Node.js is optional; if you install it, prefer Node 20+.
+
 ### Step 3: Deployment Options
 
 #### Full Production Deployment
@@ -99,7 +107,14 @@ This performs:
 - Rollback on failure
 
 Configuration is read from `deploy.env` when present; you can still override via environment variables (e.g., `DEPLOY_HOST=1.2.3.4 npm run deploy:prod`).
-\n+Additional automation:
+\n+Required secrets (first run): ensure `/opt/booster/.env` includes `JWT_SECRET` and `JWT_REFRESH_SECRET`. The compose file injects these into the app container.
+
+Recommended rsync options to avoid attribute warnings (set locally in `deploy.env`):
+```
+RSYNC_OPTS="--no-perms --no-owner --no-group --omit-dir-times"
+```
+
+Compose tip: Docker Compose v2 ignores the top-level `version:` key and logs a warning; you can safely remove it from `docker-compose.prod.yml`.
 - If `backend/data/products.csv` exists on the server, the deploy script runs the CSV importer automatically to upsert your catalog.
 - If `boosterbeacon.com-ssl-bundle.zip` is present at repo root, it extracts to `nginx/ssl/` (requires `unzip` installed on server).
 - If `DOMAIN` env var is provided when invoking the script, it substitutes `server_name your-domain.com;` in `nginx/nginx.conf` with your domain.
@@ -194,6 +209,11 @@ ssh derek@82.180.162.48
 # Install SSL certificate
 sudo certbot --nginx -d your-domain.com
 
+# If you already have a bundle on the server (e.g., /opt/booster/nginx/ssl/boosterbeacon.com-ssl-bundle),
+# map Nginx’s expected paths by symlink:
+ln -sfn /opt/booster/nginx/ssl/boosterbeacon.com-ssl-bundle/domain.cert.pem /opt/booster/nginx/ssl/cert.pem
+ln -sfn /opt/booster/nginx/ssl/boosterbeacon.com-ssl-bundle/private.key.pem /opt/booster/nginx/ssl/key.pem
+
 # Update nginx configuration if needed (or pass DOMAIN when deploying)
 sudo nano /opt/booster/nginx/nginx.conf
 ```
@@ -271,6 +291,33 @@ sudo certbot renew
 # Check certificate status
 sudo certbot certificates
 ```
+
+#### Nginx container fails to start (SSL)
+```
+nginx: [emerg] cannot load certificate "/etc/ssl/cert.pem": No such file or directory
+```
+Fix: Ensure `/opt/booster/nginx/ssl/cert.pem` and `/opt/booster/nginx/ssl/key.pem` exist (symlink to your bundle or Let’s Encrypt paths). Recreate Nginx:
+```
+docker compose -f docker-compose.prod.yml up -d --force-recreate nginx
+```
+
+#### Nginx fails: "host not found in upstream app:3000"
+The app container isn’t up. Start the app and check logs:
+```
+docker compose -f docker-compose.prod.yml up -d app
+docker compose -f docker-compose.prod.yml logs app --tail=200
+```
+
+#### Node 18 runtime crash (undici) – “File is not defined”
+Use Node 20-based images. The Dockerfile uses `node:20-alpine`.
+
+#### PWA service worker caches localhost API
+If registration calls try to hit `localhost:3000`, update `vite.config.ts` workbox runtimeCaching to match same-origin:
+```ts
+// In frontend/vite.config.ts (workbox.runtimeCaching[0])
+urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+```
+Ensure icons referenced in the manifest exist under `frontend/public/icons/` (e.g., `icon-192.png`, `icon-512.png`). Rebuild the frontend and update the service worker (Application tab → Unregister → Reload).
 
 ### Rollback Procedure
 

@@ -39,7 +39,7 @@ BoosterBeacon is an enterprise-grade platform for monitoring, analyzing, and inv
 ## 🏗️ Architecture
 
 ### Technology Stack
-- **Backend**: Node.js 18+ with TypeScript, Express.js
+- **Backend**: Node.js 20+ with TypeScript, Express.js
 - **Frontend**: React 18+ with Vite, TypeScript, Tailwind CSS
 - **Database**: PostgreSQL 15+ with Redis caching
 - **Authentication**: JWT with bcrypt, RBAC system
@@ -58,7 +58,7 @@ BoosterBeacon is an enterprise-grade platform for monitoring, analyzing, and inv
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 20+
 - PostgreSQL 15+
 - Redis 6+
 - Docker (optional)
@@ -178,6 +178,11 @@ docker-compose -f docker-compose.prod.yml up -d
 npm run migrate:up
 npm run seed:prod
 ```
+
+Important:
+- Set strong `JWT_SECRET` and `JWT_REFRESH_SECRET` in `/opt/booster/.env` on the server. The compose file injects these into the app container.
+- Docker images use Node 20; host Node is optional.
+- If you see rsync attr warnings, add `RSYNC_OPTS="--no-perms --no-owner --no-group --omit-dir-times"` to `deploy.env` on your workstation.
 
 ### Infrastructure Requirements
 - **CPU**: 4+ cores recommended
