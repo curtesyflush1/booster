@@ -58,7 +58,8 @@ describe('TargetService (scraping)', () => {
     const reqUrlFirst = `/s?searchTerm=pokemon%20tcg`;
     const spy = jest
       .spyOn<any, any>(service as any, 'makeRequest')
-      .mockImplementation((url: string) => {
+      .mockImplementation((...args: any[]) => {
+        const url = args[0];
         if (String(url).includes('/s?searchTerm=')) {
           return Promise.resolve({ data: searchHtml, status: 200, headers: {}, config: {}, request: {} });
         }
@@ -84,4 +85,3 @@ describe('TargetService (scraping)', () => {
     expect(health.retailerId).toBe('target');
   });
 });
-

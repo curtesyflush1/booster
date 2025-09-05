@@ -400,10 +400,11 @@ class BackupService {
         return false;
       }
 
-      // For SQL files, check if they contain expected SQL commands
+      // For SQL files, check if they contain expected SQL commands (case-insensitive)
       if (filepath.endsWith('.sql')) {
-        const content = await fs.readFile(filepath, 'utf8');
-        return content.includes('CREATE') || content.includes('INSERT') || content.includes('COPY');
+        const content = (await fs.readFile(filepath, 'utf8')) || '';
+        const upper = String(content).toUpperCase();
+        return upper.includes('CREATE') || upper.includes('INSERT') || upper.includes('COPY');
       }
 
       return true;

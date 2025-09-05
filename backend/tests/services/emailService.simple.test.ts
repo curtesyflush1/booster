@@ -20,6 +20,8 @@ describe('EmailService - Core Logic', () => {
     last_name: 'User',
     password_hash: 'hash',
     subscription_tier: SubscriptionTier.FREE,
+    role: 'user',
+    admin_permissions: [],
     failed_login_attempts: 0,
     shipping_addresses: [],
     payment_methods: [],

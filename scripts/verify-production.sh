@@ -6,9 +6,22 @@
 set -e
 
 # Configuration
+# Resolve project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Load optional project-level deploy config if present (overrides defaults)
+if [[ -f "$PROJECT_ROOT/deploy.env" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$PROJECT_ROOT/deploy.env"
+  set +a
+fi
+
 DEPLOY_USER="${DEPLOY_USER:-derek}"
 DEPLOY_HOST="${DEPLOY_HOST:-82.180.162.48}"
 DEPLOY_PATH="${DEPLOY_PATH:-/opt/booster}"
+SSH_OPTS="${SSH_OPTS:-}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -33,6 +46,17 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Parse args
+DRY_RUN=false
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run)
+      DRY_RUN=true
+      shift
+      ;;
+  esac
+done
+
 # Check local environment
 check_local_environment() {
     log_info "Checking local environment..."
@@ -45,12 +69,15 @@ check_local_environment() {
         return 1
     fi
     
-    # Check if Docker is running
-    if docker info &> /dev/null; then
-        log_success "Docker is running"
+    # Check if Docker is running (skip in dry-run)
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_warning "Skipping Docker check (dry-run)"
     else
-        log_error "Docker is not running"
-        return 1
+        if docker info &> /null; then
+            log_success "Docker is running"
+    else
+        log_warning "Docker is not running locally (will build on server or use existing artifacts)"
+    fi
     fi
     
     # Check if builds exist
@@ -72,9 +99,13 @@ check_local_environment() {
 # Check remote server
 check_remote_server() {
     log_info "Checking remote server..."
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_warning "Skipping remote server checks (dry-run)"
+        return 0
+    fi
     
     # Test SSH connection
-    if ssh -o ConnectTimeout=10 "$DEPLOY_USER@$DEPLOY_HOST" "echo 'SSH connection successful'" &> /dev/null; then
+    if ssh $SSH_OPTS -o ConnectTimeout=10 "$DEPLOY_USER@$DEPLOY_HOST" "echo 'SSH connection successful'" &> /dev/null; then
         log_success "SSH connection to server successful"
     else
         log_error "Cannot connect to server $DEPLOY_USER@$DEPLOY_HOST"
@@ -82,7 +113,7 @@ check_remote_server() {
     fi
     
     # Check server requirements
-    ssh "$DEPLOY_USER@$DEPLOY_HOST" << 'EOF'
+    ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" << 'EOF'
         # Check if Docker is installed
         if command -v docker &> /dev/null; then
             echo -e "\033[0;32m[SUCCESS]\033[0m Docker is installed: $(docker --version)"
@@ -91,11 +122,13 @@ check_remote_server() {
             exit 1
         fi
         
-        # Check if Docker Compose is installed
+        # Check if Docker Compose (v1 or v2) is available
         if command -v docker-compose &> /dev/null; then
-            echo -e "\033[0;32m[SUCCESS]\033[0m Docker Compose is installed: $(docker-compose --version)"
+            echo -e "\033[0;32m[SUCCESS]\033[0m Docker Compose (v1) is installed: $(docker-compose --version)"
+        elif docker compose version &> /dev/null; then
+            echo -e "\033[0;32m[SUCCESS]\033[0m Docker Compose (v2) is available: $(docker compose version)"
         else
-            echo -e "\033[0;31m[ERROR]\033[0m Docker Compose is not installed"
+            echo -e "\033[0;31m[ERROR]\033[0m Docker Compose not found (install docker compose plugin or docker-compose)"
             exit 1
         fi
         
@@ -135,8 +168,12 @@ EOF
 # Check current deployment status
 check_deployment_status() {
     log_info "Checking current deployment status..."
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_warning "Skipping remote deployment status (dry-run)"
+        return 0
+    fi
     
-    ssh "$DEPLOY_USER@$DEPLOY_HOST" << 'EOF'
+    ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" << 'EOF'
         cd /opt/booster 2>/dev/null || { echo -e "\033[0;33m[INFO]\033[0m No existing deployment found"; exit 0; }
         
         echo "=== Current Deployment Status ==="
@@ -195,7 +232,7 @@ main() {
     echo ""
     echo "=================================================="
     
-    if [[ $local_check -eq 1 && $remote_check -eq 1 ]]; then
+    if [[ $local_check -eq 1 && ( "$DRY_RUN" == "true" || $remote_check -eq 1 ) ]]; then
         log_success "✅ Production environment verification passed!"
         log_info "You can now run: ./scripts/deploy.sh deploy"
         exit 0

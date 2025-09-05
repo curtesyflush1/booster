@@ -473,3 +473,18 @@ export class DiscordBotService {
 }
 
 export const discordBotService = new DiscordBotService();
+export default DiscordBotService;
+
+// CommonJS compatibility for ts-jest environments that expect named constructors
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+  try {
+    (module as any).exports = {
+      ...(module as any).exports,
+      DiscordBotService,
+      discordBotService,
+      default: DiscordBotService,
+    };
+  } catch { /* noop */ }
+}

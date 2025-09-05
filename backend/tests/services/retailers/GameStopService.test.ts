@@ -55,7 +55,8 @@ describe('GameStopService (scraping)', () => {
   it('checkAvailability uses search + product page and returns parsed response', async () => {
     const spy = jest
       .spyOn<any, any>(service as any, 'makeRequest')
-      .mockImplementation((url: string) => {
+      .mockImplementation((...args: any[]) => {
+        const url = args[0];
         if (String(url).includes('/search/?q=')) {
           return Promise.resolve({ data: searchHtml, status: 200, headers: {}, config: {}, request: {} });
         }
@@ -81,4 +82,3 @@ describe('GameStopService (scraping)', () => {
     expect(health.retailerId).toBe('gamestop');
   });
 });
-

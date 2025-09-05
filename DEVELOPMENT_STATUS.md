@@ -23,6 +23,7 @@
 - **Community Features**: User-generated content, testimonials, and social integration
 - **Email System**: Enhanced email delivery service with template management
 - **Monitoring**: System health checks, metrics collection, and performance tracking
+  - Note: In tests, set `CI_SANDBOX=true` to skip socket-binding smoke tests. See `backend/docs/testing-notes.md` for harness details.
 
 ### ⚠️ Minor Considerations:
 1. **API Keys**: Retailer integrations require API keys for full functionality (expected for dev)

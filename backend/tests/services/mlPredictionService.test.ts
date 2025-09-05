@@ -30,8 +30,12 @@ describe('MLPredictionService', () => {
       }
     };
 
-    // Mock BaseModel.db
-    (BaseModel as any).db = jest.fn().mockReturnValue(mockDb);
+    // Mock BaseModel.getKnex to return a callable knex-like function
+    const fakeKnex: any = Object.assign(((table: string) => mockDb), {
+      raw: jest.fn().mockReturnValue('mocked_raw_query'),
+      fn: { now: jest.fn() }
+    });
+    (BaseModel as any).getKnex = jest.fn().mockReturnValue(fakeKnex);
     
     // Reset all mocks
     jest.clearAllMocks();
@@ -64,25 +68,19 @@ describe('MLPredictionService', () => {
         }
       ];
 
-      // Mock database calls - return the data directly since we're mocking the query chain
-      mockDb.first.mockResolvedValue(mockPriceHistory);
-      
-      // Mock the database query chain to return the mock data
-      (BaseModel as any).db.mockImplementation((table: string) => {
+      // Mock the database query chain to return the mock data via getKnex callable
+      const fakeKnex: any = ((table: string) => {
         if (table === 'price_history') {
-          return {
-            ...mockDb,
-            first: jest.fn().mockResolvedValue(mockPriceHistory)
-          };
+          return { ...mockDb, first: jest.fn().mockResolvedValue(mockPriceHistory) };
         }
         if (table === 'product_availability') {
-          return {
-            ...mockDb,
-            first: jest.fn().mockResolvedValue(mockAvailabilityData)
-          };
+          return { ...mockDb, first: jest.fn().mockResolvedValue(mockAvailabilityData) };
         }
         return mockDb;
       });
+      fakeKnex.raw = jest.fn().mockReturnValue('mocked_raw_query');
+      fakeKnex.fn = { now: jest.fn() };
+      (BaseModel as any).getKnex = jest.fn().mockReturnValue(fakeKnex);
 
       // Mock the private methods
       jest.spyOn(MLPredictionService as any, 'calculateSeasonalTrends').mockResolvedValue([]);
@@ -101,10 +99,10 @@ describe('MLPredictionService', () => {
       const productId = 'test-product-id';
 
       // Mock empty results
-      (BaseModel as any).db.mockReturnValue({
-        ...mockDb,
-        first: jest.fn().mockResolvedValue([])
-      });
+      const emptyKnex: any = ((table: string) => ({ ...mockDb, first: jest.fn().mockResolvedValue([]) }));
+      emptyKnex.raw = jest.fn().mockReturnValue('mocked_raw_query');
+      emptyKnex.fn = { now: jest.fn() };
+      (BaseModel as any).getKnex = jest.fn().mockReturnValue(emptyKnex);
       jest.spyOn(MLPredictionService as any, 'calculateSeasonalTrends').mockResolvedValue([]);
       jest.spyOn(MLPredictionService as any, 'getCompetitorAnalysis').mockResolvedValue([]);
 

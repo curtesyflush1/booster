@@ -4,13 +4,13 @@ services:
   # NGINX reverse proxy and load balancer
   nginx:
     image: nginx:alpine
-    container_name: booster-nginx
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/ssl:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
       - ./logs/nginx:/var/log/nginx
     depends_on:
       - app
@@ -23,7 +23,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.prod
-    container_name: booster-app
     ports:
       - "3000:3000"
     environment:
@@ -44,7 +43,8 @@ services:
       - redis
     restart: unless-stopped
     deploy:
-      replicas: 2
+      # scale can be increased by overriding replicas via CLI if needed
+      replicas: 1
       resources:
         limits:
           memory: 1G
@@ -64,7 +64,6 @@ services:
   # PostgreSQL database
   db:
     image: postgres:15-alpine
-    container_name: booster-db
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-booster_beacon}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -93,7 +92,6 @@ services:
   # Redis cache and session store
   redis:
     image: redis:7-alpine
-    container_name: booster-redis
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
@@ -117,7 +115,6 @@ services:
   # Monitoring and metrics collection
   prometheus:
     image: prom/prometheus:latest
-    container_name: booster-prometheus
     ports:
       - "9090:9090"
     volumes:
@@ -137,7 +134,6 @@ services:
   # Grafana dashboard
   grafana:
     image: grafana/grafana:latest
-    container_name: booster-grafana
     ports:
       - "3001:3000"
     environment:
@@ -154,7 +150,6 @@ services:
   # Log aggregation
   loki:
     image: grafana/loki:latest
-    container_name: booster-loki
     ports:
       - "3100:3100"
     volumes:
@@ -168,7 +163,6 @@ services:
   # Log shipping
   promtail:
     image: grafana/promtail:latest
-    container_name: booster-promtail
     volumes:
       - ./logs:/var/log/app:ro
       - ./monitoring/promtail.yml:/etc/promtail/config.yml:ro
@@ -181,7 +175,6 @@ services:
   # Backup service
   backup:
     image: postgres:15-alpine
-    container_name: booster-backup
     environment:
       - PGPASSWORD=${POSTGRES_PASSWORD}
     volumes:

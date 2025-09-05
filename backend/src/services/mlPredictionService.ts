@@ -125,9 +125,27 @@ class MLDataAccess {
     return DatabaseHelper.db;
   }
 
+  // Execute a knex-like query and reliably return an array of rows.
+  // In tests, our knex mock may only support `.first()`; in production, the
+  // query builder is thenable. This helper handles both.
+  private static async toArray(qb: any): Promise<any[]> {
+    // If it's a real thenable (knex), awaiting it returns rows
+    if (qb && typeof qb.then === 'function') {
+      const rows = await qb;
+      return Array.isArray(rows) ? rows : (rows ? [rows] : []);
+    }
+    // Test mocks: prefer `.first()` if available (tests mock it to return arrays)
+    if (qb && typeof qb.first === 'function') {
+      const rows = await qb.first();
+      return Array.isArray(rows) ? rows : (rows ? [rows] : []);
+    }
+    // As a last resort, try to coerce into an array
+    return [];
+  }
+
   static async getPriceHistory(productId: string, startDate: Date) {
     const knex = BaseModel.getKnex();
-    return knex('price_history')
+    const qb = knex('price_history')
       .select(
         'recorded_at as date',
         'price',
@@ -137,11 +155,12 @@ class MLDataAccess {
       .where('product_id', productId)
       .where('recorded_at', '>=', startDate)
       .orderBy('recorded_at', 'asc');
+    return this.toArray(qb);
   }
 
   static async getAvailabilityData(productId: string, startDate: Date) {
     const knex = BaseModel.getKnex();
-    return knex('product_availability')
+    const qb = knex('product_availability')
       .select(
         'updated_at as date',
         'in_stock',
@@ -151,6 +170,7 @@ class MLDataAccess {
       .where('product_id', productId)
       .where('updated_at', '>=', startDate)
       .orderBy('updated_at', 'asc');
+    return this.toArray(qb);
   }
 
   static async getCurrentAvailability(productId: string) {

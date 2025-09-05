@@ -1,8 +1,8 @@
 import { RetailerIntegrationService } from '../../src/services/RetailerIntegrationService';
-import { BestBuyService } from '../../src/services/retailers/BestBuyService';
-import { WalmartService } from '../../src/services/retailers/WalmartService';
-import { CostcoService } from '../../src/services/retailers/CostcoService';
-import { SamsClubService } from '../../src/services/retailers/SamsClubService';
+import * as BestBuyModule from '../../src/services/retailers/BestBuyService';
+import * as WalmartModule from '../../src/services/retailers/WalmartService';
+import * as CostcoModule from '../../src/services/retailers/CostcoService';
+import * as SamsClubModule from '../../src/services/retailers/SamsClubService';
 
 // Mock the retailer services
 jest.mock('../../src/services/retailers/BestBuyService');
@@ -15,10 +15,10 @@ const originalEnv = process.env;
 
 describe('RetailerIntegrationService', () => {
   let service: RetailerIntegrationService;
-  let mockBestBuyService: jest.Mocked<BestBuyService>;
-  let mockWalmartService: jest.Mocked<WalmartService>;
-  let mockCostcoService: jest.Mocked<CostcoService>;
-  let mockSamsClubService: jest.Mocked<SamsClubService>;
+  let mockBestBuyService: jest.Mocked<InstanceType<typeof BestBuyModule.BestBuyService>>;
+  let mockWalmartService: jest.Mocked<InstanceType<typeof WalmartModule.WalmartService>>;
+  let mockCostcoService: jest.Mocked<InstanceType<typeof CostcoModule.CostcoService>>;
+  let mockSamsClubService: jest.Mocked<InstanceType<typeof SamsClubModule.SamsClubService>>;
 
   beforeEach(() => {
     // Set up environment variables
@@ -65,11 +65,11 @@ describe('RetailerIntegrationService', () => {
       getConfig: jest.fn()
     } as any;
 
-    // Mock constructors
-    (BestBuyService as jest.MockedClass<typeof BestBuyService>).mockImplementation(() => mockBestBuyService);
-    (WalmartService as jest.MockedClass<typeof WalmartService>).mockImplementation(() => mockWalmartService);
-    (CostcoService as jest.MockedClass<typeof CostcoService>).mockImplementation(() => mockCostcoService);
-    (SamsClubService as jest.MockedClass<typeof SamsClubService>).mockImplementation(() => mockSamsClubService);
+    // Mock constructors via module spies (handles TS classes correctly)
+    jest.spyOn(BestBuyModule, 'BestBuyService').mockImplementation(() => mockBestBuyService as any);
+    jest.spyOn(WalmartModule, 'WalmartService').mockImplementation(() => mockWalmartService as any);
+    jest.spyOn(CostcoModule, 'CostcoService').mockImplementation(() => mockCostcoService as any);
+    jest.spyOn(SamsClubModule, 'SamsClubService').mockImplementation(() => mockSamsClubService as any);
 
     // Mock getConfig methods
     mockBestBuyService.getConfig.mockReturnValue({
@@ -109,24 +109,24 @@ describe('RetailerIntegrationService', () => {
 
   describe('initialization', () => {
     it('should initialize all available retailers', () => {
-      expect(BestBuyService).toHaveBeenCalledWith(expect.objectContaining({
+      expect(BestBuyModule.BestBuyService as any).toHaveBeenCalledWith(expect.objectContaining({
         id: 'best-buy',
         name: 'Best Buy',
         apiKey: 'test-bestbuy-key'
       }));
 
-      expect(WalmartService).toHaveBeenCalledWith(expect.objectContaining({
+      expect(WalmartModule.WalmartService as any).toHaveBeenCalledWith(expect.objectContaining({
         id: 'walmart',
         name: 'Walmart',
         apiKey: 'test-walmart-key'
       }));
 
-      expect(CostcoService).toHaveBeenCalledWith(expect.objectContaining({
+      expect(CostcoModule.CostcoService as any).toHaveBeenCalledWith(expect.objectContaining({
         id: 'costco',
         name: 'Costco'
       }));
 
-      expect(SamsClubService).toHaveBeenCalledWith(expect.objectContaining({
+      expect(SamsClubModule.SamsClubService as any).toHaveBeenCalledWith(expect.objectContaining({
         id: 'sams-club',
         name: 'Sam\'s Club'
       }));
@@ -139,8 +139,8 @@ describe('RetailerIntegrationService', () => {
       const newService = new RetailerIntegrationService();
       
       // Should still initialize scraping services (Costco, Sam's Club)
-      expect(CostcoService).toHaveBeenCalled();
-      expect(SamsClubService).toHaveBeenCalled();
+      expect(CostcoModule.CostcoService as any).toHaveBeenCalled();
+      expect(SamsClubModule.SamsClubService as any).toHaveBeenCalled();
       
       newService.shutdown();
     });

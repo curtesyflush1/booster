@@ -100,7 +100,7 @@ describe.skip('Alert Rate Limiting and Spam Prevention Tests', () => {
         updated_at: new Date()
       }));
 
-      MockedAlert.findBy.mockResolvedValue(recentAlerts);
+      MockedAlert.findBy.mockResolvedValue({ data: recentAlerts, total: recentAlerts.length, page: 1, limit: 100 } as any);
       
       const mockAlert: IAlert = {
         id: 'new-alert',
@@ -153,7 +153,7 @@ describe.skip('Alert Rate Limiting and Spam Prevention Tests', () => {
         updated_at: new Date()
       }));
 
-      MockedAlert.findBy.mockResolvedValue(recentAlerts);
+      MockedAlert.findBy.mockResolvedValue({ data: recentAlerts, total: recentAlerts.length, page: 1, limit: 100 } as any);
 
       await expect(AlertProcessingService.generateAlert(baseAlertData))
         .rejects.toThrow('Rate limit exceeded');
@@ -178,7 +178,7 @@ describe.skip('Alert Rate Limiting and Spam Prevention Tests', () => {
         updated_at: new Date()
       }));
 
-      MockedAlert.findBy.mockResolvedValue(oldAlerts);
+      MockedAlert.findBy.mockResolvedValue({ data: oldAlerts, total: oldAlerts.length, page: 1, limit: 100 } as any);
       
       const mockAlert: IAlert = {
         id: 'new-alert',
@@ -233,7 +233,7 @@ describe.skip('Alert Rate Limiting and Spam Prevention Tests', () => {
         updated_at: new Date()
       };
 
-      MockedAlert.findBy.mockResolvedValue([existingAlert]);
+      MockedAlert.findBy.mockResolvedValue({ data: [existingAlert], total: 1, page: 1, limit: 50 } as any);
 
       const result = await AlertProcessingService.generateAlert(baseAlertData);
 
@@ -259,7 +259,7 @@ describe.skip('Alert Rate Limiting and Spam Prevention Tests', () => {
         updated_at: new Date()
       };
 
-      MockedAlert.findBy.mockResolvedValue([oldAlert]);
+      MockedAlert.findBy.mockResolvedValue({ data: [oldAlert], total: 1, page: 1, limit: 50 } as any);
       
       const mockAlert: IAlert = {
         id: 'new-alert',
@@ -312,7 +312,7 @@ describe.skip('Alert Rate Limiting and Spam Prevention Tests', () => {
         updated_at: new Date()
       };
 
-      MockedAlert.findBy.mockResolvedValue([existingAlert]);
+      MockedAlert.findBy.mockResolvedValue({ data: [existingAlert], total: 1, page: 1, limit: 50 } as any);
       
       // Try to create a price_drop alert (different type)
       const priceDropAlertData = {

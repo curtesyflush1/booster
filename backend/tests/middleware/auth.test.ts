@@ -11,7 +11,20 @@ jest.mock('../../src/services/tokenBlacklistService', () => ({
     isTokenRevoked: jest.fn().mockResolvedValue(false)
   }
 }));
-jest.mock('../../src/utils/logger');
+jest.mock('../../src/utils/logger', () => ({
+  loggerWithContext: {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn()
+  },
+  logger: {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn()
+  }
+}));
 
 const mockedAuthService = authService as jest.Mocked<typeof authService>;
 

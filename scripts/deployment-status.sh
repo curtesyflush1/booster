@@ -4,9 +4,15 @@
 # Quick status check for production deployment
 
 # Configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+if [[ -f "$PROJECT_ROOT/deploy.env" ]]; then
+  set -a; source "$PROJECT_ROOT/deploy.env"; set +a
+fi
 DEPLOY_USER="${DEPLOY_USER:-derek}"
 DEPLOY_HOST="${DEPLOY_HOST:-82.180.162.48}"
 DEPLOY_PATH="${DEPLOY_PATH:-/opt/booster}"
+SSH_OPTS="${SSH_OPTS:-}"
 
 # Colors
 GREEN='\033[0;32m'
@@ -19,18 +25,19 @@ echo -e "${BLUE}🚀 BoosterBeacon Production Status${NC}"
 echo "=================================="
 
 # Check if we can connect to the server
-if ! ssh -o ConnectTimeout=5 "$DEPLOY_USER@$DEPLOY_HOST" "echo 'Connected'" &> /dev/null; then
+if ! ssh $SSH_OPTS -o ConnectTimeout=5 "$DEPLOY_USER@$DEPLOY_HOST" "echo 'Connected'" &> /dev/null; then
     echo -e "${RED}❌ Cannot connect to production server${NC}"
     exit 1
 fi
 
 # Get status from server
-ssh "$DEPLOY_USER@$DEPLOY_HOST" << EOF
+ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" << 'EOF'
 cd "$DEPLOY_PATH" 2>/dev/null || { echo -e "\033[0;31m❌ Deployment directory not found\033[0m"; exit 1; }
 
 echo -e "\033[0;34m📊 Docker Services Status\033[0m"
 echo "------------------------"
-if docker-compose -f docker-compose.prod.yml ps 2>/dev/null; then
+if command -v docker-compose >/dev/null 2>&1; then DC="docker-compose"; else DC="docker compose"; fi
+if $DC -f docker-compose.prod.yml ps 2>/dev/null; then
     echo ""
 else
     echo -e "\033[0;31m❌ No services running\033[0m"

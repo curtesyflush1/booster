@@ -3,6 +3,29 @@
   "source": "codex-cli",
   "items": [
     {
+      "title": "Deployment config externalized (deploy.env)",
+      "type": "runbook",
+      "tags": ["deployment", "automation", "ssh"],
+      "details": {
+        "files": [
+          "deploy.env.example",
+          "scripts/deploy.sh",
+          "scripts/quick-deploy.sh",
+          "scripts/verify-production.sh",
+          "scripts/deployment-status.sh",
+          "DEPLOYMENT_GUIDE.md",
+          "docs/deployment.md"
+        ],
+        "summary": "Scripts now source deploy.env for DEPLOY_USER/DEPLOY_HOST/DEPLOY_PATH; added SSH_OPTS/RSYNC_OPTS; docs updated.",
+        "usage": [
+          "cp deploy.env.example deploy.env && nano deploy.env",
+          "npm run deploy:verify",
+          "npm run deploy:prod"
+        ]
+      },
+      "timestamp": "${NOW}"
+    },
+    {
       "title": "Fix subscription_plans migration (bindings error)",
       "type": "decision",
       "tags": [

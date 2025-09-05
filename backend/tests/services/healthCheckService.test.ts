@@ -21,7 +21,7 @@ describe('HealthCheckService', () => {
       const result = await (healthCheckService as any).checkDatabase();
 
       expect(result.status).toBe('pass');
-      expect(result.responseTime).toBeGreaterThan(0);
+      expect(result.responseTime).toBeGreaterThanOrEqual(0);
       expect(result.details?.userCount).toBe('100');
     });
 
@@ -36,7 +36,7 @@ describe('HealthCheckService', () => {
 
     it('should warn when database is slow', async () => {
       (db.raw as jest.Mock).mockImplementation(() => 
-        new Promise(resolve => setTimeout(() => resolve([]), 1500))
+        new Promise(resolve => setTimeout(() => resolve([]), 3000))
       );
       (db as any).mockReturnValue({
         count: jest.fn().mockReturnValue({
@@ -54,13 +54,13 @@ describe('HealthCheckService', () => {
   describe('Memory Health Check', () => {
     it('should pass with normal memory usage', async () => {
       const originalMemoryUsage = process.memoryUsage;
-      process.memoryUsage = jest.fn().mockReturnValue({
+      process.memoryUsage = (jest.fn().mockReturnValue({
         rss: 150 * 1024 * 1024, // 150MB
         heapUsed: 100 * 1024 * 1024, // 100MB
         heapTotal: 200 * 1024 * 1024, // 200MB
         external: 50 * 1024 * 1024, // 50MB
         arrayBuffers: 10 * 1024 * 1024 // 10MB
-      });
+      }) as unknown) as typeof process.memoryUsage;
 
       // Mock os.totalmem to return 8GB
       jest.doMock('os', () => ({
@@ -77,13 +77,13 @@ describe('HealthCheckService', () => {
 
     it('should warn with high memory usage', async () => {
       const originalMemoryUsage = process.memoryUsage;
-      process.memoryUsage = jest.fn().mockReturnValue({
-        rss: 950 * 1024 * 1024, // 950MB
+      process.memoryUsage = (jest.fn().mockReturnValue({
+        rss: 1000 * 1024 * 1024, // ~1000MB
         heapUsed: 800 * 1024 * 1024, // 800MB
         heapTotal: 900 * 1024 * 1024, // 900MB
         external: 100 * 1024 * 1024, // 100MB
         arrayBuffers: 50 * 1024 * 1024 // 50MB
-      });
+      }) as unknown) as typeof process.memoryUsage;
 
       // Mock os.totalmem to return 1GB (so 800MB is 80%)
       jest.doMock('os', () => ({

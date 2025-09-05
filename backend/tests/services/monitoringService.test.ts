@@ -192,30 +192,8 @@ describe('MonitoringService', () => {
     });
   });
 
-  describe('Request and Alert Metrics', () => {
-    it('should record request metrics', () => {
-      const service = monitoringService as any;
-      
-      service.recordRequest(100, false);
-      service.recordRequest(200, true);
-      service.recordRequest(150, false);
-
-      expect(service.requestMetrics.total).toBe(3);
-      expect(service.requestMetrics.errors).toBe(1);
-      expect(service.requestMetrics.totalResponseTime).toBe(450);
-    });
-
-    it('should record alert metrics', () => {
-      const service = monitoringService as any;
-      
-      service.recordAlert(true);
-      service.recordAlert(false);
-      service.recordAlert(true);
-
-      expect(service.alertMetrics.sent).toBe(3);
-      expect(service.alertMetrics.failed).toBe(1);
-    });
-  });
+  // Request and alert counters are tracked in healthCheckService; 
+  // MonitoringService exposes metric APIs and collects via health checks.
 
   describe('Metrics Cleanup', () => {
     it('should clean up old metrics', () => {

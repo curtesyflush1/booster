@@ -169,7 +169,7 @@ describe.skip('AlertProcessingService', () => {
       };
 
       MockedAlert.createAlert.mockResolvedValue(mockAlert);
-      MockedAlert.findBy.mockResolvedValue([]);
+      MockedAlert.findBy.mockResolvedValue({ data: [], total: 0, page: 1, limit: 50 } as any);
       MockedAlert.updateById.mockResolvedValue(mockAlert);
 
       const result = await AlertProcessingService.generateAlert(mockAlertData);

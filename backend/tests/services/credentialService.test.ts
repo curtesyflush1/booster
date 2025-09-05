@@ -55,6 +55,20 @@ describe('CredentialService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
+  
+  // Create service with mocked dependencies (use User model statics for repo methods)
+  let service: CredentialService;
+  let mockUserRepository: any;
+  let mockLogger: any;
+  
+  beforeEach(() => {
+    mockUserRepository = {
+      findById: (User.findById as any),
+      updateById: (User.updateById as any)
+    };
+    mockLogger = { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() };
+    service = new CredentialService(mockUserRepository, mockLogger);
+  });
 
   describe('storeRetailerCredentials', () => {
     it('should store encrypted retailer credentials successfully', async () => {
@@ -68,7 +82,7 @@ describe('CredentialService', () => {
         twoFactorEnabled: true
       };
 
-      const result = await CredentialService.storeRetailerCredentials(mockUserId, credentials);
+      const result = await service.storeRetailerCredentials(mockUserId, credentials);
 
       expect(result).toBe(true);
       expect(MockedUser.findById).toHaveBeenCalledWith(mockUserId);
@@ -98,7 +112,7 @@ describe('CredentialService', () => {
       };
 
       await expect(
-        CredentialService.storeRetailerCredentials(mockUserId, credentials)
+        service.storeRetailerCredentials(mockUserId, credentials)
       ).rejects.toThrow('User not found');
     });
 
@@ -112,7 +126,7 @@ describe('CredentialService', () => {
         password: 'testpassword'
       };
 
-      const result = await CredentialService.storeRetailerCredentials(mockUserId, credentials);
+      const result = await service.storeRetailerCredentials(mockUserId, credentials);
 
       expect(result).toBe(false);
     });
@@ -144,7 +158,7 @@ describe('CredentialService', () => {
       };
 
       // First store the credentials to get properly encrypted data
-      await CredentialService.storeRetailerCredentials(mockUserId, testCredentials);
+      await service.storeRetailerCredentials(mockUserId, testCredentials);
       
       // Get the encrypted data from the mock call
       const updateCall = MockedUser.updateById.mock.calls[0];
@@ -158,7 +172,7 @@ describe('CredentialService', () => {
         }
       });
 
-      const result = await CredentialService.getRetailerCredentials(mockUserId, 'bestbuy');
+      const result = await service.getRetailerCredentials(mockUserId, 'bestbuy');
 
       expect(result).toEqual({
         username: 'testuser',
@@ -170,7 +184,7 @@ describe('CredentialService', () => {
     it('should return null when credentials not found', async () => {
       MockedUser.findById.mockResolvedValue(mockUser);
 
-      const result = await CredentialService.getRetailerCredentials(mockUserId, 'nonexistent');
+      const result = await service.getRetailerCredentials(mockUserId, 'nonexistent');
 
       expect(result).toBeNull();
     });
@@ -191,7 +205,7 @@ describe('CredentialService', () => {
 
       MockedUser.findById.mockResolvedValue(userWithInactiveCredentials);
 
-      const result = await CredentialService.getRetailerCredentials(mockUserId, 'bestbuy');
+      const result = await service.getRetailerCredentials(mockUserId, 'bestbuy');
 
       expect(result).toBeNull();
     });
@@ -200,7 +214,7 @@ describe('CredentialService', () => {
       MockedUser.findById.mockResolvedValue(null);
 
       await expect(
-        CredentialService.getRetailerCredentials(mockUserId, 'bestbuy')
+        service.getRetailerCredentials(mockUserId, 'bestbuy')
       ).rejects.toThrow('User not found');
     });
   });
@@ -229,7 +243,7 @@ describe('CredentialService', () => {
 
       MockedUser.findById.mockResolvedValue(userWithCredentials);
 
-      const result = await CredentialService.listRetailerCredentials(mockUserId);
+      const result = await service.listRetailerCredentials(mockUserId);
 
       expect(result).toHaveLength(2);
       expect(result).toEqual([
@@ -253,7 +267,7 @@ describe('CredentialService', () => {
     it('should return empty array when no credentials exist', async () => {
       MockedUser.findById.mockResolvedValue(mockUser);
 
-      const result = await CredentialService.listRetailerCredentials(mockUserId);
+      const result = await service.listRetailerCredentials(mockUserId);
 
       expect(result).toEqual([]);
     });
@@ -283,7 +297,7 @@ describe('CredentialService', () => {
         twoFactorEnabled: true
       };
 
-      const result = await CredentialService.updateRetailerCredentials(mockUserId, 'bestbuy', updates);
+      const result = await service.updateRetailerCredentials(mockUserId, 'bestbuy', updates);
 
       expect(result).toBe(true);
       expect(MockedUser.updateById).toHaveBeenCalledWith(
@@ -307,7 +321,7 @@ describe('CredentialService', () => {
       const updates = { username: 'newuser' };
 
       await expect(
-        CredentialService.updateRetailerCredentials(mockUserId, 'nonexistent', updates)
+        service.updateRetailerCredentials(mockUserId, 'nonexistent', updates)
       ).rejects.toThrow('Retailer credentials not found');
     });
   });
@@ -337,7 +351,7 @@ describe('CredentialService', () => {
       MockedUser.findById.mockResolvedValue(userWithCredentials);
       MockedUser.updateById.mockResolvedValue({ ...userWithCredentials, updated_at: new Date() });
 
-      const result = await CredentialService.deleteRetailerCredentials(mockUserId, 'bestbuy');
+      const result = await service.deleteRetailerCredentials(mockUserId, 'bestbuy');
 
       expect(result).toBe(true);
       expect(MockedUser.updateById).toHaveBeenCalledWith(
@@ -354,7 +368,7 @@ describe('CredentialService', () => {
       MockedUser.findById.mockResolvedValue(mockUser);
 
       await expect(
-        CredentialService.deleteRetailerCredentials(mockUserId, 'nonexistent')
+        service.deleteRetailerCredentials(mockUserId, 'nonexistent')
       ).rejects.toThrow('Retailer credentials not found');
     });
   });
@@ -371,7 +385,7 @@ describe('CredentialService', () => {
         password: 'testpassword'
       };
 
-      await CredentialService.storeRetailerCredentials(mockUserId, testCredentials);
+      await service.storeRetailerCredentials(mockUserId, testCredentials);
       
       // Get the encrypted data from the mock call
       const updateCall = MockedUser.updateById.mock.calls[0];
@@ -389,7 +403,7 @@ describe('CredentialService', () => {
       MockedUser.findById.mockResolvedValue(userWithCredentials);
       MockedUser.updateById.mockResolvedValue({ ...userWithCredentials, updated_at: new Date() });
 
-      const result = await CredentialService.verifyRetailerCredentials(mockUserId, 'bestbuy');
+      const result = await service.verifyRetailerCredentials(mockUserId, 'bestbuy');
 
       expect(result.isValid).toBe(true);
       expect(result.message).toBe('Credentials verified successfully');
@@ -398,7 +412,7 @@ describe('CredentialService', () => {
     it('should return invalid when credentials not found', async () => {
       MockedUser.findById.mockResolvedValue(mockUser);
 
-      const result = await CredentialService.verifyRetailerCredentials(mockUserId, 'nonexistent');
+      const result = await service.verifyRetailerCredentials(mockUserId, 'nonexistent');
 
       expect(result.isValid).toBe(false);
       expect(result.message).toBe('Credentials not found');

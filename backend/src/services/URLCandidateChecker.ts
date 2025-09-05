@@ -91,12 +91,11 @@ export class URLCandidateChecker {
             }
           }
 
-          // Record request
+          // Resolve slug and record request
           const slug = slug0 || await this.getRetailerSlug(c.retailer_id);
           if (slug) { await UrlCandidateMetricsService.record(slug, 'requests'); }
 
           // Per-retailer render/session behavior
-          const slug = slug0 || await this.getRetailerSlug(c.retailer_id);
           // Resolve render/session config: prefer redis override, else env
           let renderBehavior = this.getRenderBehaviorForSlug(slug || undefined);
           let useSession = this.getSessionReuseForSlug(slug || undefined);
@@ -230,10 +229,11 @@ export class URLCandidateChecker {
     // CTA / availability heuristics
     const cta = /(add to cart|buy now|ship it|pickup|add to basket)/i.test(text);
     const inStockText = /(in stock|available|ready to ship)/i.test(text) && !/(out of stock|sold out|unavailable)/i.test(text);
-    const price = /\$\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})?/.test(text);
+    const priceTextual = /\$\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})?/.test(text);
 
     // JSON-LD Product detection with basic field expectations
     let jsonld = false;
+    let jsonldHasPrice = false;
     try {
       $('script[type="application/ld+json"]').each((_, el) => {
         const t = ($(el).text() || '').trim();
@@ -246,8 +246,9 @@ export class URLCandidateChecker {
             if (type.includes('product')) {
               // Look for expected price/offer fields
               const offers = obj.offers || obj.offer || {};
-              const hasPrice = !!(offers.price || offers.lowPrice || offers.highPrice || obj.price || obj.sku || obj.gtin12 || obj.gtin13);
-              if (hasPrice) { jsonld = true; break; }
+              const hasPrice = !!(offers.price || offers.lowPrice || offers.highPrice || obj.price);
+              if (hasPrice) jsonldHasPrice = true;
+              if (hasPrice || obj.sku || obj.gtin12 || obj.gtin13) { jsonld = true; break; }
             }
           }
         } catch {}
@@ -257,6 +258,7 @@ export class URLCandidateChecker {
     const productSignals: string[] = [];
     if (cta) productSignals.push('cta');
     if (inStockText) productSignals.push('in_stock_text');
+    const price = priceTextual || jsonldHasPrice;
     if (price) productSignals.push('price_seen');
     if (jsonld) productSignals.push('jsonld_product');
 

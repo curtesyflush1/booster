@@ -3,6 +3,7 @@ import { User } from '../../src/models/User';
 import jwt from 'jsonwebtoken';
 import { IUser, IUserRegistration, ILoginCredentials } from '../../src/types/database';
 import { SubscriptionTier } from '../../src/types/subscription';
+import { IUserRepository, ILogger } from '../../src/types/dependencies';
 
 // Mock dependencies
 jest.mock('../../src/models/User');
@@ -16,13 +17,15 @@ const mockedJwt = jwt as jest.Mocked<typeof jwt>;
 
 // Mock Redis and token blacklist services
 import { redisService } from '../../src/services/redisService';
-import { tokenBlacklistService } from '../../src/services/tokenBlacklistService';
+import { tokenBlacklistService, TokenBlacklistService } from '../../src/services/tokenBlacklistService';
 
 const mockRedisService = redisService as jest.Mocked<typeof redisService>;
 const mockTokenBlacklistService = tokenBlacklistService as jest.Mocked<typeof tokenBlacklistService>;
 
 describe('AuthService', () => {
   let authService: AuthService;
+  let mockUserRepository: jest.Mocked<IUserRepository>;
+  let mockLogger: jest.Mocked<ILogger>;
   const mockConfig = {
     jwtSecret: 'test-secret',
     jwtRefreshSecret: 'test-refresh-secret',
@@ -31,14 +34,49 @@ describe('AuthService', () => {
   };
 
   beforeEach(() => {
-    authService = new AuthService(mockConfig);
+    // Adapter repository that proxies to mocked User model static methods
+    mockUserRepository = {
+      findById: jest.fn((id: string) => (User.findById as any)(id)),
+      findByEmail: jest.fn((email: string) => (User.findByEmail as any)(email)),
+      findOneBy: jest.fn((q: any) => (User.findOneBy as any)(q)),
+      findAll: jest.fn((q: any) => (User.findAll as any)(q)),
+      createUser: jest.fn((data: any) => (User.createUser as any)(data)),
+      updateById: jest.fn((id: string, data: any) => (User.updateById as any)(id, data)),
+      updatePreferences: jest.fn((id: string, prefs: any) => (User.updatePreferences as any)(id, prefs)),
+      updateNotificationSettings: jest.fn((id: string, s: any) => (User.updateNotificationSettings as any)(id, s)),
+      addShippingAddress: jest.fn((id: string, a: any) => (User.addShippingAddress as any)(id, a)),
+      removeShippingAddress: jest.fn((id: string, addrId: string) => (User.removeShippingAddress as any)(id, addrId)),
+      getUserStats: jest.fn((id: string) => (User.getUserStats as any)(id)),
+      verifyPassword: jest.fn((pwd: string, hash: string) => (User.verifyPassword as any)(pwd, hash)),
+      updatePassword: jest.fn((id: string, pwd: string) => (User.updatePassword as any)(id, pwd)),
+      handleFailedLogin: jest.fn((id: string) => (User.handleFailedLogin as any)(id)),
+      handleSuccessfulLogin: jest.fn((id: string) => (User.handleSuccessfulLogin as any)(id)),
+      isAccountLocked: jest.fn((id: string) => (User.isAccountLocked as any)(id)),
+      setResetToken: jest.fn((id: string, token: string, exp: Date) => (User.setResetToken as any)(id, token, exp)),
+      verifyEmail: jest.fn((id: string, token: string) => (User.verifyEmail as any)(id, token))
+    } as unknown as jest.Mocked<IUserRepository>;
+
+    mockLogger = {
+      info: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn()
+    } as unknown as jest.Mocked<ILogger>;
+
+    authService = new AuthService(mockUserRepository, mockLogger, mockConfig);
     jest.clearAllMocks();
     
     // Setup Redis and token blacklist service mocks
-    mockTokenBlacklistService.isTokenBlacklisted.mockResolvedValue(false);
-    mockTokenBlacklistService.blacklistToken.mockResolvedValue();
-    mockTokenBlacklistService.blacklistAllUserTokens.mockResolvedValue();
-    mockTokenBlacklistService.trackUserToken.mockResolvedValue();
+    mockTokenBlacklistService.isTokenBlacklisted.mockResolvedValue(false as any);
+    mockTokenBlacklistService.blacklistToken.mockResolvedValue(true as any);
+    mockTokenBlacklistService.blacklistAllUserTokens.mockResolvedValue(true as any);
+    mockTokenBlacklistService.trackUserToken.mockResolvedValue(true as any);
+
+    // Mock static TokenBlacklistService used internally by AuthService
+    (TokenBlacklistService.isTokenRevoked as any) = jest.fn().mockResolvedValue(false);
+    (TokenBlacklistService.revokeToken as any) = jest.fn().mockResolvedValue(true);
+    (TokenBlacklistService.revokeAllUserTokens as any) = jest.fn().mockResolvedValue(true);
+    (TokenBlacklistService.trackUserToken as any) = jest.fn().mockResolvedValue(true);
   });
 
   const createMockUser = (overrides: Partial<IUser> = {}): IUser => ({
@@ -201,7 +239,7 @@ describe('AuthService', () => {
       (mockedJwt.verify as jest.Mock).mockReturnValue({ userId: 'user-123' });
       MockedUser.findById.mockResolvedValue(null);
 
-      await expect(authService.refreshToken(mockRefreshToken)).rejects.toThrow('Invalid refresh token');
+      await expect(authService.refreshToken(mockRefreshToken)).rejects.toThrow('User associated with token no longer exists');
     });
   });
 
@@ -210,7 +248,7 @@ describe('AuthService', () => {
 
     it('should validate token successfully', async () => {
       const mockUser = createMockUser({ email_verified: true });
-      (mockedJwt.verify as jest.Mock).mockReturnValue({ userId: 'user-123' });
+      (mockedJwt.verify as jest.Mock).mockReturnValue({ sub: 'user-123' });
       MockedUser.findById.mockResolvedValue(mockUser);
 
       const result = await authService.validateAccessToken(mockAccessToken);
@@ -230,10 +268,10 @@ describe('AuthService', () => {
     });
 
     it('should throw error if user not found', async () => {
-      (mockedJwt.verify as jest.Mock).mockReturnValue({ userId: 'user-123' });
+      (mockedJwt.verify as jest.Mock).mockReturnValue({ sub: 'user-123' });
       MockedUser.findById.mockResolvedValue(null);
 
-      await expect(authService.validateAccessToken(mockAccessToken)).rejects.toThrow('Invalid token');
+      await expect(authService.validateAccessToken(mockAccessToken)).rejects.toThrow('User associated with token not found');
     });
   });
 

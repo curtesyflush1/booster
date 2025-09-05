@@ -8,10 +8,21 @@ set -e  # Exit on any error
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Load optional project-level deploy config if present (overrides defaults)
+if [[ -f "$PROJECT_ROOT/deploy.env" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$PROJECT_ROOT/deploy.env"
+  set +a
+fi
+
 DEPLOY_USER="${DEPLOY_USER:-derek}"
 DEPLOY_HOST="${DEPLOY_HOST:-82.180.162.48}"
 DEPLOY_PATH="${DEPLOY_PATH:-/opt/booster}"
 BACKUP_PATH="${BACKUP_PATH:-/opt/booster/backups}"
+SSH_OPTS="${SSH_OPTS:-}"
+RSYNC_OPTS="${RSYNC_OPTS:-}"
 SERVICE_NAME="booster-beacon"
 HEALTH_CHECK_URL="http://localhost:3000/health"
 MAX_HEALTH_RETRIES=30
@@ -128,7 +139,15 @@ load_config() {
     if [[ -f "$config_file" ]]; then
         log_info "Loading configuration from $config_file"
         set -a  # Automatically export variables
-        source "$config_file"
+        # Safely load only simple KEY=VALUE lines (no spaces or parentheses)
+        while IFS= read -r line; do
+            # Skip comments/empty
+            [[ -z "$line" || "$line" =~ ^\s*# ]] && continue
+            # Only accept KEY=VALUE without spaces and parentheses
+            if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= && ! "$line" =~ [\ \(\)] ]]; then
+                export "$line"
+            fi
+        done < "$config_file"
         set +a
     else
         log_warning "Configuration file $config_file not found"
@@ -139,8 +158,8 @@ load_config() {
 check_prerequisites() {
     log_info "Checking prerequisites..."
     
-    # Check if required tools are installed
-    local required_tools=("docker" "docker-compose" "git" "ssh" "rsync")
+    # Check if required tools are installed (local)
+    local required_tools=("git" "ssh" "rsync" "npm")
     for tool in "${required_tools[@]}"; do
         if ! command -v "$tool" &> /dev/null; then
             log_error "$tool is required but not installed"
@@ -149,7 +168,7 @@ check_prerequisites() {
     done
     
     # Check if we can connect to the deployment server
-    if ! ssh -o ConnectTimeout=10 "$DEPLOY_USER@$DEPLOY_HOST" "echo 'Connection test successful'" &> /dev/null; then
+    if ! ssh $SSH_OPTS -o ConnectTimeout=10 "$DEPLOY_USER@$DEPLOY_HOST" "echo 'Connection test successful'" &> /dev/null; then
         log_error "Cannot connect to deployment server $DEPLOY_USER@$DEPLOY_HOST"
         exit 1
     fi
@@ -169,8 +188,10 @@ create_backup() {
     local timestamp=$(date +"%Y%m%d_%H%M%S")
     local backup_name="pre_deploy_${timestamp}"
     
-    ssh "$DEPLOY_USER@$DEPLOY_HOST" << EOF
+    ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" << 'EOF'
         cd "$DEPLOY_PATH"
+        # Resolve docker compose command
+        if command -v docker-compose >/dev/null 2>&1; then DC="docker-compose"; else DC="docker compose"; fi
         
         # Create backup directory if it doesn't exist
         mkdir -p "$BACKUP_PATH"
@@ -209,10 +230,6 @@ build_application() {
     
     cd "$PROJECT_ROOT"
     
-    # Install root dependencies
-    log_info "Installing root dependencies..."
-    npm ci --production=false
-    
     # Build backend
     log_info "Building backend..."
     cd backend
@@ -229,7 +246,11 @@ build_application() {
     # Build frontend
     log_info "Building frontend..."
     cd frontend
-    npm ci --production=false
+    if [[ -f package-lock.json ]]; then
+      npm ci --production=false
+    else
+      npm install --legacy-peer-deps
+    fi
     npm run build
     
     # Verify frontend build
@@ -239,18 +260,8 @@ build_application() {
     fi
     cd ..
     
-    # Build extension
-    log_info "Building extension..."
-    cd extension
-    npm ci --production=false
-    npm run build
-    
-    # Verify extension build
-    if [[ ! -d "dist" ]]; then
-        log_error "Extension build failed - dist directory not found"
-        exit 1
-    fi
-    cd ..
+    # Build extension (optional) — skipping for core deploy
+    log_info "Skipping browser extension build for production deploy"
     
     log_success "Application built successfully"
 }
@@ -275,9 +286,12 @@ deploy_application() {
     # Build application locally
     build_application
     
-    # Sync files to server
+    # Sync files to server (preserve server-managed SSL contents)
     log_info "Syncing files to server..."
-    rsync -avz --delete \
+    rsync -avz --delete $RSYNC_OPTS \
+        --exclude='nginx/ssl/**' \
+        --exclude='.env' \
+        --exclude='.env.production' \
         --exclude=node_modules \
         --exclude=.git \
         --exclude=logs \
@@ -289,28 +303,51 @@ deploy_application() {
         --exclude=*.log \
         "$PROJECT_ROOT/" "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
     
-    # Deploy on server
-    ssh "$DEPLOY_USER@$DEPLOY_HOST" << EOF
+    # Deploy on server (inject variables into remote environment)
+    ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" "DEPLOY_PATH=\"$DEPLOY_PATH\" DOMAIN=\"$DOMAIN\" bash -s" << 'EOF'
         cd "$DEPLOY_PATH"
+        # Resolve docker compose command
+        if command -v docker-compose >/dev/null 2>&1; then DC="docker-compose"; else DC="docker compose"; fi
         
-        # Ensure production environment file exists
+        # Ensure production environment file exists (fallback to ./current)
         if [[ ! -f .env.production ]]; then
-            log_error "Production environment file not found!"
-            exit 1
+            if [[ -f current/.env.production ]]; then
+              echo "Using environment from ./current/.env.production"
+              cp current/.env.production .env.production
+            elif [[ -f .env ]]; then
+              echo "Found .env; proceeding with existing environment"
+            elif [[ -f current/.env ]]; then
+              echo "Using environment from ./current/.env"
+              cp current/.env .env
+            else
+              echo "Production environment file not found!" >&2
+              exit 1
+            fi
         fi
         
         # Copy production environment
         cp .env.production .env
         
-        # Prepare SSL bundle if provided
+        # Prepare SSL bundle if provided on server
         mkdir -p nginx/ssl || true
-        if [[ -f boosterbeacon.com-ssl-bundle.zip ]]; then
-            echo "Found SSL bundle: boosterbeacon.com-ssl-bundle.zip"
-            if command -v unzip >/dev/null 2>&1; then
-              unzip -o boosterbeacon.com-ssl-bundle.zip -d nginx/ssl || true
-            else
-              echo "Warning: unzip not found on server; skipping SSL unzip. Install unzip to auto-extract."
-            fi
+        BUNDLE="boosterbeacon.com-ssl-bundle.zip"
+        if [[ -f "$BUNDLE" ]]; then
+          echo "Found SSL bundle: $BUNDLE"
+          if command -v unzip >/dev/null 2>&1; then
+            unzip -o "$BUNDLE" -d nginx/ssl || true
+          elif command -v unrar >/dev/null 2>&1; then
+            unrar x -o+ "$BUNDLE" nginx/ssl/ || true
+          else
+            echo "Warning: neither unzip nor unrar found; cannot extract SSL bundle"
+          fi
+          # If typical PEM names are present, update nginx cert paths
+          CERT_PATH=$(find nginx/ssl -type f -name 'domain.cert.pem' | head -n1)
+          KEY_PATH=$(find nginx/ssl -type f -name 'private.key.pem' | head -n1)
+          if [[ -n "$CERT_PATH" && -n "$KEY_PATH" && -f nginx/nginx.conf ]]; then
+            echo "Updating nginx ssl_certificate paths"
+            sed -i "s#^\s*ssl_certificate\s\+.*;#        ssl_certificate /etc/ssl/${CERT_PATH#nginx/ssl/};#" nginx/nginx.conf || true
+            sed -i "s#^\s*ssl_certificate_key\s\+.*;#        ssl_certificate_key /etc/ssl/${KEY_PATH#nginx/ssl/};#" nginx/nginx.conf || true
+          fi
         fi
         
         # Update nginx server_name if DOMAIN env is provided
@@ -320,14 +357,14 @@ deploy_application() {
         
         # Stop existing services gracefully
         echo "Stopping existing services..."
-        docker-compose -f docker-compose.prod.yml down --timeout 30 || true
+        $DC -f docker-compose.prod.yml down --timeout 30 || true
         
         # Clean up unused Docker resources
         docker system prune -f || true
         
         # Build and start services
         echo "Building and starting services..."
-        docker-compose -f docker-compose.prod.yml up -d --build
+        $DC -f docker-compose.prod.yml up -d --build
         
         # Wait for services to initialize
         echo "Waiting for services to initialize..."
@@ -335,12 +372,12 @@ deploy_application() {
         
         # Run database migrations
         echo "Running database migrations..."
-        docker-compose -f docker-compose.prod.yml exec -T app sh -c "cd backend && npm run migrate:up" || true
+        $DC -f docker-compose.prod.yml exec -T app sh -c "cd backend && npm run migrate:up" || true
         
         # Optional: import products from CSV if present on server
         if [[ -f backend/data/products.csv ]]; then
           echo "Found backend/data/products.csv; running importer"
-          docker-compose -f docker-compose.prod.yml exec -T app sh -c "cd backend && npm run import:products" || true
+          $DC -f docker-compose.prod.yml exec -T app sh -c "cd backend && npm run import:products" || true
         else
           echo "No backend/data/products.csv found; skipping import"
         fi
@@ -351,10 +388,11 @@ EOF
         log_success "Deployment completed successfully"
         
         # Show deployment status
-        ssh "$DEPLOY_USER@$DEPLOY_HOST" << EOF
+        ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" "DEPLOY_PATH=\"$DEPLOY_PATH\" bash -s" << 'EOF'
             cd "$DEPLOY_PATH"
             echo "=== Deployment Status ==="
-            docker-compose -f docker-compose.prod.yml ps
+            if command -v docker-compose >/dev/null 2>&1; then DC="docker-compose"; else DC="docker compose"; fi
+            $DC -f docker-compose.prod.yml ps
             echo ""
             echo "=== Application Health ==="
             curl -s http://localhost:3000/health | jq '.' 2>/dev/null || echo "Health endpoint not responding"
@@ -372,7 +410,7 @@ check_health() {
     
     local retries=0
     while [[ $retries -lt $MAX_HEALTH_RETRIES ]]; do
-        if ssh "$DEPLOY_USER@$DEPLOY_HOST" "curl -f $HEALTH_CHECK_URL" &> /dev/null; then
+        if ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" "curl -f $HEALTH_CHECK_URL" &> /dev/null; then
             log_success "Health check passed"
             return 0
         fi
@@ -398,7 +436,7 @@ rollback_deployment() {
         exit 1
     fi
     
-    ssh "$DEPLOY_USER@$DEPLOY_HOST" << EOF
+    ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" << EOF
         cd "$DEPLOY_PATH"
         
         # Stop current services
@@ -434,7 +472,7 @@ EOF
 get_status() {
     log_info "Getting deployment status..."
     
-    ssh "$DEPLOY_USER@$DEPLOY_HOST" << EOF
+    ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" << EOF
         cd "$DEPLOY_PATH"
         
         echo "=== Docker Services ==="
@@ -459,7 +497,7 @@ view_logs() {
     
     log_info "Viewing application logs (last $tail_lines lines)..."
     
-    ssh "$DEPLOY_USER@$DEPLOY_HOST" << EOF
+    ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" << EOF
         cd "$DEPLOY_PATH"
         docker-compose -f docker-compose.prod.yml logs --tail=$tail_lines -f
 EOF

@@ -262,7 +262,6 @@ import { BaseModel } from '../models/BaseModel';
 import { redisService } from '../services/redisService';
 import { UrlCandidateMetricsService } from '../services/urlCandidateMetricsService';
 import { transactionService } from '../services/transactionService';
-import { redisService } from '../services/redisService';
 
 export const getDropMetrics = async (_req: Request, res: Response): Promise<void> => {
   const db = BaseModel.getKnex();

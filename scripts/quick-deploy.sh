@@ -8,9 +8,24 @@ set -e
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+# Load optional project-level deploy config if present (overrides defaults)
+if [[ -f "$PROJECT_ROOT/deploy.env" ]]; then
+  set -a; source "$PROJECT_ROOT/deploy.env"; set +a
+fi
 DEPLOY_USER="${DEPLOY_USER:-derek}"
 DEPLOY_HOST="${DEPLOY_HOST:-82.180.162.48}"
 DEPLOY_PATH="${DEPLOY_PATH:-/opt/booster}"
+SSH_OPTS="${SSH_OPTS:-}"
+RSYNC_OPTS="${RSYNC_OPTS:-}"
+
+# Args
+DRY_RUN=false
+case "${1:-}" in
+  --dry-run)
+    DRY_RUN=true
+    shift || true
+    ;;
+esac
 
 # Colors for output
 RED='\033[0;31m'
@@ -53,8 +68,12 @@ quick_deploy() {
     fi
     
     # Sync only essential files
-    log_info "Syncing files to server..."
-    rsync -avz --delete \
+    if [[ "$DRY_RUN" == "true" ]]; then
+      log_info "[DRY-RUN] Would sync files to $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH"
+      echo "rsync -avz --delete $RSYNC_OPTS (includes: backend/dist, frontend/dist, extension/dist, docker-compose.prod.yml, Dockerfile.prod, .env.production, nginx/**, monitoring/**, backend/migrations/**, backend/package.json, backend/knexfile.js)"
+    else
+      log_info "Syncing files to server..."
+      rsync -avz --delete $RSYNC_OPTS \
         --include='backend/dist/' \
         --include='backend/dist/**' \
         --include='frontend/dist/' \
@@ -74,27 +93,41 @@ quick_deploy() {
         --include='backend/knexfile.js' \
         --exclude='*' \
         "$PROJECT_ROOT/" "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
+    fi
     
     # Restart services
-    log_info "Restarting services..."
-    ssh "$DEPLOY_USER@$DEPLOY_HOST" << EOF
+    if [[ "$DRY_RUN" == "true" ]]; then
+      log_info "[DRY-RUN] Would restart services on $DEPLOY_HOST"
+      cat << 'EOF'
+Commands:
+  cp .env.production .env
+  docker-compose -f docker-compose.prod.yml up -d --no-deps app
+  sleep 10
+  docker-compose -f docker-compose.prod.yml ps
+  curl -f http://localhost:3000/health || echo "Health check failed"
+EOF
+    else
+      log_info "Restarting services..."
+    ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" << 'EOF'
         cd "$DEPLOY_PATH"
         
         # Copy production environment
         cp .env.production .env
         
         # Restart only the app container
-        docker-compose -f docker-compose.prod.yml up -d --no-deps app
+        if command -v docker-compose >/dev/null 2>&1; then DC="docker-compose"; else DC="docker compose"; fi
+        $DC -f docker-compose.prod.yml up -d --no-deps app
         
         # Wait a moment
         sleep 10
         
         # Check status
-        docker-compose -f docker-compose.prod.yml ps
+        $DC -f docker-compose.prod.yml ps
         
         # Quick health check
         curl -f http://localhost:3000/health || echo "Health check failed"
 EOF
+    fi
     
     log_success "Quick deployment completed!"
 }
@@ -102,12 +135,16 @@ EOF
 # Health check function
 check_health() {
     log_info "Performing health check..."
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "[DRY-RUN] Skipping remote health probe"
+        return 0
+    fi
     
     local retries=0
     local max_retries=10
     
     while [[ $retries -lt $max_retries ]]; do
-        if ssh "$DEPLOY_USER@$DEPLOY_HOST" "curl -f -s http://localhost:3000/health" &> /dev/null; then
+        if ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" "curl -f -s http://localhost:3000/health" &> /dev/null; then
             log_success "Health check passed"
             return 0
         fi
@@ -125,7 +162,11 @@ check_health() {
 show_status() {
     log_info "Getting deployment status..."
     
-    ssh "$DEPLOY_USER@$DEPLOY_HOST" << 'EOF'
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "[DRY-RUN] Skipping remote status retrieval"
+        return 0
+    fi
+    ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" << 'EOF'
         cd /opt/booster
         
         echo "=== Docker Services ==="

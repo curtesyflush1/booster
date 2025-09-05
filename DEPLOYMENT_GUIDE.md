@@ -24,13 +24,20 @@ This guide covers deploying BoosterBeacon to production using Docker containers.
    npm run deploy:verify
    ```
 
-2. **Configure Production Environment**
+2. **Configure Deployment Targets**
+   Copy `deploy.env.example` to `deploy.env` and set your VPS details:
+   ```bash
+   cp deploy.env.example deploy.env
+   nano deploy.env   # set DEPLOY_USER, DEPLOY_HOST, DEPLOY_PATH, optional DOMAIN
+   ```
+
+3. **Configure Production Environment**
    Edit `.env.production` with your actual values:
    ```bash
    nano .env.production
    ```
 
-3. **Deploy to Production**
+4. **Deploy to Production**
    ```bash
    npm run deploy:prod
    ```
@@ -90,6 +97,8 @@ This performs:
 - Service deployment
 - Health checks
 - Rollback on failure
+
+Configuration is read from `deploy.env` when present; you can still override via environment variables (e.g., `DEPLOY_HOST=1.2.3.4 npm run deploy:prod`).
 \n+Additional automation:
 - If `backend/data/products.csv` exists on the server, the deploy script runs the CSV importer automatically to upsert your catalog.
 - If `boosterbeacon.com-ssl-bundle.zip` is present at repo root, it extracts to `nginx/ssl/` (requires `unzip` installed on server).

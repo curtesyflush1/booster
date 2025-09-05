@@ -46,9 +46,7 @@ export class PurchaseOrchestrator {
       msrp: job.msrp,
       region: job.region,
       session_fingerprint: job.sessionFingerprint,
-      alert_at: job.alertAt ?? new Date().toISOString(),
-      // optional column if migration applied
-      idem_key: idemKey
+      alert_at: job.alertAt ?? new Date().toISOString()
     });
 
     // Execute checkout via the Browser API stub (or simulate if not configured)
@@ -75,8 +73,7 @@ export class PurchaseOrchestrator {
         alert_at: job.alertAt ?? new Date(startedAt).toISOString(),
         added_to_cart_at: result.addedToCartAt || new Date(startedAt + 500).toISOString(),
         purchased_at: result.purchasedAt || new Date().toISOString(),
-        price_paid: result.pricePaid ?? job.maxPrice ?? job.msrp ?? 0,
-        idem_key: idemKey
+        price_paid: result.pricePaid ?? job.maxPrice ?? job.msrp ?? 0
       });
       logger.info('Purchase succeeded', { retailer: job.retailerSlug, productId: job.productId });
     } else {
@@ -90,8 +87,7 @@ export class PurchaseOrchestrator {
         region: job.region,
         session_fingerprint: job.sessionFingerprint,
         alert_at: job.alertAt ?? new Date(startedAt).toISOString(),
-        failure_reason: result.failureReason || 'CHECKOUT_FAILED',
-        idem_key: idemKey
+        failure_reason: result.failureReason || 'CHECKOUT_FAILED'
       });
       logger.warn('Purchase failed', { retailer: job.retailerSlug, productId: job.productId });
     }

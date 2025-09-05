@@ -105,6 +105,16 @@ ENABLE_SWAGGER=true
 
 ## 🐳 Docker Deployment
 
+### Configure VPS Target (Optional)
+
+For SSH-based deployments via scripts, create `deploy.env` at the repo root (copy from `deploy.env.example`) and set:
+
+- `DEPLOY_USER`, `DEPLOY_HOST`, `DEPLOY_PATH`
+- Optional: `DOMAIN` for nginx `server_name`
+- Optional: `SSH_OPTS` and `RSYNC_OPTS` for custom port / identity file
+
+Scripts like `scripts/deploy.sh`, `scripts/quick-deploy.sh`, and `scripts/verify-production.sh` will automatically source this file.
+
 ### Quick Start with Docker Compose
 
 ```bash
