@@ -302,6 +302,41 @@ Authorization: Bearer <admin_token>
 3. View historical performance data
 4. Set up alerts for system issues
 
+## Testing Tools
+
+To streamline validation of end-to-end flows, the admin panel includes a dedicated Testing Tools section. These tools surface safe, auditable actions designed for staging and local development. In development (`NODE_ENV=development`), some checks are relaxed to speed iteration; in production, RBAC permissions are strictly enforced and all actions are audited.
+
+### Available Test Actions
+
+- Simulated Purchase
+  - Endpoint: `POST /api/admin/test-purchase`
+  - Purpose: Queues a simulated auto-purchase job to validate orchestration and reporting without live checkout.
+  - Input: `productId`, `retailerSlug`, `maxPrice`, `qty`, `alertAt?`
+
+- Synthetic Restock Alert
+  - Endpoint: `POST /api/admin/test-alert/restock`
+  - Purpose: Exercises the alert generation and delivery pipeline (email/Discord/web push/SMS).
+  - Input: `userId?`, `productId`, `retailerSlug`, `price?`, `productUrl?`, `watchId?`
+
+- Recent Transactions
+  - Endpoint: `GET /api/admin/purchases/transactions/recent?limit=50`
+  - Purpose: Quickly review recent synthetic or live transactions for verification.
+
+### Admin Utilities
+
+- Set Password by Email
+  - Endpoint: `POST /api/admin/users/set-password`
+  - Input: `email`, `newPassword`
+
+- Grant Admin Role by Email
+  - Endpoint: `POST /api/admin/users/grant-admin`
+  - Input: `email`
+
+- Lookup User by Email
+  - Endpoint: `GET /api/admin/users/by-email?email=user@example.com`
+
+All testing actions emit audit logs with actor, payload summary, and timestamp. Rate limits apply per environment and role.
+
 ## Development Notes
 
 ### Adding New Admin Features

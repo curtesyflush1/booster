@@ -123,12 +123,12 @@ describe('AdminSystemService - Dependency Injection', () => {
     it('should get system metrics using injected repository', async () => {
       // Arrange
       const mockMetrics = {
-        cpuMetric: { value: 45.5 },
-        memoryMetric: { value: 67.2 },
-        diskMetric: { value: 23.1 },
-        responseTimeMetric: { avg_value: '150.5' },
-        errorRateMetric: { avg_value: '0.1' }
-      };
+        cpuMetric: { usage: 45.5, loadAverage: [0.1, 0.2, 0.3], timestamp: new Date() },
+        memoryMetric: { percentage: 67.2, usedMB: 1024, totalMB: 2048, timestamp: new Date() },
+        diskMetric: { percentage: 23.1, usedGB: 50, totalGB: 500, timestamp: new Date() },
+        responseTimeMetric: { average: 150.5, p95: 200.1, count: 1000 },
+        errorRateMetric: { rate: 0.1 }
+      } as any;
       mockSystemRepository.getSystemMetrics.mockResolvedValue(mockMetrics);
 
       // Act
@@ -220,12 +220,12 @@ describe('AdminSystemService - Dependency Injection', () => {
       });
 
       mockSystemRepository.getSystemMetrics.mockResolvedValue({
-        cpuMetric: { value: 45.5 },
-        memoryMetric: { value: 67.2 },
-        diskMetric: { value: 23.1 },
-        responseTimeMetric: { avg_value: '150.5' },
-        errorRateMetric: { avg_value: '0.1' }
-      });
+        cpuMetric: { usage: 45.5 },
+        memoryMetric: { percentage: 67.2 },
+        diskMetric: { percentage: 23.1 },
+        responseTimeMetric: { average: 150.5 },
+        errorRateMetric: { rate: 0.1 }
+      } as any);
 
       // Act
       const result = await adminSystemService.getDashboardStats();

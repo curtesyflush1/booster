@@ -96,6 +96,17 @@ JWT_SECRET=your_jwt_secret
 STRIPE_SECRET_KEY=sk_test_...
 BESTBUY_API_KEY=your_bestbuy_key
 WALMART_API_KEY=your_walmart_key
+
+# URL Candidate Checker controls
+URL_CANDIDATE_QPM_DEFAULT=6
+# Per‑retailer overrides: e.g. best-buy -> BEST_BUY
+# URL_CANDIDATE_QPM_BEST_BUY=10
+# Render/session behavior per retailer (default: on_block & reuse session)
+# URL_CANDIDATE_RENDER_BEHAVIOR_BEST_BUY=on_block   # always|on_block|never
+# URL_CANDIDATE_SESSION_REUSE_BEST_BUY=true
+
+# Purchase Orchestrator test mode (staging-safe, deterministic)
+PURCHASES_TEST_MODE=true
 ```
 
 ## 📊 API Documentation
@@ -183,6 +194,17 @@ See [Deployment Guide](docs/deployment.md) for complete setup instructions.
 - **Performance Metrics**: Real-time performance tracking
 - **Error Tracking**: Detailed error logging and analysis
 - **Delivery Analytics**: Alert delivery performance
+ - **Purchase Metrics**: Attempts, purchases, success rate, lead-time percentiles per retailer
+ - **Precision@K**: Evaluate top‑K URL candidate precision vs outcomes (canary‑friendly)
+
+#### Monitoring API Endpoints (admin)
+- `GET /api/monitoring/drop-metrics`
+- `GET /api/monitoring/drop-budgets` / `PUT /api/monitoring/drop-budgets`
+- `GET /api/monitoring/drop-timeseries`
+- `GET /api/monitoring/drop-live-summary`
+- `GET /api/monitoring/purchase-metrics?windowHours=24`
+- `GET /api/monitoring/precision?k=3&days=7&retailers=best-buy,target,walmart&productIds=<csv>`
+- `GET /api/monitoring/crawl-config` / `PUT /api/monitoring/crawl-config`
 
 ### External Monitoring
 - **Grafana**: Advanced dashboards and visualization
@@ -259,3 +281,34 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Status**: Production Ready
 
 Built with ❤️ for the Pokémon TCG community
+
+## 🧪 CI & Testing Lanes
+
+We run tests across multiple lanes to balance speed and signal:
+
+- Unit (fast): isolated logic with heavy external effects mocked.
+  - Command: `cd backend && npm run test:unit`
+  - Notes: Auth and rate limiting bypassed via `TEST_BYPASS_AUTH` and `TEST_DISABLE_RATE_LIMIT` where appropriate.
+
+- Mocked Integration (fast): route/controller wiring with per‑suite mocks (no DB).
+  - Command: `cd backend && npm run test:integration`
+  - Useful for verifying endpoints return expected shapes without provisioning infra.
+
+- DB‑Backed Integration (slow): runs against a real Postgres, applies migrations, optional seeds.
+  - Start DB: `docker compose -f docker-compose.test.yml up -d db-test`
+  - Run: `cd backend && npm run test:integration:db`
+  - Environment: `TEST_DATABASE_URL` can override the default `postgresql://booster_user:booster_test_password@localhost:5435/boosterbeacon_test`.
+  - Scope: starts small with `backend/tests/integration/db-smoke.test.ts`. Expand as suites stabilize.
+
+### GitHub Actions
+
+The workflow `.github/workflows/ci.yml` defines two jobs:
+
+- Unit + Mocked Integration: installs, runs unit and mocked integration tests.
+- DB‑Backed Integration: starts Postgres via docker compose, waits for health, then runs `test:integration:db`.
+
+### Contributing to Tests
+
+- Unit tests: prefer local, deterministic mocks and avoid deep module graphs.
+- For controllers/routes, add mocked integration tests under `backend/tests/integration` with per‑suite module mocks.
+- For full flows, add DB‑backed tests using the `db-smoke` pattern and gradually expand coverage.

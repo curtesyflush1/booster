@@ -8,6 +8,8 @@ export class AuthTestHelpers {
     return {
       id: 'user-123',
       email: 'test@example.com',
+      role: 'user',
+      admin_permissions: [],
       subscription_tier: SubscriptionTier.FREE,
       first_name: 'John',
       last_name: 'Doe',

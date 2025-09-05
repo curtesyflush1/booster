@@ -60,7 +60,8 @@ export class URLPatternService {
 
   private static async forBestBuy(input: CandidateInput): Promise<UrlCandidate[]> {
     const out: UrlCandidate[] = [];
-    const slug = slugify(`${input.name || ''} ${input.setName || ''}`);
+    let slug = slugify(`${input.name || ''} ${input.setName || ''}`);
+    if (!slug) slug = 'product'; // ensure valid canonical path segment
 
     if (input.sku) {
       // Primary product patterns

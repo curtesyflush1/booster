@@ -122,6 +122,13 @@
 4. **User Acceptance Testing**: Comprehensive QA validation
 5. **Documentation Updates**: Complete API reference and operational guides; retailer coverage and endpoint paths refreshed
 
+### Newly Landed (Sept 2025)
+- Live detection hardening: product page + price + CTA gating (Target override with JSON‑LD + price)
+- Reason taxonomy persisted for QA; per‑retailer render/session toggles; Redis burst QPM clamps
+- Monitoring endpoints: purchase metrics and Precision@K; admin UI tiles added
+- Purchase test mode: deterministic `PURCHASES_TEST_MODE=true` for safe staging E2E
+- Optional DB idempotency for transactions (unique index) + Redis guard
+
 ### Current Status
 - **Overall Completion**: 95%+ of planned features implemented
 - **Production Readiness**: All core systems operational and tested

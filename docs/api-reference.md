@@ -496,7 +496,7 @@ WALMART_API_KEY=your_walmart_key
 
 ---
 
-**Last Updated**: September 2024
+**Last Updated**: September 2025
 **API Version**: 2.0
 **Status**: Production Ready
 ### Drop Predictions
@@ -516,3 +516,38 @@ GET `/api/ml/drop-predictions?product_id|set|retailer&horizonMinutes&topK`
 ### Admin ML (Training)
 - POST `/api/admin/ml/models/price/retrain` (also retrains drop windows by default; `{ includeDrops: false }` to skip)
 - POST `/api/admin/ml/models/drop-windows/retrain` (aliases: `drop`, `drop_windows`, `drop_prediction`)
+
+### Admin Testing & Utilities
+
+These endpoints facilitate safe end-to-end validation in development and controlled testing in staging/production. In `NODE_ENV=development`, some routes relax permission checks to speed iteration.
+
+- POST `/api/admin/test-purchase`
+  - Queue a simulated purchase job to exercise the auto-purchase pipeline.
+  - Body: `{ "productId": "uuid", "retailerSlug": "best-buy|walmart|costco|sams-club", "maxPrice": 49.99, "qty": 1, "alertAt": "ISO-8601?" }`
+  - Response: `{ queued: true, job }`
+
+- POST `/api/admin/test-alert/restock`
+  - Generate a synthetic restock alert to validate alert fanout and delivery channels.
+  - Body: `{ "userId": "uuid?", "productId": "uuid", "retailerSlug": "best-buy|walmart|costco|sams-club", "price?": 29.99, "productUrl?": "https://...", "watchId?": "uuid" }`
+  - Response: `{ success: true, data: { ... } }`
+
+- GET `/api/admin/purchases/transactions/recent?limit=50`
+  - Fetch recent purchase transactions to quickly validate end-to-end flows.
+
+- POST `/api/admin/users/set-password`
+  - Set a user’s password by email (audited).
+  - Body: `{ "email": "user@example.com", "newPassword": "..." }`
+
+- POST `/api/admin/users/grant-admin`
+  - Grant admin role to a user by email (audited).
+  - Body: `{ "email": "admin@example.com" }`
+
+- GET `/api/admin/users/by-email?email=user@example.com`
+  - Look up a user by email (safe fields only).
+
+### Subscription & Webhooks
+
+- POST `/api/subscription/webhook/stripe`
+  - Stripe webhook receiver. Requires raw body for signature verification.
+  - Header: `Stripe-Signature`
+  - Note: This route consumes `express.raw({ type: 'application/json' })`; ensure no JSON body parser runs before it.

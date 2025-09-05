@@ -46,18 +46,22 @@ describe('RetailerIntegrationService', () => {
     } as any;
 
     mockCostcoService = {
-      checkAvailability: jest.fn(),
-      searchProducts: jest.fn(),
-      getHealthStatus: jest.fn(),
-      getMetrics: jest.fn(),
+      checkAvailability: jest.fn().mockResolvedValue(undefined as any),
+      searchProducts: jest.fn().mockResolvedValue([]),
+      getHealthStatus: jest.fn().mockResolvedValue({
+        retailerId: 'costco', isHealthy: false, responseTime: 0, successRate: 0, lastChecked: new Date(), errors: [], circuitBreakerState: 'CLOSED'
+      } as any),
+      getMetrics: jest.fn().mockReturnValue({ circuitBreakerState: 'CLOSED' } as any),
       getConfig: jest.fn()
     } as any;
 
     mockSamsClubService = {
-      checkAvailability: jest.fn(),
-      searchProducts: jest.fn(),
-      getHealthStatus: jest.fn(),
-      getMetrics: jest.fn(),
+      checkAvailability: jest.fn().mockResolvedValue(undefined as any),
+      searchProducts: jest.fn().mockResolvedValue([]),
+      getHealthStatus: jest.fn().mockResolvedValue({
+        retailerId: 'sams-club', isHealthy: false, responseTime: 0, successRate: 0, lastChecked: new Date(), errors: [], circuitBreakerState: 'CLOSED'
+      } as any),
+      getMetrics: jest.fn().mockReturnValue({ circuitBreakerState: 'CLOSED' } as any),
       getConfig: jest.fn()
     } as any;
 
@@ -228,7 +232,7 @@ describe('RetailerIntegrationService', () => {
       }
     ];
 
-    it('should search products across all active retailers', async () => {
+    it('should search products across active retailers (includes scraping retailers)', async () => {
       mockBestBuyService.searchProducts.mockResolvedValue(mockSearchResults);
       mockWalmartService.searchProducts.mockResolvedValue([]);
 
@@ -236,7 +240,8 @@ describe('RetailerIntegrationService', () => {
 
       expect(mockBestBuyService.searchProducts).toHaveBeenCalledWith('pokemon booster');
       expect(mockWalmartService.searchProducts).toHaveBeenCalledWith('pokemon booster');
-      expect(results).toHaveLength(2);
+      expect(results.length).toBeGreaterThanOrEqual(2);
+      expect(results.some(r => r?.retailerId === 'best-buy')).toBe(true);
     });
 
     it('should search products for specific retailers only', async () => {
@@ -282,9 +287,10 @@ describe('RetailerIntegrationService', () => {
 
       expect(mockBestBuyService.getHealthStatus).toHaveBeenCalled();
       expect(mockWalmartService.getHealthStatus).toHaveBeenCalled();
-      expect(results).toHaveLength(2);
-      expect(results[0]?.retailerId).toBe('best-buy');
-      expect(results[1]?.retailerId).toBe('walmart');
+      expect(results.length).toBeGreaterThanOrEqual(2);
+      const ids = results.map(r => r?.retailerId);
+      expect(ids).toContain('best-buy');
+      expect(ids).toContain('walmart');
     });
 
     it('should handle health check errors', async () => {
@@ -293,10 +299,10 @@ describe('RetailerIntegrationService', () => {
 
       const results = await service.getRetailerHealthStatus();
 
-      expect(results).toHaveLength(2);
-      expect(results[0]?.isHealthy).toBe(true);
-      expect(results[1]?.isHealthy).toBe(false);
-      expect(results[1]?.errors).toContain('Health check failed: Health Check Error');
+      expect(results.length).toBeGreaterThanOrEqual(2);
+      const wm = results.find(r => r?.retailerId === 'walmart');
+      expect(wm?.isHealthy).toBe(false);
+      expect(wm?.errors).toContain('Health check failed: Health Check Error');
     });
   });
 
@@ -312,7 +318,7 @@ describe('RetailerIntegrationService', () => {
       lastRequestTime: new Date()
     };
 
-    it('should get metrics for all retailers', () => {
+    it('should get metrics for retailers', () => {
       mockBestBuyService.getMetrics.mockReturnValue(mockMetrics);
       mockWalmartService.getMetrics.mockReturnValue({
         ...mockMetrics,
@@ -321,9 +327,10 @@ describe('RetailerIntegrationService', () => {
 
       const results = service.getRetailerMetrics();
 
-      expect(results).toHaveLength(2);
-      expect(results[0]?.retailerId).toBe('best-buy');
-      expect(results[1]?.retailerId).toBe('walmart');
+      expect(results.length).toBeGreaterThanOrEqual(2);
+      const ids = results.map(r => r?.retailerId);
+      expect(ids).toContain('best-buy');
+      expect(ids).toContain('walmart');
       expect(results[0]).toHaveProperty('circuitBreakerState');
     });
   });

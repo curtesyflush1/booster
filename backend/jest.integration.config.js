@@ -19,8 +19,7 @@ module.exports = {
   testTimeout: 30000,
   maxWorkers: 1, // Sequential execution for database tests
   setupFilesAfterEnv: [
-    '<rootDir>/tests/setup.ts',
-    '<rootDir>/tests/integration/setup.ts'
+    '<rootDir>/tests/setup.ts'
   ],
   // Lower coverage thresholds for integration tests
   coverageThreshold: {

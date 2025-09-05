@@ -1,4 +1,5 @@
-import { AlertProcessingService, AlertGenerationData } from '../../src/services/alertProcessingService';
+import { AlertProcessingService } from '../../src/services/alertProcessingService';
+import type { AlertGenerationData } from '../../src/services/alertStrategies/AlertProcessingStrategy';
 import { Alert } from '../../src/models/Alert';
 import { User } from '../../src/models/User';
 import { Product } from '../../src/models/Product';
@@ -122,7 +123,7 @@ describe.skip('AlertProcessingService', () => {
       };
 
       MockedAlert.createAlert.mockResolvedValue(mockAlert);
-      MockedAlert.findBy.mockResolvedValue([]);
+      MockedAlert.findBy.mockResolvedValue({ data: [], total: 0, page: 1, limit: 50 } as any);
       MockedAlertDeliveryService.deliverAlert.mockResolvedValue({
         success: true,
         successfulChannels: ['web_push', 'email'],
@@ -197,7 +198,7 @@ describe.skip('AlertProcessingService', () => {
         updated_at: new Date()
       };
 
-      MockedAlert.findBy.mockResolvedValue([existingAlert]);
+      MockedAlert.findBy.mockResolvedValue({ data: [existingAlert], total: 1, page: 1, limit: 50 } as any);
 
       const result = await AlertProcessingService.generateAlert(mockAlertData);
 
@@ -240,7 +241,7 @@ describe.skip('AlertProcessingService', () => {
         updated_at: new Date()
       }));
 
-      MockedAlert.findBy.mockResolvedValue(recentAlerts);
+      MockedAlert.findBy.mockResolvedValue({ data: recentAlerts as any, total: recentAlerts.length, page: 1, limit: 100 } as any);
 
       await expect(AlertProcessingService.generateAlert(mockAlertData))
         .rejects.toThrow('Rate limit exceeded');
@@ -269,7 +270,7 @@ describe.skip('AlertProcessingService', () => {
       };
 
       MockedAlert.createAlert.mockResolvedValue(mockAlert);
-      MockedAlert.findBy.mockResolvedValue([]);
+      MockedAlert.findBy.mockResolvedValue({ data: [], total: 0, page: 1, limit: 50 } as any);
       MockedAlertDeliveryService.deliverAlert.mockResolvedValue({
         success: true,
         successfulChannels: ['web_push'],
@@ -297,7 +298,7 @@ describe.skip('AlertProcessingService', () => {
           retailer_id: 'retailer-1',
           type: 'restock',
           priority: 'medium',
-          data: mockAlertData.data,
+          data: { ...mockAlertData.data, availability_status: 'in_stock' },
           status: 'pending',
           delivery_channels: [],
           retry_count: 0,
@@ -488,7 +489,7 @@ describe.skip('AlertProcessingService', () => {
           retailer_id: 'retailer-1',
           type: 'restock',
           priority: 'medium',
-          data: mockAlertData.data,
+          data: { ...mockAlertData.data, availability_status: 'in_stock' },
           status: 'failed',
           delivery_channels: [],
           retry_count: 1,
@@ -599,7 +600,7 @@ describe.skip('AlertProcessingService', () => {
           retailer_id: 'retailer-1',
           type: 'restock',
           priority: 'medium',
-          data: mockAlertData.data,
+          data: { ...mockAlertData.data, availability_status: 'in_stock' },
           status: 'sent',
           delivery_channels: ['web_push'],
           retry_count: 0,
@@ -610,7 +611,7 @@ describe.skip('AlertProcessingService', () => {
 
       MockedAlert.getPendingAlerts.mockResolvedValue(pendingAlerts);
       MockedAlert.getFailedAlertsForRetry.mockResolvedValue(failedAlerts);
-      MockedAlert.findBy.mockResolvedValue(todayAlerts);
+      MockedAlert.findBy.mockResolvedValue({ data: todayAlerts as any, total: 1, page: 1, limit: 50 } as any);
 
       const stats = await AlertProcessingService.getProcessingStats();
 

@@ -15,7 +15,8 @@ module.exports = {
     'integration',
     'e2e',
     'performance',
-    'security'
+    'security',
+    'controllers'
   ],
   transform: {
     '^.+\\.ts$': 'ts-jest'

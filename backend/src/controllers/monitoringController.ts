@@ -261,6 +261,8 @@ export const getDashboardData = async (req: Request, res: Response): Promise<voi
 import { BaseModel } from '../models/BaseModel';
 import { redisService } from '../services/redisService';
 import { UrlCandidateMetricsService } from '../services/urlCandidateMetricsService';
+import { transactionService } from '../services/transactionService';
+import { redisService } from '../services/redisService';
 
 export const getDropMetrics = async (_req: Request, res: Response): Promise<void> => {
   const db = BaseModel.getKnex();
@@ -496,3 +498,183 @@ export const runSmokeTests = async (_req: Request, res: Response): Promise<void>
   }
 };
 // remove duplicate export (not needed)
+
+// ---------------- Purchase Metrics + Precision ----------------
+
+export const getPurchaseMetrics = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const db = BaseModel.getKnex();
+    const windowHours = Math.max(1, Math.min(parseInt(String(req.query.windowHours || '24'), 10) || 24, 720));
+    const since = new Date(Date.now() - windowHours * 60 * 60 * 1000);
+    const rows = await db('transactions')
+      .select('retailer_slug', 'status', 'lead_time_ms')
+      .where('created_at', '>=', since);
+
+    const byRetailer: Record<string, { attempts: number; purchased: number; leadTimes: number[] }> = {};
+    for (const r of rows) {
+      const slug = r.retailer_slug || 'unknown';
+      if (!byRetailer[slug]) byRetailer[slug] = { attempts: 0, purchased: 0, leadTimes: [] };
+      if (['attempted', 'failed', 'purchased'].includes(r.status)) byRetailer[slug].attempts++;
+      if (r.status === 'purchased') {
+        byRetailer[slug].purchased++;
+        const lt = r.lead_time_ms ? Number(r.lead_time_ms) : null;
+        if (typeof lt === 'number' && isFinite(lt) && lt >= 0) byRetailer[slug].leadTimes.push(lt);
+      }
+    }
+    const pct = (a: number[]) => (q: number) => {
+      if (!a.length) return null;
+      const sorted = [...a].sort((x,y)=>x-y);
+      const idx = Math.floor(q * (sorted.length - 1));
+      return sorted[idx];
+    };
+    const out = Object.keys(byRetailer).map(slug => {
+      const s = byRetailer[slug];
+      const p = pct(s.leadTimes);
+      return {
+        retailer: slug,
+        attempts: s.attempts,
+        purchased: s.purchased,
+        purchase_rate: s.attempts ? s.purchased / s.attempts : 0,
+        lead_time_ms: {
+          p50: p(0.5), p90: p(0.9), p95: p(0.95), count: s.leadTimes.length
+        }
+      };
+    });
+    successResponse(res, { windowHours, retailers: out }, 'Purchase metrics');
+  } catch (error) {
+    errorResponse(res, 500, 'Failed to compute purchase metrics');
+  }
+};
+
+export const getPrecisionAtK = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const db = BaseModel.getKnex();
+    const k = Math.max(1, Math.min(parseInt(String(req.query.k || '3'), 10) || 3, 10));
+    const days = Math.max(1, Math.min(parseInt(String(req.query.days || '7'), 10) || 7, 60));
+    const productIdsParam = String(req.query.productIds || '').trim();
+    const slugsParam = String(req.query.retailers || '').trim();
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    // Scope products
+    let productIds: string[] = [];
+    if (productIdsParam) productIds = productIdsParam.split(',').map(s => s.trim()).filter(Boolean);
+
+    // Map retailer slugs -> ids
+    let slugFilter: string[] = [];
+    if (slugsParam) slugFilter = slugsParam.split(',').map(s => s.trim()).filter(Boolean);
+    const retailers = await db('retailers').select('id','slug');
+    const idBySlug = new Map<string,string>(retailers.map((r:any)=>[r.slug, r.id] as const));
+    const slugById = new Map<string,string>(retailers.map((r:any)=>[r.id, r.slug] as const));
+    const retailerIds = slugFilter.length ? slugFilter.map(sl => idBySlug.get(sl)).filter(Boolean) as string[] : retailers.map((r:any)=>r.id);
+
+    // Collect outcomes in window
+    let q = db('drop_outcomes')
+      .select('id','product_id','retailer_id','first_instock_at')
+      .where('drop_at','>=', cutoff)
+      .whereIn('retailer_id', retailerIds);
+    if (productIds.length) q = q.whereIn('product_id', productIds);
+    const outcomes = await q;
+
+    let hits = 0; let total = 0;
+    const perRetailer: Record<string, { hits: number; total: number }> = {};
+    for (const o of outcomes) {
+      const slug = slugById.get(o.retailer_id) || 'unknown';
+      if (!perRetailer[slug]) perRetailer[slug] = { hits: 0, total: 0 };
+      perRetailer[slug].total++; total++;
+
+      // Top-K candidates by score for this product/retailer
+      const cands = await db('url_candidates')
+        .select('status','score','last_checked_at')
+        .where({ product_id: o.product_id, retailer_id: o.retailer_id })
+        .andWhere('score','is not', null)
+        .orderBy('score','desc')
+        .limit(k);
+      if (!cands.length) continue;
+
+      // Simple success condition: any top-K candidate became 'live' before or at first_instock_at (if available), else before drop_at
+      const firstIn = o.first_instock_at ? new Date(o.first_instock_at) : null;
+      const success = cands.some(c => {
+        if (c.status !== 'live') return false;
+        const checkedAt = c.last_checked_at ? new Date(c.last_checked_at) : null;
+        if (!checkedAt) return true; // if unknown, count as success conservatively
+        if (firstIn) return checkedAt.getTime() <= firstIn.getTime();
+        return true;
+      });
+      if (success) { hits++; perRetailer[slug].hits++; }
+    }
+
+    const perRetailerOut = Object.keys(perRetailer).map(slug => ({
+      retailer: slug,
+      total: perRetailer[slug].total,
+      hits: perRetailer[slug].hits,
+      p_at_k: perRetailer[slug].total ? perRetailer[slug].hits / perRetailer[slug].total : 0
+    }));
+
+    successResponse(res, { k, days, total, hits, p_at_k: total ? hits/total : 0, byRetailer: perRetailerOut }, 'Precision@K summary');
+  } catch (error) {
+    errorResponse(res, 500, 'Failed to compute precision@K');
+  }
+};
+
+// Retailer crawl config (render behavior, session reuse, burst QPM)
+export const getCrawlConfig = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const rows: Array<{ slug: string }> = await BaseModel.getKnex()('retailers').select('slug');
+    const slugs = rows.map(r => r.slug);
+    const out: Array<{ slug: string; renderBehavior: string; sessionReuse: boolean; burstQpm?: number | null; qpm?: number | null }>= [];
+    for (const slug of slugs) {
+      let renderBehavior = 'on_block';
+      try {
+        const rb = await redisService.get(`config:url_candidate:render_behavior:${slug}`);
+        if (rb) renderBehavior = rb;
+      } catch {}
+      let sessionReuse = true;
+      try {
+        const sr = await redisService.get(`config:url_candidate:session_reuse:${slug}`);
+        if (sr) sessionReuse = !/^false|0|no$/i.test(sr);
+      } catch {}
+      let burstQpm: number | null = null;
+      try {
+        const b = await redisService.get(`config:url_candidate:qpm_burst:${slug}`);
+        burstQpm = b ? (parseInt(b,10) || null) : null;
+      } catch {}
+      let qpm: number | null = null;
+      try {
+        const q = await redisService.get(`config:url_candidate:qpm:${slug}`);
+        qpm = q ? (parseInt(q,10) || null) : null;
+      } catch {}
+      out.push({ slug, renderBehavior, sessionReuse, burstQpm, qpm });
+    }
+    successResponse(res, { configs: out }, 'Crawl config');
+  } catch (error) {
+    errorResponse(res, 500, 'Failed to load crawl config');
+  }
+};
+
+export const setCrawlConfig = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const updates = req.body?.configs as Array<{ slug: string; renderBehavior?: string; sessionReuse?: boolean; burstQpm?: number; qpm?: number }>;
+    if (!Array.isArray(updates) || updates.length === 0) {
+      errorResponse(res, 400, 'configs array required');
+      return;
+    }
+    for (const u of updates) {
+      if (!u.slug) continue;
+      if (u.renderBehavior && ['always','on_block','never'].includes(u.renderBehavior)) {
+        await redisService.set(`config:url_candidate:render_behavior:${u.slug}`, u.renderBehavior);
+      }
+      if (typeof u.sessionReuse === 'boolean') {
+        await redisService.set(`config:url_candidate:session_reuse:${u.slug}`, u.sessionReuse ? 'true' : 'false');
+      }
+      if (typeof u.burstQpm === 'number' && u.burstQpm > 0) {
+        await redisService.set(`config:url_candidate:qpm_burst:${u.slug}`, String(Math.floor(u.burstQpm)));
+      }
+      if (typeof u.qpm === 'number' && u.qpm > 0) {
+        await redisService.set(`config:url_candidate:qpm:${u.slug}`, String(Math.floor(u.qpm)));
+      }
+    }
+    successResponse(res, { updated: updates.length }, 'Crawl config updated');
+  } catch (error) {
+    errorResponse(res, 500, 'Failed to set crawl config');
+  }
+};

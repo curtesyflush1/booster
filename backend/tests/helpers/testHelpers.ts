@@ -408,6 +408,30 @@ export const cleanupTestData = async (
   }
 };
 
+// Simple database lifecycle helpers for tests that import these names.
+// These delegate to the testDatabase harness if available; otherwise no-op.
+export const setupTestDatabase = async (): Promise<void> => {
+  try {
+    const db = require('./testDatabase');
+    if (db && typeof db.initializeDatabase === 'function') {
+      await db.initializeDatabase();
+    }
+  } catch {
+    // no-op in unit environments without DB
+  }
+};
+
+export const cleanupTestDatabase = async (): Promise<void> => {
+  try {
+    const db = require('./testDatabase');
+    if (db && typeof db.closeDatabaseConnection === 'function') {
+      await db.closeDatabaseConnection();
+    }
+  } catch {
+    // no-op
+  }
+};
+
 // ============================================================================
 // COMPATIBILITY SHIMS FOR REFACTORED SERVICES
 // ============================================================================

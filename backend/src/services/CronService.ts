@@ -150,6 +150,17 @@ export class CronService {
       logger.info('[Cron] Price drop monitoring completed');
     });
 
+    // Every 2 hours: retailer discovery diff (Walmart/Costco/Sam's Club)
+    this.registerJob('retailer_discovery_diff', '0 */2 * * *', async () => {
+      if (String(process.env.ENABLE_RETAILER_DISCOVERY_DIFF || 'true').toLowerCase() === 'false') return;
+      try {
+        const { RetailerDiscoveryDiffService } = await import('./RetailerDiscoveryDiffService');
+        await RetailerDiscoveryDiffService.runForSlugs(['walmart','costco','sams-club']);
+      } catch (e) {
+        logger.warn('[Cron] Retailer discovery diff failed', { error: e instanceof Error ? e.message : String(e) });
+      }
+    });
+
     // Daily at 02:30: cleanup watches and other maintenance
     this.registerJob('watch_cleanup', '30 2 * * *', async () => {
       logger.info('[Cron] Watch cleanup started');

@@ -6,6 +6,11 @@ import { createMockUser, createFreeUser, createProUser, createUnverifiedUser } f
 
 // Mock dependencies
 jest.mock('../../src/services/authService');
+jest.mock('../../src/services/tokenBlacklistService', () => ({
+  TokenBlacklistService: {
+    isTokenRevoked: jest.fn().mockResolvedValue(false)
+  }
+}));
 jest.mock('../../src/utils/logger');
 
 const mockedAuthService = authService as jest.Mocked<typeof authService>;
@@ -15,7 +20,9 @@ describe('Auth Middleware', () => {
   let mockResponse: Partial<Response>;
   let mockNext: NextFunction;
 
-  beforeEach(() => {
+beforeEach(() => {
+  // Ensure auth bypass is disabled for these unit tests
+  process.env.TEST_BYPASS_AUTH = 'false';
     mockRequest = {
       headers: {}
     };

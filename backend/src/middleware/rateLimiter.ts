@@ -88,6 +88,11 @@ export const createRateLimit = (config: RateLimitConfig) => {
   } = config;
 
   return (req: Request, res: Response, next: NextFunction): void => {
+    if (process.env.TEST_DISABLE_RATE_LIMIT === 'true') {
+      res.setHeader('X-RateLimit-Skipped', 'test');
+      next();
+      return;
+    }
     // Dev guard: allow skipping limiter in development when explicitly disabled
     if ((process.env.NODE_ENV || 'development') === 'development' && process.env.DISABLE_RATE_LIMITING === 'true') {
       res.setHeader('X-RateLimit-Skipped', 'development');

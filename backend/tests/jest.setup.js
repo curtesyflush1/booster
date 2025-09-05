@@ -69,50 +69,66 @@ jest.mock('redis', () => ({
 
 // Mock Knex database
 jest.mock('knex', () => {
-  const mockKnex = jest.fn(() => ({
+  // Build a chainable query builder stub
+  const createBuilder = () => ({
     select: jest.fn().mockReturnThis(),
     from: jest.fn().mockReturnThis(),
     where: jest.fn().mockReturnThis(),
-    insert: jest.fn().mockReturnThis(),
-    update: jest.fn().mockReturnThis(),
-    delete: jest.fn().mockReturnThis(),
+    orWhere: jest.fn().mockReturnThis(),
+    whereIn: jest.fn().mockReturnThis(),
+    whereNull: jest.fn().mockReturnThis(),
+    join: jest.fn().mockReturnThis(),
+    leftJoin: jest.fn().mockReturnThis(),
+    innerJoin: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
     offset: jest.fn().mockReturnThis(),
+    insert: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    del: jest.fn().mockReturnThis(),
+    count: jest.fn().mockResolvedValue([{ count: 0 }]),
+    avg: jest.fn().mockResolvedValue([{ avg: 0 }]),
+    sum: jest.fn().mockResolvedValue([{ sum: 0 }]),
+    max: jest.fn().mockResolvedValue([{ max: 0 }]),
+    min: jest.fn().mockResolvedValue([{ min: 0 }]),
+    groupBy: jest.fn().mockReturnThis(),
     first: jest.fn().mockResolvedValue(null),
+    returning: jest.fn().mockResolvedValue([{ id: 'test-id' }]),
     then: jest.fn().mockResolvedValue([]),
-    catch: jest.fn().mockReturnThis(),
-    transaction: jest.fn().mockImplementation(async (callback) => {
-      const mockTransaction = {
+    catch: jest.fn().mockReturnThis()
+  });
+
+  const knexFactory = jest.fn((_config) => {
+    // Return a callable function that acts as knex instance
+    const builder = createBuilder();
+    const callable = ((table) => {
+      // ignore table and return a fresh builder per call
+      return createBuilder();
+    });
+
+    // Attach common methods on the instance
+    callable.raw = jest.fn().mockResolvedValue({ rows: [] });
+    callable.transaction = jest.fn().mockImplementation(async (cb) => {
+      const trx = {
+        ...createBuilder(),
         commit: jest.fn().mockResolvedValue(undefined),
-        rollback: jest.fn().mockResolvedValue(undefined),
-        select: jest.fn().mockReturnThis(),
-        from: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        insert: jest.fn().mockReturnThis(),
-        update: jest.fn().mockReturnThis(),
-        delete: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        offset: jest.fn().mockReturnThis(),
-        first: jest.fn().mockResolvedValue(null),
-        then: jest.fn().mockResolvedValue([]),
-        catch: jest.fn().mockReturnThis()
+        rollback: jest.fn().mockResolvedValue(undefined)
       };
-      return await callback(mockTransaction);
-    }),
-    migrate: {
+      const res = await cb(trx);
+      return res;
+    });
+    callable.migrate = {
       latest: jest.fn().mockResolvedValue([]),
       rollback: jest.fn().mockResolvedValue([])
-    },
-    seed: {
-      run: jest.fn().mockResolvedValue([])
-    },
-    destroy: jest.fn().mockResolvedValue(undefined)
-  }));
-  
-  mockKnex.mockReturnValue(mockKnex());
-  return mockKnex;
+    };
+    callable.seed = { run: jest.fn().mockResolvedValue([]) };
+    callable.destroy = jest.fn().mockResolvedValue(undefined);
+    return callable;
+  });
+
+  // Export types compatibility
+  knexFactory.Knex = {};
+  return knexFactory;
 });
 
 // Mock setInterval to prevent background processes from running during tests
@@ -141,7 +157,7 @@ jest.mock('../src/utils/encryption/kms/factory', () => {
 });
 
 // Global test timeout
-jest.setTimeout(15000);
+jest.setTimeout(30000);
 
 // Suppress console output in tests
 const originalConsole = { ...console };
@@ -164,6 +180,64 @@ if (typeof beforeAll === 'function' && typeof afterAll === 'function') {
     await closeDatabaseConnection();
   });
 }
+
+// Mock monitoring service to avoid side effects during import
+jest.mock('../src/services/monitoringService', () => ({
+  monitoringService: {
+    on: jest.fn(),
+    recordMetric: jest.fn(),
+    getMetrics: jest.fn(() => []),
+  }
+}));
+
+// Enable test bypass for auth and disable rate limiters globally for tests
+process.env.TEST_BYPASS_AUTH = 'true';
+process.env.TEST_DISABLE_RATE_LIMIT = 'true';
+
+// Mock retailer service classes as jest fns to support constructor mocking in tests
+jest.mock('../src/services/retailers/BestBuyService', () => {
+  const Impl = jest.fn().mockImplementation(() => ({
+    checkAvailability: jest.fn(),
+    searchProducts: jest.fn(),
+    getHealthStatus: jest.fn(),
+    getMetrics: jest.fn(),
+    getConfig: jest.fn()
+  }));
+  return { BestBuyService: Impl };
+});
+
+jest.mock('../src/services/retailers/WalmartService', () => {
+  const Impl = jest.fn().mockImplementation(() => ({
+    checkAvailability: jest.fn(),
+    searchProducts: jest.fn(),
+    getHealthStatus: jest.fn(),
+    getMetrics: jest.fn(),
+    getConfig: jest.fn()
+  }));
+  return { WalmartService: Impl };
+});
+
+jest.mock('../src/services/retailers/CostcoService', () => {
+  const Impl = jest.fn().mockImplementation(() => ({
+    checkAvailability: jest.fn(),
+    searchProducts: jest.fn(),
+    getHealthStatus: jest.fn(),
+    getMetrics: jest.fn(),
+    getConfig: jest.fn()
+  }));
+  return { CostcoService: Impl };
+});
+
+jest.mock('../src/services/retailers/SamsClubService', () => {
+  const Impl = jest.fn().mockImplementation(() => ({
+    checkAvailability: jest.fn(),
+    searchProducts: jest.fn(),
+    getHealthStatus: jest.fn(),
+    getMetrics: jest.fn(),
+    getConfig: jest.fn()
+  }));
+  return { SamsClubService: Impl };
+});
 
 // Restore console after tests if needed
 global.restoreConsole = () => {

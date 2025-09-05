@@ -285,7 +285,32 @@ export class TargetService extends BaseRetailerService {
         const img = $('body').find('img').first().attr('src') || $('body').find('img').first().attr('data-src') || '';
         if (img) imageUrl = this.absUrl(img);
       }
-      return { ...p, availability, price, originalPrice, imageUrl, shippingText: shipText || p.shippingText, shippingDateIso: shipDateIso || p.shippingDateIso };
+      // Extract TCIN from JSON-LD or URL if available
+      let id = p.id;
+      try {
+        $('script[type="application/ld+json"]').each((_: any, el: any) => {
+          if (id) return;
+          const t = ($(el).text() || '').trim();
+          if (!t) return;
+          try {
+            const j = JSON.parse(t);
+            const arr = Array.isArray(j) ? j : [j];
+            for (const obj of arr) {
+              const type = (obj['@type'] || obj['type'] || '').toString().toLowerCase();
+              if (type.includes('product')) {
+                const tcin = obj.sku || obj.productID || obj.productId;
+                if (tcin && String(tcin).match(/^\d+$/)) { id = String(tcin); break; }
+              }
+            }
+          } catch {}
+        });
+        if (!id) {
+          const m = String(p.url || '').match(/\/p\/[^/]+\/(\d+)/);
+          if (m) id = m[1];
+        }
+      } catch {}
+
+      return { ...p, id, availability, price, originalPrice, imageUrl, shippingText: shipText || p.shippingText, shippingDateIso: shipDateIso || p.shippingDateIso };
     } catch (e) {
       return p;
     }

@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  db-test:
+    image: postgres:15
+    container_name: boosterbeacon-db-test
+    environment:
+      POSTGRES_DB: boosterbeacon_test
+      POSTGRES_USER: booster_user
+      POSTGRES_PASSWORD: booster_test_password
+    ports:
+      - "5435:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # Optional: add a lightweight Redis for tests if needed later
+  # redis-test:
+  #   image: redis:7
+  #   container_name: boosterbeacon-redis-test
+  #   ports:
+  #     - "6380:6379"
+  #   restart: unless-stopped
+
+networks:
+  default:
+    name: boosterbeacon-test-net
+

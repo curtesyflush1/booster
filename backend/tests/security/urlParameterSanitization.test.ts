@@ -17,7 +17,7 @@
  * @since 2025-08-28
  */
 
-import request, { Test } from 'supertest';
+import supertest, { Test } from 'supertest';
 import app from '../../src/index';
 import { User } from '../../src/models/User';
 import { Product } from '../../src/models/Product';
@@ -87,13 +87,13 @@ describe('URL Parameter Sanitization Security Tests', () => {
   ) => {
     const { useAuth = false, method = 'GET', expectedErrorCode } = options;
     
-    let request = app[method.toLowerCase() as 'get' | 'post' | 'delete'](endpoint);
+    let req: Test = (supertest(app)[method.toLowerCase() as 'get' | 'post' | 'delete'])(endpoint);
     
     if (useAuth) {
-      request = request.set('Authorization', `Bearer ${authToken}`);
+      req = req.set('Authorization', `Bearer ${authToken}`) as unknown as Test;
     }
     
-    const response = await request.expect(expectedStatus);
+    const response = await req.expect(expectedStatus);
     
     if (expectedErrorCode && response.body.error) {
       expect(response.body.error.code).toBe(expectedErrorCode);

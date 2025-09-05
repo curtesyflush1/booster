@@ -1,0 +1,144 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  unit-and-mocked-integration:
+    name: Unit + Mocked Integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies (root)
+        run: npm ci
+
+      - name: Unit tests (backend)
+        env:
+          CI: 'true'
+          LOG_LEVEL: error
+          TEST_BYPASS_AUTH: 'true'
+          TEST_DISABLE_RATE_LIMIT: 'true'
+          DISABLE_REDIS: 'true'
+        run: |
+          cd backend
+          npm run test:unit
+
+      - name: Mocked integration tests (backend)
+        env:
+          CI: 'true'
+          LOG_LEVEL: error
+          TEST_BYPASS_AUTH: 'true'
+          TEST_DISABLE_RATE_LIMIT: 'true'
+          DISABLE_REDIS: 'true'
+        run: |
+          cd backend
+          npm run test:integration
+
+  db-backed-integration:
+    name: DB-backed Integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      # Optional alternative: use Actions service instead of docker compose
+      # postgres:
+      #   image: postgres:15
+      #   env:
+      #     POSTGRES_DB: boosterbeacon_test
+      #     POSTGRES_USER: booster_user
+      #     POSTGRES_PASSWORD: booster_test_password
+      #   ports:
+      #     - 5435:5432
+      #   options: >-
+      #     --health-cmd "pg_isready -U booster_user -d boosterbeacon_test" \
+      #     --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies (root)
+        run: npm ci
+
+      - name: Start Postgres (docker compose)
+        run: |
+          docker compose -f docker-compose.test.yml up -d db-test
+          # Wait for health
+          for i in {1..30}; do \
+            status=$(docker inspect -f '{{.State.Health.Status}}' boosterbeacon-db-test || echo 'starting'); \
+            echo "DB health: $status"; \
+            if [ "$status" = "healthy" ]; then break; fi; \
+            sleep 2; \
+          done
+
+      - name: DB-backed integration tests (backend)
+        env:
+          CI: 'true'
+          LOG_LEVEL: error
+          TEST_DATABASE_URL: postgresql://booster_user:booster_test_password@localhost:5435/boosterbeacon_test
+          # Keep Redis optional in CI; disable to avoid external deps
+          DISABLE_REDIS: 'true'
+        run: |
+          cd backend
+          npm run test:integration:db
+
+      - name: Dump Docker logs on failure
+        if: failure()
+        run: |
+          docker ps -a
+          docker logs boosterbeacon-db-test || true
+  db-backed-integration-service:
+    name: DB-backed Integration (Actions Service)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: boosterbeacon_test
+          POSTGRES_USER: booster_user
+          POSTGRES_PASSWORD: booster_test_password
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U booster_user -d boosterbeacon_test" \
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies (root)
+        run: npm ci
+
+      - name: DB-backed integration tests (backend)
+        env:
+          CI: 'true'
+          LOG_LEVEL: error
+          TEST_DATABASE_URL: postgresql://booster_user:booster_test_password@localhost:5435/boosterbeacon_test
+          DISABLE_REDIS: 'true'
+        run: |
+          cd backend
+          npm run test:integration:db
+

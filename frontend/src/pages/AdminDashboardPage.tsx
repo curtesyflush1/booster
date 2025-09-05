@@ -551,7 +551,11 @@ const AdminDashboardPage: React.FC = () => {
 
         {/* Purchases Tab */}
         {activeTab === 'purchases' && (
-          <AdminRecentTransactionsPanel />
+          <div className="space-y-6">
+            <AdminRecentTransactionsPanel />
+            <PurchaseMetricsPanel />
+            <PrecisionAtKPanel />
+          </div>
         )}
 
         {/* ML Models Tab */}
@@ -595,6 +599,16 @@ const AdminDashboardPage: React.FC = () => {
                   ) : (
                     <div className="text-gray-600 text-sm">No model metadata found.</div>
                   )}
+                </div>
+              </div>
+
+              {/* Crawl Config + Budgets */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+                <div className="lg:col-span-2 border rounded-lg p-4">
+                  <CrawlConfigCard />
+                </div>
+                <div className="border rounded-lg p-4">
+                  <RunCheckerCard />
                 </div>
               </div>
 
@@ -879,6 +893,190 @@ const RunCheckerCard: React.FC = () => {
     </div>
   );
 };
+
+// --- Purchases Tab Panels ---
+
+const PurchaseMetricsPanel: React.FC = React.memo(() => {
+  const [data, setData] = React.useState<{ windowHours: number; retailers: Array<{ retailer: string; attempts: number; purchased: number; purchase_rate: number; lead_time_ms: { p50: number|null; p90: number|null; p95: number|null; count: number } }> } | null>(null);
+  const [hours, setHours] = React.useState(24);
+  const [loading, setLoading] = React.useState(false);
+  const load = async () => {
+    try {
+      setLoading(true);
+      const res = await apiClient.get<{ success: boolean; data: any }>(`/monitoring/purchase-metrics`, { params: { windowHours: hours } });
+      setData(res.data.data);
+    } catch {
+      // ignore
+    } finally { setLoading(false); }
+  };
+  React.useEffect(() => { load(); }, []);
+  return (
+    <div className="bg-white shadow rounded-lg p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-lg font-medium text-gray-900">Purchase Metrics</h3>
+        <div className="flex items-center gap-2">
+          <input type="number" className="border rounded px-2 py-1 w-24" value={hours} onChange={e=>setHours(parseInt(e.target.value||'24',10)||24)} />
+          <button className="px-3 py-1 rounded bg-blue-600 text-white" onClick={load} disabled={loading}>{loading ? 'Loading…' : 'Refresh'}</button>
+        </div>
+      </div>
+      {!data ? <div className="text-sm text-gray-600">Loading…</div> : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Retailer</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Attempts</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Purchased</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Purchase Rate</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Lead-time p50/p90/p95 (ms)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {data.retailers.map(r => (
+                <tr key={r.retailer}>
+                  <td className="px-3 py-2 font-medium">{r.retailer}</td>
+                  <td className="px-3 py-2">{r.attempts}</td>
+                  <td className="px-3 py-2">{r.purchased}</td>
+                  <td className="px-3 py-2">{(r.purchase_rate*100).toFixed(1)}%</td>
+                  <td className="px-3 py-2">{[r.lead_time_ms.p50, r.lead_time_ms.p90, r.lead_time_ms.p95].map(v=>v??'—').join(' / ')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+});
+
+const PrecisionAtKPanel: React.FC = React.memo(() => {
+  const [k, setK] = React.useState(3);
+  const [days, setDays] = React.useState(7);
+  const [retailers, setRetailers] = React.useState('best-buy,target,walmart');
+  const [productIds, setProductIds] = React.useState('');
+  const [data, setData] = React.useState<{ k:number; days:number; p_at_k:number; total:number; hits:number; byRetailer: Array<{ retailer:string; total:number; hits:number; p_at_k:number }> } | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const run = async () => {
+    try {
+      setLoading(true);
+      const res = await apiClient.get<{ success:boolean; data:any }>(`/monitoring/precision`, { params: { k, days, retailers, productIds } });
+      setData(res.data.data);
+    } catch {
+      // ignore
+    } finally { setLoading(false); }
+  };
+  React.useEffect(() => { run(); }, []);
+  return (
+    <div className="bg-white shadow rounded-lg p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-lg font-medium text-gray-900">Precision@K</h3>
+        <div className="flex items-center gap-2">
+          <input type="number" className="border rounded px-2 py-1 w-16" value={k} onChange={e=>setK(parseInt(e.target.value||'3',10)||3)} />
+          <input type="number" className="border rounded px-2 py-1 w-20" value={days} onChange={e=>setDays(parseInt(e.target.value||'7',10)||7)} />
+          <input type="text" className="border rounded px-2 py-1 w-64" placeholder="retailers csv" value={retailers} onChange={e=>setRetailers(e.target.value)} />
+          <input type="text" className="border rounded px-2 py-1 w-64" placeholder="productIds csv (optional)" value={productIds} onChange={e=>setProductIds(e.target.value)} />
+          <button className="px-3 py-1 rounded bg-blue-600 text-white" onClick={run} disabled={loading}>{loading ? 'Running…' : 'Run'}</button>
+        </div>
+      </div>
+      {!data ? <div className="text-sm text-gray-600">Loading…</div> : (
+        <div>
+          <div className="mb-2 text-sm text-gray-700">Overall p@{k}: <span className="font-semibold">{(data.p_at_k*100).toFixed(1)}%</span> ({data.hits}/{data.total})</div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 py-2 text-left font-medium text-gray-600">Retailer</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-600">Total</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-600">Hits</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-600">p@{k}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {data.byRetailer.map(r => (
+                  <tr key={r.retailer}>
+                    <td className="px-3 py-2 font-medium">{r.retailer}</td>
+                    <td className="px-3 py-2">{r.total}</td>
+                    <td className="px-3 py-2">{r.hits}</td>
+                    <td className="px-3 py-2">{(r.p_at_k*100).toFixed(1)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+const CrawlConfigCard: React.FC = React.memo(() => {
+  const [configs, setConfigs] = React.useState<Array<{ slug:string; renderBehavior:string; sessionReuse:boolean; burstQpm?: number|null; qpm?: number|null }>>([]);
+  const [saving, setSaving] = React.useState(false);
+  const load = async () => {
+    try {
+      const res = await apiClient.get<{ success:boolean; data: any }>('/monitoring/crawl-config');
+      setConfigs(res.data.data.configs || []);
+    } catch {}
+  };
+  React.useEffect(() => { load(); }, []);
+  const update = (idx:number, patch: Partial<{ renderBehavior:string; sessionReuse:boolean; burstQpm:number; qpm:number }>) => {
+    setConfigs(prev => prev.map((c,i)=> i===idx? { ...c, ...patch }: c));
+  };
+  const save = async () => {
+    try {
+      setSaving(true);
+      await apiClient.put('/monitoring/crawl-config', { configs });
+      await load();
+    } catch {} finally { setSaving(false); }
+  };
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="font-semibold text-gray-900">Crawler Config (per retailer)</h4>
+        <button className="px-3 py-1 rounded bg-blue-600 text-white" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-3 py-2 text-left">Slug</th>
+              <th className="px-3 py-2 text-left">Render</th>
+              <th className="px-3 py-2 text-left">Session</th>
+              <th className="px-3 py-2 text-left">QPM</th>
+              <th className="px-3 py-2 text-left">Burst QPM</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {configs.map((c, idx) => (
+              <tr key={c.slug}>
+                <td className="px-3 py-2 font-medium">{c.slug}</td>
+                <td className="px-3 py-2">
+                  <select className="border rounded px-2 py-1" value={c.renderBehavior} onChange={e=>update(idx,{ renderBehavior: e.target.value })}>
+                    <option value="on_block">on_block</option>
+                    <option value="always">always</option>
+                    <option value="never">never</option>
+                  </select>
+                </td>
+                <td className="px-3 py-2">
+                  <label className="inline-flex items-center gap-2">
+                    <input type="checkbox" checked={c.sessionReuse} onChange={e=>update(idx,{ sessionReuse: e.target.checked })} />
+                    <span>reuse</span>
+                  </label>
+                </td>
+                <td className="px-3 py-2">
+                  <input type="number" className="border rounded px-2 py-1 w-24" value={c.qpm ?? ''} onChange={e=>update(idx,{ qpm: parseInt(e.target.value||'0',10)||0 })} />
+                </td>
+                <td className="px-3 py-2">
+                  <input type="number" className="border rounded px-2 py-1 w-24" value={c.burstQpm ?? ''} onChange={e=>update(idx,{ burstQpm: parseInt(e.target.value||'0',10)||0 })} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+});
 
 const CalibrateClassifierCard: React.FC = () => {
   const [running, setRunning] = React.useState(false);

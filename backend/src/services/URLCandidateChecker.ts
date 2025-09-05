@@ -37,6 +37,13 @@ export class URLCandidateChecker {
         const parsed = Number(val);
         if (!isNaN(parsed) && parsed > 0) return parsed;
       }
+      // Temporary burst override for hot windows
+      const burstKey = `config:url_candidate:qpm_burst:${slug}`;
+      const burst = await redisService.get(burstKey);
+      if (burst) {
+        const parsed = Number(burst);
+        if (!isNaN(parsed) && parsed > 0) return parsed;
+      }
     } catch {}
     const envKey = `URL_CANDIDATE_QPM_${slug.toUpperCase().replace(/[^A-Z0-9]/g,'_')}`;
     const specific = Number(process.env[envKey] || 0);
@@ -88,20 +95,40 @@ export class URLCandidateChecker {
           const slug = slug0 || await this.getRetailerSlug(c.retailer_id);
           if (slug) { await UrlCandidateMetricsService.record(slug, 'requests'); }
 
-          let res = await fetcher.get(c.url, { timeout: timeoutMs, render: false, useSession: true });
+          // Per-retailer render/session behavior
+          const slug = slug0 || await this.getRetailerSlug(c.retailer_id);
+          // Resolve render/session config: prefer redis override, else env
+          let renderBehavior = this.getRenderBehaviorForSlug(slug || undefined);
+          let useSession = this.getSessionReuseForSlug(slug || undefined);
+          if (slug) {
+            try {
+              const rb = await redisService.get(`config:url_candidate:render_behavior:${slug}`);
+              const rbv = (rb || '').toLowerCase();
+              if (rbv === 'always' || rbv === 'on_block' || rbv === 'never') renderBehavior = rbv as any;
+            } catch {}
+            try {
+              const sr = await redisService.get(`config:url_candidate:session_reuse:${slug}`);
+              const srl = (sr || '').toLowerCase();
+              if (srl === 'false' || srl === '0' || srl === 'no') useSession = false;
+              else if (srl === 'true' || srl === '1' || srl === 'yes') useSession = true;
+            } catch {}
+          }
+
+          let res = await fetcher.get(c.url, { timeout: timeoutMs, render: renderBehavior === 'always', useSession });
           // If blocked or proxied errors detected, optionally retry with render=true
           const bodyStr = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
           const blocked = /incapsula|captcha|access denied|request unsuccessful|bot|forbidden|proxy authentication/i.test(bodyStr) || [403, 407, 429].includes(Number(res.status));
-          const renderOnBlock = String(process.env.URL_CANDIDATE_RENDER_ON_BLOCK || 'true').toLowerCase() !== 'false';
-          const forceRender = String(process.env.URL_CANDIDATE_FORCE_RENDER || 'false').toLowerCase() === 'true';
-          if (slug && blocked) { await UrlCandidateMetricsService.record(slug, 'blocked'); }
-          if (forceRender) {
+          const renderOnBlock = renderBehavior === 'on_block' && (String(process.env.URL_CANDIDATE_RENDER_ON_BLOCK || 'true').toLowerCase() !== 'false');
+          const forceRender = renderBehavior === 'always' || (String(process.env.URL_CANDIDATE_FORCE_RENDER || 'false').toLowerCase() === 'true');
+          if (slug) { await UrlCandidateMetricsService.record(slug, blocked ? 'blocked' : 'requests'); }
+          if (forceRender && !blocked) {
             try {
-              res = await fetcher.get(c.url, { timeout: Math.max(timeoutMs, 12000), render: true, useSession: true });
+              // Already rendered in initial call if 'always'; this branch is for global force flag
+              res = await fetcher.get(c.url, { timeout: Math.max(timeoutMs, 12000), render: true, useSession });
             } catch {}
           } else if (blocked && renderOnBlock) {
             try {
-              res = await fetcher.get(c.url, { timeout: Math.max(timeoutMs, 12000), render: true, useSession: true });
+              res = await fetcher.get(c.url, { timeout: Math.max(timeoutMs, 12000), render: true, useSession });
             } catch (e) {
               // keep original res
             }
@@ -111,13 +138,14 @@ export class URLCandidateChecker {
           if (statusCode >= 200 && statusCode < 300) {
             ok = true;
             const html = typeof data === 'string' ? data : JSON.stringify(data);
-            const { isLive, isProduct, priceFound, signals } = this.analyzeHtml(html);
-            const productPage = this.isLikelyProductPage(c.url, html);
-            // Gating: only consider live if looks like a product page and live cues present
-            if (productPage && (isLive || (isProduct && priceFound))) {
+            const evalOut = this.evaluateHtml(c.url, html);
+            const productPage = evalOut.productPage;
+            // Tightened gating: product page + price + CTA by default; retailer-specific overrides can relax
+            const allow = this.isLiveAllowedByRetailer(slug || undefined, evalOut);
+            if (allow) {
               newStatus = 'live';
               newScore = clamp01((Number.isFinite(newScore) ? newScore : 0.5) + 0.25);
-              reason = signals.join(',') || 'live_detected';
+              reason = this.buildReason('live', evalOut);
               live++;
               // Persist outcomes and emit drop signal
               try {
@@ -137,7 +165,7 @@ export class URLCandidateChecker {
             } else {
               newStatus = 'valid';
               newScore = clamp01((Number.isFinite(newScore) ? newScore : 0.5) + 0.05);
-              reason = signals.join(',') || 'reachable_no_live_cues';
+              reason = this.buildReason('valid', evalOut);
               if (slug) { await UrlCandidateMetricsService.record(slug, 'valid'); }
             }
           } else if (statusCode === 404 || statusCode === 410) {
@@ -193,22 +221,48 @@ export class URLCandidateChecker {
     }
   }
 
-  private static analyzeHtml(html: string): { isProduct: boolean; isLive: boolean; priceFound: boolean; signals: string[] } {
+  // Public helper to support unit tests and consistent reason taxonomy
+  public static evaluateHtml(url: string, html: string): { productPage: boolean; cta: boolean; price: boolean; jsonld: boolean; productSignals: string[] } {
     const $ = cheerio.load(html);
     const text = $('body').text().toLowerCase();
-    const signals: string[] = [];
-    // Basic cues
-    const addToCart = /(add to cart|buy now|ship it|pickup|add to basket)/i.test(text);
-    const inStock = /(in stock|available|ready to ship)/i.test(text) && !/(out of stock|sold out|unavailable)/i.test(text);
-    const price = /\$\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})?/.test(text);
-    const productSchema = $('script[type="application/ld+json"]').filter((_, el) => /Product/i.test($(el).text())).length > 0;
     const title = ($('title').text() || '').toLowerCase();
-    const isProduct = productSchema || /pokemon|tcg|elite trainer|booster/i.test(title + ' ' + text.slice(0, 2000));
-    if (addToCart) signals.push('cta');
-    if (inStock) signals.push('in_stock_text');
-    if (price) signals.push('price_seen');
-    if (productSchema) signals.push('jsonld_product');
-    return { isProduct, isLive: addToCart || inStock, priceFound: price, signals };
+
+    // CTA / availability heuristics
+    const cta = /(add to cart|buy now|ship it|pickup|add to basket)/i.test(text);
+    const inStockText = /(in stock|available|ready to ship)/i.test(text) && !/(out of stock|sold out|unavailable)/i.test(text);
+    const price = /\$\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})?/.test(text);
+
+    // JSON-LD Product detection with basic field expectations
+    let jsonld = false;
+    try {
+      $('script[type="application/ld+json"]').each((_, el) => {
+        const t = ($(el).text() || '').trim();
+        if (!t) return;
+        try {
+          const j = JSON.parse(t);
+          const arr = Array.isArray(j) ? j : [j];
+          for (const obj of arr) {
+            const type = (obj['@type'] || obj['type'] || '').toString().toLowerCase();
+            if (type.includes('product')) {
+              // Look for expected price/offer fields
+              const offers = obj.offers || obj.offer || {};
+              const hasPrice = !!(offers.price || offers.lowPrice || offers.highPrice || obj.price || obj.sku || obj.gtin12 || obj.gtin13);
+              if (hasPrice) { jsonld = true; break; }
+            }
+          }
+        } catch {}
+      });
+    } catch {}
+
+    const productSignals: string[] = [];
+    if (cta) productSignals.push('cta');
+    if (inStockText) productSignals.push('in_stock_text');
+    if (price) productSignals.push('price_seen');
+    if (jsonld) productSignals.push('jsonld_product');
+
+    // Product page check using URL and structure
+    const productPage = this.isLikelyProductPage(url, html);
+    return { productPage, cta: (cta || inStockText), price, jsonld, productSignals };
   }
 
   private static isLikelyProductPage(url: string, html: string): boolean {
@@ -233,6 +287,61 @@ export class URLCandidateChecker {
     } catch {
       return false;
     }
+  }
+
+  private static buildReason(prefix: 'live' | 'valid', evalOut: { productPage: boolean; cta: boolean; price: boolean; jsonld: boolean; productSignals: string[] }): string {
+    const bits = [
+      `pg=${evalOut.productPage ? 1 : 0}`,
+      `cta=${evalOut.cta ? 1 : 0}`,
+      `price=${evalOut.price ? 1 : 0}`,
+      `jsonld=${evalOut.jsonld ? 1 : 0}`
+    ];
+    return `${prefix}:${bits.join(',')}`;
+  }
+
+  private static isLiveAllowedByRetailer(slug: string | undefined, evalOut: { productPage: boolean; cta: boolean; price: boolean; jsonld: boolean }): boolean {
+    // Default: require product page + CTA + price together
+    const defaultAllow = evalOut.productPage && evalOut.cta && evalOut.price;
+    if (!slug) return defaultAllow;
+    switch (slug) {
+      case 'target':
+        // Target: product page + JSON-LD Product + price (CTA often dynamic)
+        return evalOut.productPage && evalOut.jsonld && evalOut.price;
+      case 'best-buy':
+        // BestBuy: enforce /site/ pages + CTA + price
+        return defaultAllow;
+      case 'walmart':
+      case 'costco':
+      case 'sams-club':
+        return defaultAllow;
+      default:
+        return defaultAllow;
+    }
+  }
+
+  private static getRenderBehaviorForSlug(slug?: string): 'always' | 'on_block' | 'never' {
+    if (!slug) return 'on_block';
+    // Redis-configurable override
+    const key = `config:url_candidate:render_behavior:${slug}`;
+    // Note: synchronous redis not available; we read env first and let controller write env-like into redis
+    // For now, prefer env; controller will set env variables on process where applicable
+    const envKey = `URL_CANDIDATE_RENDER_BEHAVIOR_${slug.toUpperCase().replace(/[^A-Z0-9]/g,'_')}`;
+    const rawEnv = (process.env[envKey] || '').toLowerCase();
+    if (rawEnv === 'always' || rawEnv === 'on_block' || rawEnv === 'never') return rawEnv as any;
+    // Non-blocking attempt to read redis value
+    try {
+      const v = (redisService as any)?.get ? undefined : undefined; // placeholder to avoid TS unused import warnings
+    } catch {}
+    return 'on_block';
+  }
+
+  private static getSessionReuseForSlug(slug?: string): boolean {
+    if (!slug) return true;
+    const envKey = `URL_CANDIDATE_SESSION_REUSE_${slug.toUpperCase().replace(/[^A-Z0-9]/g,'_')}`;
+    const raw = (process.env[envKey] || '').toLowerCase();
+    if (raw === 'false' || raw === '0' || raw === 'no') return false;
+    if (raw === 'true' || raw === '1' || raw === 'yes') return true;
+    return true;
   }
 }
 

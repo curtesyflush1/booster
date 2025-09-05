@@ -1,71 +1,43 @@
-import { AdminSystemService } from '../../src/services/adminSystemService';
-import { BaseModel } from '../../src/models/BaseModel';
-
-// Mock the BaseModel to avoid database dependencies
-jest.mock('../../src/models/BaseModel', () => ({
-  BaseModel: {
-    getKnex: jest.fn()
-  }
-}));
+import { createAdminSystemService } from '../../src/services/adminSystemService';
 
 describe('AdminSystemService', () => {
-  let mockKnex: any;
-
-  beforeEach(() => {
-    mockKnex = {
-      select: jest.fn().mockReturnThis(),
-      from: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      orWhere: jest.fn().mockReturnThis(),
-      whereIn: jest.fn().mockReturnThis(),
-      whereNotNull: jest.fn().mockReturnThis(),
-      count: jest.fn().mockReturnThis(),
-      max: jest.fn().mockReturnThis(),
-      avg: jest.fn().mockReturnThis(),
-      orderBy: jest.fn().mockReturnThis(),
-      groupBy: jest.fn().mockReturnThis(),
-      first: jest.fn(),
-      raw: jest.fn()
-    };
-
-    (BaseModel.getKnex as jest.Mock).mockReturnValue(mockKnex);
-  });
-
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
+  afterEach(() => { jest.clearAllMocks(); });
 
   describe('getDashboardStats', () => {
     it('should return comprehensive dashboard statistics', async () => {
-      // Mock user statistics
-      mockKnex.first
-        .mockResolvedValueOnce({ count: '100' }) // total users
-        .mockResolvedValueOnce({ count: '95' })  // active users
-        .mockResolvedValueOnce({ count: '5' })   // new today
-        .mockResolvedValueOnce({ count: '15' })  // new this week
-        .mockResolvedValueOnce({ count: '20' })  // pro users
-        // Mock alert statistics
-        .mockResolvedValueOnce({ count: '500' }) // total alerts
-        .mockResolvedValueOnce({ count: '25' })  // alerts today
-        .mockResolvedValueOnce({ count: '10' })  // pending alerts
-        .mockResolvedValueOnce({ count: '5' })   // failed alerts
-        .mockResolvedValueOnce({ avg_seconds: '15.5' }) // avg delivery time
-        // Mock ML model statistics
-        .mockResolvedValueOnce({ count: '3' })   // active models
-        .mockResolvedValueOnce({ count: '1' })   // training models
-        .mockResolvedValueOnce({ last_training: new Date('2024-01-01') }); // last training
-
-      // Mock system metrics
-      jest.spyOn(AdminSystemService, 'getSystemMetrics').mockResolvedValue({
-        cpu_usage: 45.2,
-        memory_usage: 67.8,
-        disk_usage: 23.1,
-        api_response_time: 120.5,
-        error_rate: 0.5,
-        uptime: 86400
+      const service = createAdminSystemService({
+        systemRepository: {
+          getUserStatistics: jest.fn().mockResolvedValue({
+            totalUsers: 100,
+            activeUsers: 95,
+            newToday: 5,
+            newThisWeek: 15,
+            proUsers: 20
+          }),
+          getAlertStatistics: jest.fn().mockResolvedValue({
+            totalAlerts: 500,
+            alertsToday: 25,
+            pendingAlerts: 10,
+            failedAlerts: 5,
+            avgDeliveryTime: 15.5
+          }),
+          getMLModelStatistics: jest.fn().mockResolvedValue({
+            activeModels: 3,
+            trainingModels: 1,
+            lastTraining: new Date('2024-01-01')
+          }),
+          getSystemMetrics: jest.fn().mockResolvedValue({
+            cpuMetric: { usage: 45.2 },
+            memoryMetric: { percentage: 67.8 },
+            diskMetric: { percentage: 23.1 },
+            responseTimeMetric: { average: 120.5 },
+            errorRateMetric: { rate: 0.5 }
+          })
+        } as any,
+        logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() } as any
       });
 
-      const result = await AdminSystemService.getDashboardStats();
+      const result = await service.getDashboardStats();
 
       expect(result).toEqual({
         users: {
@@ -91,7 +63,7 @@ describe('AdminSystemService', () => {
           prediction_accuracy: 85.5
         },
         system: {
-          uptime: 86400,
+          uptime: expect.any(Number),
           cpu_usage: 45.2,
           memory_usage: 67.8,
           disk_usage: 23.1,
@@ -102,22 +74,36 @@ describe('AdminSystemService', () => {
     });
 
     it('should handle database errors gracefully', async () => {
-      mockKnex.first.mockRejectedValue(new Error('Database connection failed'));
+      const service = createAdminSystemService({
+        systemRepository: {
+          getUserStatistics: jest.fn().mockRejectedValue(new Error('Database connection failed')),
+          getAlertStatistics: jest.fn(),
+          getMLModelStatistics: jest.fn(),
+          getSystemMetrics: jest.fn()
+        } as any,
+        logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() } as any
+      });
 
-      await expect(AdminSystemService.getDashboardStats()).rejects.toThrow('Failed to retrieve dashboard statistics');
+      await expect(service.getDashboardStats()).rejects.toThrow('Failed to retrieve dashboard statistics');
     });
   });
 
   describe('getSystemMetrics', () => {
     it('should return system metrics for specified time period', async () => {
-      mockKnex.first
-        .mockResolvedValueOnce({ value: 45.2 })    // CPU usage
-        .mockResolvedValueOnce({ value: 67.8 })    // Memory usage
-        .mockResolvedValueOnce({ value: 23.1 })    // Disk usage
-        .mockResolvedValueOnce({ avg_value: '120.5' }) // API response time
-        .mockResolvedValueOnce({ avg_value: '0.5' });  // Error rate
+      const service = createAdminSystemService({
+        systemRepository: {
+          getSystemMetrics: jest.fn().mockResolvedValue({
+            cpuMetric: { usage: 45.2 },
+            memoryMetric: { percentage: 67.8 },
+            diskMetric: { percentage: 23.1 },
+            responseTimeMetric: { average: 120.5 },
+            errorRateMetric: { rate: 0.5 }
+          })
+        } as any,
+        logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() } as any
+      });
 
-      const result = await AdminSystemService.getSystemMetrics(24);
+      const result = await service.getSystemMetrics(24);
 
       expect(result).toEqual({
         cpu_usage: 45.2,

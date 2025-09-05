@@ -33,6 +33,17 @@ export class BrowserApiService {
   }
 
   async executeCheckout(req: CheckoutRequest): Promise<CheckoutResult> {
+    // Deterministic test mode for staging: always succeed unless overriden
+    if (String(process.env.PURCHASES_TEST_MODE || '').toLowerCase() === 'true') {
+      const now = Date.now();
+      return {
+        success: true,
+        addedToCartAt: new Date(now + 500).toISOString(),
+        purchasedAt: new Date(now + 1500).toISOString(),
+        pricePaid: req.maxPrice,
+        orderId: `TEST-${req.retailerSlug}-${req.productId}`
+      };
+    }
     // If remote service configured, call it
     if (this.baseUrl && this.token) {
       try {
@@ -72,4 +83,3 @@ export class BrowserApiService {
     };
   }
 }
-

@@ -32,7 +32,7 @@ The Admin Dashboard and Management Tools system has been successfully implemente
 - **Real-Time Statistics**: Live dashboard with key performance indicators
 - **User Management Interface**: Advanced user table with search, filtering, and pagination
 - **System Health Monitoring**: Visual system metrics and service status
-- **Purchases View**: Minimal recent transactions panel with limit filter
+- **Purchases View**: Recent transactions, Purchase Metrics panel, Precision@K panel
 - **Responsive Design**: Mobile-optimized interface with modern React patterns
 
 #### Key Features
@@ -113,6 +113,10 @@ Real-time system monitoring with performance metrics and service status.
 ```http
 POST /api/admin/test-alert/restock
 GET  /api/admin/purchases/transactions/recent?limit=50
+GET  /api/monitoring/purchase-metrics?windowHours=24
+GET  /api/monitoring/precision?k=3&days=7&retailers=best-buy,target,walmart
+GET  /api/monitoring/crawl-config
+PUT  /api/monitoring/crawl-config
 ```
 Simulate a restock alert to exercise the auto-purchase pipeline and fetch recent transaction records for quick validation.
 
@@ -184,3 +188,7 @@ Searchable audit trail with advanced filtering and compliance reporting.
 ---
 
 The Admin Dashboard system provides a comprehensive, secure, and scalable administrative interface for BoosterBeacon, enabling efficient system management with complete audit trails and real-time monitoring capabilities.
+
+### New Controls Summary
+- Crawler Config (per retailer): render behavior (always | on_block | never), session reuse, QPM and Burst QPM
+- Drop Budgets editor remains for QPM; Burst QPM adds a temporary clamp for hot windows
