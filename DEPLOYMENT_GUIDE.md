@@ -374,6 +374,20 @@ For application updates:
 4. Monitor application health
 5. Rollback if issues occur
 
+## Keeping Prod and Repo in Sync
+
+If you hotfix directly on the production server, pull those changes back into the repo or re‑apply them locally before the next deploy. Practical tips:
+
+- Prefer fixing in the repo and using `npm run deploy:quick` to sync changes.
+- If you must patch the server:
+  - Document what you changed and send a PR mirroring the change.
+  - For frontend PWA and icons, use the helper script:
+    - `./scripts/sync-frontend-assets.sh` (runs locally)
+      - Copies `frontend/public/icons/*` to `${DEPLOY_PATH}/frontend/dist/icons/` on the server.
+      - Patches the server `sw.js` to allow any host for `/api/*` caching (instead of `localhost:3000`).
+    - Options: `--icons` or `--sw` to run a single step.
+- To avoid divergence, schedule a post‑deploy audit to remove the `version:` key from compose, confirm Node 20, and ensure `/opt/booster/.env` contains `JWT_SECRET` and `JWT_REFRESH_SECRET`.
+
 ## Support
 
 For deployment issues:
